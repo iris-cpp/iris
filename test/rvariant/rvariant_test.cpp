@@ -433,7 +433,7 @@ template<class Variant>
     using ExactV = iris::rvariant<int>;
     using VU = iris::detail::make_variadic_union_t<int>;
 
-    constexpr bool IsExact = iris::core::is_ttp_specialization_of_v<V, iris::rvariant>;
+    constexpr bool IsExact = iris::is_ttp_specialization_of_v<V, iris::rvariant>;
 
     if constexpr (std::is_same_v<Variant&&, V&>) {
         STATIC_REQUIRE(std::is_same_v<as_variant_t<Variant>, ExactV&>);

@@ -35,7 +35,7 @@ struct select_maybe_wrapped : select_maybe_wrapped_impl<false, 0, U, Ts...>
 {
     // Precondition: either T or recursive_wrapper<T> occurs at least once in Ts...
     static_assert(sizeof...(Ts) > 0);
-    static_assert(!core::is_ttp_specialization_of_v<U, recursive_wrapper>);
+    static_assert(!is_ttp_specialization_of_v<U, recursive_wrapper>);
 };
 
 template<class U, class... Ts>

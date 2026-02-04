@@ -62,7 +62,7 @@ class indirect
     static_assert(std::is_object_v<T>);
     static_assert(!std::is_array_v<T>);
     static_assert(!std::is_same_v<T, std::in_place_t>);
-    static_assert(!core::is_ttp_specialization_of_v<T, std::in_place_type_t>);
+    static_assert(!is_ttp_specialization_of_v<T, std::in_place_type_t>);
     static_assert(!std::is_const_v<T> && !std::is_volatile_v<T>);
     static_assert(std::is_same_v<T, typename std::allocator_traits<Allocator>::value_type>);
 
@@ -414,7 +414,7 @@ constexpr bool operator==(indirect<T, Allocator> const& lhs, U const& rhs)
     }
 }
 
-template<class T, class Allocator, class U> requires (!core::is_ttp_specialization_of_v<U, indirect>)
+template<class T, class Allocator, class U> requires (!is_ttp_specialization_of_v<U, indirect>)
 constexpr auto operator<=>(indirect<T, Allocator> const& lhs, U const& rhs)
     noexcept(core::synth_three_way_noexcept<T, U>) -> core::synth_three_way_result_t<T, U>
 {

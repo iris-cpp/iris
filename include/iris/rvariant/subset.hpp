@@ -38,8 +38,8 @@ namespace rvariant_set {
 template<class W, class V>
 struct is_subset_of : std::false_type
 {
-    static_assert(core::is_ttp_specialization_of_v<W, rvariant>);
-    static_assert(core::is_ttp_specialization_of_v<V, rvariant>);
+    static_assert(is_ttp_specialization_of_v<W, rvariant>);
+    static_assert(is_ttp_specialization_of_v<V, rvariant>);
 };
 
 template<class... Us, class... Ts>

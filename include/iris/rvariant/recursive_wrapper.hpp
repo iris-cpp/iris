@@ -21,7 +21,7 @@ class recursive_wrapper
     static_assert(std::is_object_v<T>);
     static_assert(!std::is_array_v<T>);
     static_assert(!std::is_same_v<T, std::in_place_t>);
-    static_assert(!core::is_ttp_specialization_of_v<T, std::in_place_type_t>);
+    static_assert(!is_ttp_specialization_of_v<T, std::in_place_type_t>);
     static_assert(!std::is_const_v<T> && !std::is_volatile_v<T>);
     static_assert(std::is_same_v<T, typename std::allocator_traits<Allocator>::value_type>);
 

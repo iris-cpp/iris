@@ -147,7 +147,7 @@ template<class Variant, class... Fmts, class charT = select_char_t<Fmts...>>
 [[nodiscard]] IRIS_CONSTEXPR_UP typename detail::variant_format_for_impl<charT, std::remove_cvref_t<Variant>>::spec_type
 variant_format_for(Fmts&&... fmts) noexcept
 {
-    static_assert(core::is_ttp_specialization_of_v<std::remove_cvref_t<Variant>, rvariant>);
+    static_assert(is_ttp_specialization_of_v<std::remove_cvref_t<Variant>, rvariant>);
     return detail::variant_format_for_impl<charT, std::remove_cvref_t<Variant>>::apply(
         std::forward<Fmts>(fmts)...
     );
@@ -155,8 +155,8 @@ variant_format_for(Fmts&&... fmts) noexcept
 
 template<class VFormat, class Variant>
     requires
-        core::is_ttp_specialization_of_v<std::remove_cvref_t<VFormat>, detail::variant_format_string> &&
-        core::is_ttp_specialization_of_v<std::remove_cvref_t<Variant>, rvariant>
+        is_ttp_specialization_of_v<std::remove_cvref_t<VFormat>, detail::variant_format_string> &&
+        is_ttp_specialization_of_v<std::remove_cvref_t<Variant>, rvariant>
 [[nodiscard]] constexpr detail::variant_format_proxy<VFormat, Variant>
 format_by(VFormat&& v_fmt IRIS_LIFETIMEBOUND, Variant&& v IRIS_LIFETIMEBOUND) noexcept
 {
@@ -170,7 +170,7 @@ namespace detail {
 template<class charT, class Variant>
 struct variant_alts_formattable : std::false_type
 {
-    static_assert(core::is_ttp_specialization_of_v<Variant, rvariant>);
+    static_assert(is_ttp_specialization_of_v<Variant, rvariant>);
 };
 
 template<class charT, class... Ts>
@@ -224,8 +224,8 @@ struct formatter<::iris::rvariant<Ts...>, charT>  // NOLINT(cert-dcl58-cpp)
 
 template<class VFormat, class Variant, class charT>
     requires
-        ::iris::core::is_ttp_specialization_of_v<std::remove_cvref_t<VFormat>, ::iris::detail::variant_format_string> &&
-        ::iris::core::is_ttp_specialization_of_v<std::remove_cvref_t<Variant>, ::iris::rvariant> &&
+        ::iris::is_ttp_specialization_of_v<std::remove_cvref_t<VFormat>, ::iris::detail::variant_format_string> &&
+        ::iris::is_ttp_specialization_of_v<std::remove_cvref_t<Variant>, ::iris::rvariant> &&
         ::iris::detail::variant_alts_formattable<charT, std::remove_cvref_t<Variant>>::value
 struct formatter<::iris::detail::variant_format_proxy<VFormat, Variant>, charT>  // NOLINT(cert-dcl58-cpp)
 {

@@ -102,7 +102,7 @@ template<class... Ts>
 struct is_never_valueless
     : std::conjunction<
         std::disjunction<
-            core::is_ttp_specialization_of<Ts, recursive_wrapper>,
+            is_ttp_specialization_of<Ts, recursive_wrapper>,
             std::conjunction<
                 std::bool_constant<sizeof(Ts) <= never_valueless_trivial_size_limit>,
                 std::is_trivially_destructible<Ts>,
@@ -235,7 +235,7 @@ template<class Variant>
 struct forward_storage_t_impl
 {
     static_assert(
-        core::is_ttp_specialization_of_v<std::remove_cvref_t<Variant>, rvariant>,
+        is_ttp_specialization_of_v<std::remove_cvref_t<Variant>, rvariant>,
         "`forward_storage` only accepts types which are exactly `rvariant`. Maybe you forgot `as_rvariant_t`?"
     );
     using type = decltype(std::declval<Variant>().storage());

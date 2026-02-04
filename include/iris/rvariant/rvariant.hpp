@@ -11,11 +11,11 @@
 #include <iris/rvariant/variant_helper.hpp>
 #include <iris/rvariant/subset.hpp>
 
-#include <iris/core/type_traits.hpp>
 #include <iris/core/library.hpp>
 #include <iris/core/cond_trivial.hpp>
 #include <iris/core/hash.hpp>
 
+#include <iris/type_traits.hpp>
 #include <iris/hash.hpp>
 
 #include <functional>
@@ -371,7 +371,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                 } else if constexpr (std::is_same_v<T_old_i, T>) { // NOT type-changing
                     if constexpr (
                         (sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_move_assignable_v<T>) ||
-                        core::is_ttp_specialization_of_v<T, recursive_wrapper>
+                        is_ttp_specialization_of_v<T, recursive_wrapper>
                     ) {
                         T tmp{std::forward<Args>(args)...}; // may throw
                         static_assert(noexcept(t_old_i = std::move(tmp)));
@@ -394,7 +394,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                 } else { // type-changing
                     if constexpr (
                         (sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_move_constructible_v<T>) ||
-                        core::is_ttp_specialization_of_v<T, recursive_wrapper>
+                        is_ttp_specialization_of_v<T, recursive_wrapper>
                     ) {
                         T tmp{std::forward<Args>(args)...}; // may throw
                         t_old_i.~T_old_i();
@@ -522,8 +522,8 @@ public:
         requires
             (sizeof...(Ts) > 0) &&
             (!std::is_same_v<std::remove_cvref_t<T>, rvariant>) &&
-            (!core::is_ttp_specialization_of_v<std::remove_cvref_t<T>, std::in_place_type_t>) &&
-            (!core::is_nttp_specialization_of_v<std::remove_cvref_t<T>, std::in_place_index_t>) &&
+            (!is_ttp_specialization_of_v<std::remove_cvref_t<T>, std::in_place_type_t>) &&
+            (!is_ctp_specialization_of_v<std::remove_cvref_t<T>, std::in_place_index_t>) &&
             std::is_constructible_v<typename core::aggregate_initialize_resolution<T, Ts...>::type, T>
     constexpr /* not explicit */ rvariant(T&& t)
         noexcept(std::is_nothrow_constructible_v<typename core::aggregate_initialize_resolution<T, Ts...>::type, T>)
@@ -1095,7 +1095,7 @@ private:
 // -------------------------------------------------
 
 template<class T, class... Ts>
-    requires core::is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires is_ttp_specialization_of_v<T, recursive_wrapper>
 [[nodiscard]] constexpr bool holds_alternative(rvariant<Ts...> const& v) noexcept = delete;
 
 template<class T, class... Ts>
@@ -1196,19 +1196,19 @@ get(rvariant<Ts...> const&& v IRIS_LIFETIMEBOUND)
 }
 
 template<class T, class... Ts>
-    requires core::is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires is_ttp_specialization_of_v<T, recursive_wrapper>
 constexpr T& get(rvariant<Ts...>&) = delete;
 
 template<class T, class... Ts>
-    requires core::is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires is_ttp_specialization_of_v<T, recursive_wrapper>
 constexpr T&& get(rvariant<Ts...>&&) = delete;
 
 template<class T, class... Ts>
-    requires core::is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires is_ttp_specialization_of_v<T, recursive_wrapper>
 constexpr T const& get(rvariant<Ts...> const&) = delete;
 
 template<class T, class... Ts>
-    requires core::is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires is_ttp_specialization_of_v<T, recursive_wrapper>
 constexpr T const&& get(rvariant<Ts...> const&&) = delete;
 
 // ---------------------------------------------

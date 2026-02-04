@@ -7,6 +7,8 @@
 
 #include <iris/core/type_traits.hpp>
 
+#include <iris/type_traits.hpp>
+
 
 namespace iris::detail {
 
@@ -62,7 +64,7 @@ template<class T, class List>
 struct non_wrapped_exactly_once : core::exactly_once<T, List>
 {
     static_assert(
-        !core::is_ttp_specialization_of_v<T, recursive_wrapper>,
+        !is_ttp_specialization_of_v<T, recursive_wrapper>,
         "Constructing a `recursive_wrapper` alternative with its full type as the tag is "
         "prohibited to avoid confusion; just specify `T` instead."
     );

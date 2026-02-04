@@ -479,14 +479,14 @@ template<class... Ts>
 struct not_a_variant {};
 
 template<class R, class Foo, class... Bar>
-    requires (!std::disjunction_v<iris::core::is_ttp_specialization_of<std::remove_cvref_t<Bar>, DerivedVariant>...>)
+    requires (!std::disjunction_v<iris::is_ttp_specialization_of<std::remove_cvref_t<Bar>, DerivedVariant>...>)
 constexpr R visit(Foo&&, Bar&&...)
 {
     return R{"not_a_variant"};
 }
 
 template<class Foo, class... Bar>
-    requires (!std::disjunction_v<iris::core::is_ttp_specialization_of<std::remove_cvref_t<Bar>, DerivedVariant>...>)
+    requires (!std::disjunction_v<iris::is_ttp_specialization_of<std::remove_cvref_t<Bar>, DerivedVariant>...>)
 constexpr decltype(auto) visit(Foo&&, Bar&&...)
 {
     return std::string_view{"not_a_variant"};

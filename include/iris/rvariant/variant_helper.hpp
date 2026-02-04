@@ -73,7 +73,7 @@ template<class T>
 [[nodiscard]] IRIS_FORCEINLINE constexpr auto&&
 unwrap_recursive(T&& o IRIS_LIFETIMEBOUND) noexcept
 {
-    if constexpr (core::is_ttp_specialization_of_v<std::remove_cvref_t<T>, recursive_wrapper>) {
+    if constexpr (is_ttp_specialization_of_v<std::remove_cvref_t<T>, recursive_wrapper>) {
         return *std::forward<T>(o);
     } else {
         return std::forward<T>(o);
