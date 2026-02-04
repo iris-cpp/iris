@@ -78,7 +78,6 @@ if(MSVC)
         set(CMAKE_CXX${IRIS_CXX_VERSION_BEFORE_LATEST}_STANDARD_COMPILE_OPTION /std:c++${IRIS_CXX_VERSION_BEFORE_LATEST}preview)
         set(CMAKE_CXX${IRIS_CXX_VERSION_BEFORE_LATEST}_EXTENSION_COMPILE_OPTION /std:c++${IRIS_CXX_VERSION_BEFORE_LATEST}preview)
         target_compile_options(_iris_cxx_common INTERFACE /std:c++${IRIS_CXX_VERSION_BEFORE_LATEST}preview)
-        target_compile_options(iris PUBLIC /std:c++${IRIS_CXX_VERSION_BEFORE_LATEST}preview)
 
     else()
         # MSVC's CMake support does not provide the latest `cxx_std_XX`
