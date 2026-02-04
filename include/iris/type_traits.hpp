@@ -1,6 +1,8 @@
 #ifndef IRIS_TYPE_TRAITS_HPP
 #define IRIS_TYPE_TRAITS_HPP
 
+// SPDX-License-Identifier: MIT
+
 #include <iris/config.hpp>
 
 #include <type_traits>

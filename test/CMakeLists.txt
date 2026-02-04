@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 # For Iris-specific tests.
 add_library(iris_cxx_test INTERFACE)
 set_target_properties(iris_cxx_test PROPERTIES CXX_EXTENSIONS OFF)

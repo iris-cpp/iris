@@ -1,6 +1,8 @@
 #ifndef IRIS_CONFIG_HPP
 #define IRIS_CONFIG_HPP
 
+// SPDX-License-Identifier: MIT
+
 #include <version>
 
 #define IRIS_STRINGIZE_I(x) #x
