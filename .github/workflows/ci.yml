@@ -173,8 +173,7 @@ jobs:
 
       - name: Build Tests
         run: |
-          cmake --build build --verbose --config ${{ matrix.build_type.name }} -j${{ env.IRIS_BUILD_JOBS }} ${{ matrix.compiler.builder_additional_args }}
-          # TODO: remove --verbose
+          cmake --build build --config ${{ matrix.build_type.name }} -j${{ env.IRIS_BUILD_JOBS }} ${{ matrix.compiler.builder_additional_args }}
 
       - name: Cache CMake Dependencies (save)
         if: steps.cache-deps.outputs.cache-hit != 'true'
