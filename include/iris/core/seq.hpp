@@ -1,5 +1,5 @@
-﻿#ifndef YK_CORE_SEQ_HPP
-#define YK_CORE_SEQ_HPP
+﻿#ifndef IRIS_CORE_SEQ_HPP
+#define IRIS_CORE_SEQ_HPP
 
 // SPDX-License-Identifier: MIT
 

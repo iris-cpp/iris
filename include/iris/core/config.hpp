@@ -1,5 +1,5 @@
-﻿#ifndef YK_CORE_CONFIG_HPP
-#define YK_CORE_CONFIG_HPP
+﻿#ifndef IRIS_CORE_CONFIG_HPP
+#define IRIS_CORE_CONFIG_HPP
 
 // SPDX-License-Identifier: MIT
 
@@ -17,31 +17,31 @@
 #endif
 
 #if _MSC_VER && __INTELLISENSE__ // Memory Layout view shows wrong layout without this workaround
-# define YK_NO_UNIQUE_ADDRESS [[msvc::no_unique_address, no_unique_address]]
+# define IRIS_NO_UNIQUE_ADDRESS [[msvc::no_unique_address, no_unique_address]]
 
 #elif _MSC_VER // normal MSVC
-# define YK_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+# define IRIS_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
 
 #else // other compilers
-# define YK_NO_UNIQUE_ADDRESS [[no_unique_address]]
+# define IRIS_NO_UNIQUE_ADDRESS [[no_unique_address]]
 #endif
 
 
-#ifndef YK_LIFETIMEBOUND
+#ifndef IRIS_LIFETIMEBOUND
 # if defined(__clang__)
-#  define YK_LIFETIMEBOUND [[clang::lifetimebound]]
+#  define IRIS_LIFETIMEBOUND [[clang::lifetimebound]]
 # elif defined(_MSC_VER)
-#  define YK_LIFETIMEBOUND [[msvc::lifetimebound]]
+#  define IRIS_LIFETIMEBOUND [[msvc::lifetimebound]]
 # else
-#  define YK_LIFETIMEBOUND
+#  define IRIS_LIFETIMEBOUND
 # endif
 #endif
 
 
 #if __cpp_consteval >= 202211L
-# define YK_CONSTEXPR_UP constexpr
+# define IRIS_CONSTEXPR_UP constexpr
 #else
-# define YK_CONSTEXPR_UP consteval
+# define IRIS_CONSTEXPR_UP consteval
 #endif
 
 
@@ -50,11 +50,11 @@
 // [[clang::always_inline]] https://clang.llvm.org/docs/AttributeReference.html#always-inline-force-inline
 // [[gnu::always_inline]] https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html#index-always_005finline-function-attribute
 
-#ifndef YK_FORCEINLINE
+#ifndef IRIS_FORCEINLINE
 # ifdef _MSC_VER
-#  define YK_FORCEINLINE __forceinline
+#  define IRIS_FORCEINLINE __forceinline
 # elifdef __GNUC__
-#  define YK_FORCEINLINE __attribute__((always_inline)) inline
+#  define IRIS_FORCEINLINE __attribute__((always_inline)) inline
 # endif
 #endif
 

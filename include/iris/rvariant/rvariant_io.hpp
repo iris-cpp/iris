@@ -1,5 +1,5 @@
-﻿#ifndef YK_RVARIANT_RVARIANT_IO_HPP
-#define YK_RVARIANT_RVARIANT_IO_HPP
+﻿#ifndef IRIS_RVARIANT_RVARIANT_IO_HPP
+#define IRIS_RVARIANT_RVARIANT_IO_HPP
 
 // SPDX-License-Identifier: MIT
 
@@ -121,7 +121,7 @@ struct variant_format_for_impl<charT, rvariant<Ts...>>
     using spec_type = variant_format_string_t<charT, Ts...>;
 
     template<class... Fmts>
-    [[nodiscard]] static YK_CONSTEXPR_UP spec_type
+    [[nodiscard]] static IRIS_CONSTEXPR_UP spec_type
     apply(Fmts&&... fmts) noexcept
     {
         return variant_format_string{variant_format_string_overload<charT, Ts>{
@@ -134,7 +134,7 @@ struct variant_format_for_impl<charT, rvariant<Ts...>>
 
 
 template<class... Ts, class... Fmts, class charT = select_char_t<Fmts...>>
-[[nodiscard]] YK_CONSTEXPR_UP detail::variant_format_string_t<charT, Ts...>
+[[nodiscard]] IRIS_CONSTEXPR_UP detail::variant_format_string_t<charT, Ts...>
 variant_format(Fmts&&... fmts) noexcept
 {
     static_assert(sizeof...(Ts) > 0);
@@ -144,7 +144,7 @@ variant_format(Fmts&&... fmts) noexcept
 }
 
 template<class Variant, class... Fmts, class charT = select_char_t<Fmts...>>
-[[nodiscard]] YK_CONSTEXPR_UP typename detail::variant_format_for_impl<charT, std::remove_cvref_t<Variant>>::spec_type
+[[nodiscard]] IRIS_CONSTEXPR_UP typename detail::variant_format_for_impl<charT, std::remove_cvref_t<Variant>>::spec_type
 variant_format_for(Fmts&&... fmts) noexcept
 {
     static_assert(core::is_ttp_specialization_of_v<std::remove_cvref_t<Variant>, rvariant>);
@@ -158,7 +158,7 @@ template<class VFormat, class Variant>
         core::is_ttp_specialization_of_v<std::remove_cvref_t<VFormat>, detail::variant_format_string> &&
         core::is_ttp_specialization_of_v<std::remove_cvref_t<Variant>, rvariant>
 [[nodiscard]] constexpr detail::variant_format_proxy<VFormat, Variant>
-format_by(VFormat&& v_fmt YK_LIFETIMEBOUND, Variant&& v YK_LIFETIMEBOUND) noexcept
+format_by(VFormat&& v_fmt IRIS_LIFETIMEBOUND, Variant&& v IRIS_LIFETIMEBOUND) noexcept
 {
     return detail::variant_format_proxy<VFormat, Variant>{
         std::forward<VFormat>(v_fmt), std::forward<Variant>(v)

@@ -1,5 +1,5 @@
-﻿#ifndef YK_RVARIANT_VARIANT_HELPER_HPP
-#define YK_RVARIANT_VARIANT_HELPER_HPP
+﻿#ifndef IRIS_RVARIANT_VARIANT_HELPER_HPP
+#define IRIS_RVARIANT_VARIANT_HELPER_HPP
 
 // SPDX-License-Identifier: MIT
 
@@ -70,8 +70,8 @@ struct variant_size<rvariant<Ts...>> : std::integral_constant<std::size_t, sizeo
 namespace detail {
 
 template<class T>
-[[nodiscard]] YK_FORCEINLINE constexpr auto&&
-unwrap_recursive(T&& o YK_LIFETIMEBOUND) noexcept
+[[nodiscard]] IRIS_FORCEINLINE constexpr auto&&
+unwrap_recursive(T&& o IRIS_LIFETIMEBOUND) noexcept
 {
     if constexpr (core::is_ttp_specialization_of_v<std::remove_cvref_t<T>, recursive_wrapper>) {
         return *std::forward<T>(o);
@@ -120,7 +120,7 @@ template<class T, class Allocator>
 struct forward_maybe_wrapped_impl<recursive_wrapper<T, Allocator>, recursive_wrapper<T, Allocator>>
 {
     template<class Wrapped>
-    [[nodiscard]] static constexpr auto&& apply(Wrapped&& wrapped YK_LIFETIMEBOUND) noexcept
+    [[nodiscard]] static constexpr auto&& apply(Wrapped&& wrapped IRIS_LIFETIMEBOUND) noexcept
     {
         static_assert(std::is_same_v<std::remove_cvref_t<Wrapped>, recursive_wrapper<T, Allocator>>);
         return std::forward<Wrapped>(wrapped);
@@ -132,7 +132,7 @@ template<class T, class Allocator>
 struct forward_maybe_wrapped_impl<recursive_wrapper<T, Allocator>, T>
 {
     template<class Value>
-    [[nodiscard]] static constexpr auto&& apply(Value&& value YK_LIFETIMEBOUND) noexcept
+    [[nodiscard]] static constexpr auto&& apply(Value&& value IRIS_LIFETIMEBOUND) noexcept
     {
         static_assert(std::is_same_v<std::remove_cvref_t<Value>, T>);
         return std::forward<Value>(value);
@@ -144,7 +144,7 @@ template<class T>
 struct forward_maybe_wrapped_impl<T, T>
 {
     template<class Value>
-    [[nodiscard]] static constexpr auto&& apply(Value&& value YK_LIFETIMEBOUND) noexcept
+    [[nodiscard]] static constexpr auto&& apply(Value&& value IRIS_LIFETIMEBOUND) noexcept
     {
         static_assert(std::is_same_v<std::remove_cvref_t<Value>, T>);
         return std::forward<Value>(value);
@@ -152,7 +152,7 @@ struct forward_maybe_wrapped_impl<T, T>
 };
 
 template<class VT, class RHS>
-[[nodiscard]] constexpr auto&& forward_maybe_wrapped(RHS&& rhs YK_LIFETIMEBOUND) noexcept
+[[nodiscard]] constexpr auto&& forward_maybe_wrapped(RHS&& rhs IRIS_LIFETIMEBOUND) noexcept
 {
     static_assert(!std::is_reference_v<VT> && !std::is_const_v<VT>);
     return forward_maybe_wrapped_impl<VT, std::remove_cvref_t<RHS>>::apply(std::forward<RHS>(rhs));

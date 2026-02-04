@@ -1026,9 +1026,9 @@ TEST_CASE("copy assignment")
     // trivial case
     {
         iris::rvariant<int, float> a = 42, b = 3.14f;
-        YK_REQUIRE_STATIC_NOTHROW(a = b);  // different alternative
+        IRIS_REQUIRE_STATIC_NOTHROW(a = b);  // different alternative
         REQUIRE(a.index() == 1);
-        YK_REQUIRE_STATIC_NOTHROW(a = b);  // same alternative
+        IRIS_REQUIRE_STATIC_NOTHROW(a = b);  // same alternative
         REQUIRE(a.index() == 1);
     }
 
@@ -1043,8 +1043,8 @@ TEST_CASE("copy assignment")
             S& operator=(S&&) noexcept(false) { throw std::exception{}; }
         };
         iris::rvariant<S, int> a = 42, b;
-        YK_REQUIRE_STATIC_NOTHROW(a = b);  // different alternative; use copy constructor
-        YK_REQUIRE_STATIC_NOTHROW(a = b);  // same alternative; directly use copy assignment
+        IRIS_REQUIRE_STATIC_NOTHROW(a = b);  // different alternative; use copy constructor
+        IRIS_REQUIRE_STATIC_NOTHROW(a = b);  // same alternative; directly use copy assignment
     }
     {
         struct S
@@ -1074,12 +1074,12 @@ TEST_CASE("move assignment")
     // trivial case
     {
         iris::rvariant<int, float> a = 42, b = 3.14f;
-        YK_REQUIRE_STATIC_NOTHROW(a = std::move(b));  // different alternative
+        IRIS_REQUIRE_STATIC_NOTHROW(a = std::move(b));  // different alternative
         REQUIRE(a.index() == 1);
     }
     {
         iris::rvariant<int, float> a = 42, b = 33 - 4;
-        YK_REQUIRE_STATIC_NOTHROW(a = std::move(b));  // same alternative
+        IRIS_REQUIRE_STATIC_NOTHROW(a = std::move(b));  // same alternative
         REQUIRE(a.index() == 0);
     }
 
@@ -1095,12 +1095,12 @@ TEST_CASE("move assignment")
         };
         {
             iris::rvariant<S, int> a = 42, b;
-            YK_CHECK_STATIC_NOTHROW(a = std::move(b));  // different alternative; use move constructor
+            IRIS_CHECK_STATIC_NOTHROW(a = std::move(b));  // different alternative; use move constructor
             CHECK(a.index() == 0);
         }
         {
             iris::rvariant<S, int> a, b;
-            YK_CHECK_STATIC_NOTHROW(a = std::move(b));  // same alternative; directly use move assignment
+            IRIS_CHECK_STATIC_NOTHROW(a = std::move(b));  // same alternative; directly use move assignment
             CHECK(a.index() == 0);
         }
     }
@@ -1133,7 +1133,7 @@ TEST_CASE("generic assignment")
     }
     {
         iris::rvariant<int, MC_Thrower> a;
-        YK_REQUIRE_STATIC_NOTHROW(a = MC_Thrower::non_throwing);
+        IRIS_REQUIRE_STATIC_NOTHROW(a = MC_Thrower::non_throwing);
         CHECK(a.valueless_by_exception() == false);
     }
     {
@@ -1158,8 +1158,8 @@ TEST_CASE("emplace")
     }
     {
         iris::rvariant<int> a = 42;
-        YK_REQUIRE_STATIC_NOTHROW(a.emplace<int>(12));
-        YK_REQUIRE_STATIC_NOTHROW(a.emplace<0>(12));
+        IRIS_REQUIRE_STATIC_NOTHROW(a.emplace<int>(12));
+        IRIS_REQUIRE_STATIC_NOTHROW(a.emplace<0>(12));
     }
     {
         iris::rvariant<std::vector<int>> a;
@@ -1238,12 +1238,12 @@ TEST_CASE("emplace")
     STATIC_REQUIRE(is_never_valueless<iris::rvariant<Non_Thrower>>);
     {
         iris::rvariant<Non_Thrower> a;
-        YK_REQUIRE_STATIC_NOTHROW(a.emplace<0>(Non_Thrower{}));
+        IRIS_REQUIRE_STATIC_NOTHROW(a.emplace<0>(Non_Thrower{}));
         CHECK(a.valueless_by_exception() == false);
     }
     {
         iris::rvariant<Non_Thrower> a;
-        YK_REQUIRE_STATIC_NOTHROW(a.emplace<0>(Non_Thrower::non_throwing));
+        IRIS_REQUIRE_STATIC_NOTHROW(a.emplace<0>(Non_Thrower::non_throwing));
         CHECK(a.valueless_by_exception() == false);
     }
     {
@@ -1262,12 +1262,12 @@ TEST_CASE("emplace")
     STATIC_REQUIRE(is_never_valueless<iris::rvariant<int, Non_Thrower>>);
     {
         iris::rvariant<int, Non_Thrower> a;
-        YK_REQUIRE_STATIC_NOTHROW(a.emplace<1>(Non_Thrower{}));
+        IRIS_REQUIRE_STATIC_NOTHROW(a.emplace<1>(Non_Thrower{}));
         CHECK(a.valueless_by_exception() == false);
     }
     {
         iris::rvariant<int, Non_Thrower> a;
-        YK_REQUIRE_STATIC_NOTHROW(a.emplace<1>(Non_Thrower::non_throwing));
+        IRIS_REQUIRE_STATIC_NOTHROW(a.emplace<1>(Non_Thrower::non_throwing));
         CHECK(a.valueless_by_exception() == false);
     }
     {
@@ -1291,7 +1291,7 @@ TEST_CASE("emplace")
     }
     {
         iris::rvariant<MC_Thrower> a;
-        YK_REQUIRE_STATIC_NOTHROW(a.emplace<0>(MC_Thrower::non_throwing));
+        IRIS_REQUIRE_STATIC_NOTHROW(a.emplace<0>(MC_Thrower::non_throwing));
         CHECK(a.valueless_by_exception() == false);
     }
     {
@@ -1315,7 +1315,7 @@ TEST_CASE("emplace")
     }
     {
         iris::rvariant<int, MC_Thrower> a;
-        YK_REQUIRE_STATIC_NOTHROW(a.emplace<1>(MC_Thrower::non_throwing));
+        IRIS_REQUIRE_STATIC_NOTHROW(a.emplace<1>(MC_Thrower::non_throwing));
         CHECK(a.valueless_by_exception() == false);
     }
     {
@@ -1391,13 +1391,13 @@ TEST_CASE("swap")
     {
         STATIC_REQUIRE(iris::core::is_trivially_swappable_v<int>);
         iris::rvariant<int> a = 33, b = 4;
-        YK_REQUIRE_STATIC_NOTHROW(a.swap(b));
+        IRIS_REQUIRE_STATIC_NOTHROW(a.swap(b));
         CHECK(iris::get<0>(a) == 4);
         CHECK(iris::get<0>(b) == 33);
     }
     {
         iris::rvariant<int, float> a = 42, b = 3.14f;
-        YK_REQUIRE_STATIC_NOTHROW(a.swap(b));
+        IRIS_REQUIRE_STATIC_NOTHROW(a.swap(b));
         CHECK(iris::get<1>(a) == 3.14f);
         CHECK(iris::get<0>(b) == 42);
     }

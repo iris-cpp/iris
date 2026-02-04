@@ -1,5 +1,5 @@
-﻿#ifndef YK_CORE_COND_TRIVIAL_HPP
-#define YK_CORE_COND_TRIVIAL_HPP
+﻿#ifndef IRIS_CORE_COND_TRIVIAL_HPP
+#define IRIS_CORE_COND_TRIVIAL_HPP
 
 // SPDX-License-Identifier: MIT
 

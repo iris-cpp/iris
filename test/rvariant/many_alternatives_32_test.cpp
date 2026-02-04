@@ -1,6 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 
-#if YK_CI
+#if IRIS_CI
 #include "rvariant_test.hpp"
 
 
@@ -50,7 +50,7 @@ TEST_CASE("many alternatives (32)")
         CHECK_NOTHROW((void)iris::get<Index<30>>(b));
         CHECK(b.visit([]<std::size_t I>(Index<I> const&) { return I; }) == 30);
 
-        YK_REQUIRE_STATIC_NOTHROW(a.swap(b));
+        IRIS_REQUIRE_STATIC_NOTHROW(a.swap(b));
         CHECK(iris::holds_alternative<Index<30>>(a));
         CHECK(iris::holds_alternative<Index<29>>(b));
     }
@@ -70,7 +70,7 @@ TEST_CASE("many alternatives (32)")
         CHECK_NOTHROW((void)iris::get<Index<31>>(b));
         CHECK(b.visit([]<std::size_t I>(Index<I> const&) { return I; }) == 31);
 
-        YK_REQUIRE_STATIC_NOTHROW(a.swap(b));
+        IRIS_REQUIRE_STATIC_NOTHROW(a.swap(b));
         CHECK(iris::holds_alternative<Index<31>>(a));
         CHECK(iris::holds_alternative<Index<30>>(b));
     }
@@ -90,7 +90,7 @@ TEST_CASE("many alternatives (32)")
         CHECK_NOTHROW((void)iris::get<Index<32>>(b));
         CHECK(b.visit([]<std::size_t I>(Index<I> const&) { return I; }) == 32);
 
-        YK_REQUIRE_STATIC_NOTHROW(a.swap(b));
+        IRIS_REQUIRE_STATIC_NOTHROW(a.swap(b));
         CHECK(iris::holds_alternative<Index<32>>(a));
         CHECK(iris::holds_alternative<Index<31>>(b));
     }
@@ -98,4 +98,4 @@ TEST_CASE("many alternatives (32)")
 
 } // unit_test
 
-#endif // YK_CI
+#endif // IRIS_CI

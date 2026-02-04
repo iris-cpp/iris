@@ -1,5 +1,5 @@
-﻿#ifndef YK_RVARIANT_DETAIL_VISIT_HPP
-#define YK_RVARIANT_DETAIL_VISIT_HPP
+﻿#ifndef IRIS_RVARIANT_DETAIL_VISIT_HPP
+#define IRIS_RVARIANT_DETAIL_VISIT_HPP
 
 // SPDX-License-Identifier: MIT
 
@@ -27,29 +27,29 @@ namespace detail {
     throw std::bad_variant_access{};
 }
 
-#define YK_VISIT_CASES_0(def, ofs) \
+#define IRIS_VISIT_CASES_0(def, ofs) \
     def(ofs); \
     def((ofs) + 1); \
     def((ofs) + 2); \
     def((ofs) + 3)
 
-#define YK_VISIT_CASES_1(def, ofs) \
-    YK_VISIT_CASES_0(def, ofs); \
-    YK_VISIT_CASES_0(def, (ofs) + 4); \
-    YK_VISIT_CASES_0(def, (ofs) + 8); \
-    YK_VISIT_CASES_0(def, (ofs) + 12)
+#define IRIS_VISIT_CASES_1(def, ofs) \
+    IRIS_VISIT_CASES_0(def, ofs); \
+    IRIS_VISIT_CASES_0(def, (ofs) + 4); \
+    IRIS_VISIT_CASES_0(def, (ofs) + 8); \
+    IRIS_VISIT_CASES_0(def, (ofs) + 12)
 
-#define YK_VISIT_CASES_2(def, ofs) \
-    YK_VISIT_CASES_1(def, ofs); \
-    YK_VISIT_CASES_1(def, (ofs) + 16); \
-    YK_VISIT_CASES_1(def, (ofs) + 32); \
-    YK_VISIT_CASES_1(def, (ofs) + 48)
+#define IRIS_VISIT_CASES_2(def, ofs) \
+    IRIS_VISIT_CASES_1(def, ofs); \
+    IRIS_VISIT_CASES_1(def, (ofs) + 16); \
+    IRIS_VISIT_CASES_1(def, (ofs) + 32); \
+    IRIS_VISIT_CASES_1(def, (ofs) + 48)
 
-#define YK_VISIT_CASES_3(def, ofs) \
-    YK_VISIT_CASES_2(def, ofs); \
-    YK_VISIT_CASES_2(def, (ofs) + 64); \
-    YK_VISIT_CASES_2(def, (ofs) + 128); \
-    YK_VISIT_CASES_2(def, (ofs) + 192)
+#define IRIS_VISIT_CASES_3(def, ofs) \
+    IRIS_VISIT_CASES_2(def, ofs); \
+    IRIS_VISIT_CASES_2(def, (ofs) + 64); \
+    IRIS_VISIT_CASES_2(def, (ofs) + 128); \
+    IRIS_VISIT_CASES_2(def, (ofs) + 192)
 
 template<std::size_t OverloadSeqSize>
 constexpr int visit_strategy =
@@ -137,21 +137,21 @@ struct raw_visit_table<Visitor, Storage, std::index_sequence<Is...>>
 // value of `(n)`.
 #ifdef NDEBUG // Release build
 #if defined(__GNUC__) && !defined(__clang__)
-# define YK_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN \
+# define IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN \
     _Pragma("GCC diagnostic push") \
     _Pragma("GCC diagnostic ignored \"-Wmaybe-uninitialized\"")
 
-# define YK_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END \
+# define IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END \
     _Pragma("GCC diagnostic pop")
 
 #else // non-GCC
-# define YK_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
-# define YK_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
+# define IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
+# define IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
 #endif
 
 #else // Debug build
-# define YK_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
-# define YK_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
+# define IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
+# define IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
 #endif
 
 template<bool NeverValueless, int Strategy>
@@ -161,7 +161,7 @@ template<bool NeverValueless>
 struct raw_visit_dispatch<NeverValueless, -1>
 {
     template<std::size_t N, class Visitor, class Storage>
-    [[nodiscard]] YK_FORCEINLINE static constexpr raw_visit_result_t<Visitor, Storage>
+    [[nodiscard]] IRIS_FORCEINLINE static constexpr raw_visit_result_t<Visitor, Storage>
     apply(std::size_t const i, [[maybe_unused]] Visitor&& vis, [[maybe_unused]] Storage&& storage)
         noexcept(raw_visit_noexcept_all<Visitor, Storage>)
     {
@@ -171,31 +171,31 @@ struct raw_visit_dispatch<NeverValueless, -1>
     }
 };
 
-#define YK_RAW_VISIT_NEVER_VALUELESS_CASE(n) \
+#define IRIS_RAW_VISIT_NEVER_VALUELESS_CASE(n) \
     case (n): \
         if constexpr ((n) < N) { \
             return static_cast<Visitor&&>(vis)(std::in_place_index<(n)>, detail::raw_get<(n)>(static_cast<Storage&&>(storage))); \
         } else std::unreachable(); [[fallthrough]]
 
-#define YK_RAW_VISIT_MAYBE_VALUELESS_CASE(n) \
+#define IRIS_RAW_VISIT_MAYBE_VALUELESS_CASE(n) \
     case (n) + 1: \
         if constexpr ((n) < N - 1) { \
             return static_cast<Visitor&&>(vis)(std::in_place_index<(n)>, detail::raw_get<(n)>(static_cast<Storage&&>(storage))); \
         } else std::unreachable(); [[fallthrough]]
 
-#define YK_RAW_VISIT_DISPATCH_DEF(strategy) \
+#define IRIS_RAW_VISIT_DISPATCH_DEF(strategy) \
     template<> \
     struct raw_visit_dispatch<true, (strategy)> \
     { \
         template<std::size_t N, class Visitor, class Storage> \
-        [[nodiscard]] YK_FORCEINLINE static constexpr detail::raw_visit_result_t<Visitor, Storage> \
+        [[nodiscard]] IRIS_FORCEINLINE static constexpr detail::raw_visit_result_t<Visitor, Storage> \
         apply(std::size_t const i, [[maybe_unused]] Visitor&& vis, [[maybe_unused]] Storage&& storage) \
             noexcept(detail::raw_visit_noexcept_all<Visitor, Storage>) \
         { \
             static_assert(std::remove_cvref_t<Storage>::never_valueless); \
             static_assert((1uz << ((strategy) * 2uz)) <= N && N <= (1uz << (((strategy) + 1) * 2uz))); \
             switch (i) { \
-            YK_VISIT_CASES_ ## strategy (YK_RAW_VISIT_NEVER_VALUELESS_CASE, 0); \
+            IRIS_VISIT_CASES_ ## strategy (IRIS_RAW_VISIT_NEVER_VALUELESS_CASE, 0); \
             default: std::unreachable(); \
             } \
         } \
@@ -204,7 +204,7 @@ struct raw_visit_dispatch<NeverValueless, -1>
     struct raw_visit_dispatch<false, (strategy)> \
     { \
         template<std::size_t N, class Visitor, class Storage> \
-        [[nodiscard]] YK_FORCEINLINE static constexpr detail::raw_visit_result_t<Visitor, Storage> \
+        [[nodiscard]] IRIS_FORCEINLINE static constexpr detail::raw_visit_result_t<Visitor, Storage> \
         apply(std::size_t const i, [[maybe_unused]] Visitor&& vis, [[maybe_unused]] Storage&& storage) \
             noexcept(detail::raw_visit_noexcept_all<Visitor, Storage>) \
         { \
@@ -212,24 +212,24 @@ struct raw_visit_dispatch<NeverValueless, -1>
             static_assert((1uz << ((strategy) * 2uz)) <= N && N <= (1uz << (((strategy) + 1) * 2uz))); \
             switch (i) { \
             case 0: return static_cast<Visitor&&>(vis)(std::in_place_index<std::variant_npos>, static_cast<Storage&&>(storage)); \
-            YK_VISIT_CASES_ ## strategy (YK_RAW_VISIT_MAYBE_VALUELESS_CASE, 0); \
+            IRIS_VISIT_CASES_ ## strategy (IRIS_RAW_VISIT_MAYBE_VALUELESS_CASE, 0); \
             default: std::unreachable(); \
             } \
         } \
     }
 
-YK_RAW_VISIT_DISPATCH_DEF(0);
-YK_RAW_VISIT_DISPATCH_DEF(1);
-YK_RAW_VISIT_DISPATCH_DEF(2);
-YK_RAW_VISIT_DISPATCH_DEF(3);
+IRIS_RAW_VISIT_DISPATCH_DEF(0);
+IRIS_RAW_VISIT_DISPATCH_DEF(1);
+IRIS_RAW_VISIT_DISPATCH_DEF(2);
+IRIS_RAW_VISIT_DISPATCH_DEF(3);
 
-#undef YK_RAW_VISIT_NEVER_VALUELESS_CASE
-#undef YK_RAW_VISIT_MAYBE_VALUELESS_CASE
-#undef YK_RAW_VISIT_DISPATCH_DEF
+#undef IRIS_RAW_VISIT_NEVER_VALUELESS_CASE
+#undef IRIS_RAW_VISIT_MAYBE_VALUELESS_CASE
+#undef IRIS_RAW_VISIT_DISPATCH_DEF
 
 
 template<class Variant, class Visitor>
-YK_FORCEINLINE constexpr raw_visit_result_t<Visitor, forward_storage_t<Variant>>
+IRIS_FORCEINLINE constexpr raw_visit_result_t<Visitor, forward_storage_t<Variant>>
 raw_visit(Variant&& v, Visitor&& vis)  // NOLINT(cppcoreguidelines-missing-std-forward)
     noexcept(raw_visit_noexcept_all<Visitor, forward_storage_t<Variant>>)
 {
@@ -242,7 +242,7 @@ raw_visit(Variant&& v, Visitor&& vis)  // NOLINT(cppcoreguidelines-missing-std-f
 }
 
 template<class Variant, class Visitor>
-YK_FORCEINLINE constexpr raw_visit_result_t<Visitor, forward_storage_t<Variant>>
+IRIS_FORCEINLINE constexpr raw_visit_result_t<Visitor, forward_storage_t<Variant>>
 raw_visit_i(std::size_t const biased_i, Variant&& v, Visitor&& vis)  // NOLINT(cppcoreguidelines-missing-std-forward)
     noexcept(raw_visit_noexcept_all<Visitor, forward_storage_t<Variant>>)
 {
@@ -418,27 +418,27 @@ struct multi_visitor<std::index_sequence<Is...>>
 {
     template<class R, class Visitor, class... Storage>
     static constexpr R apply([[maybe_unused]] Visitor&& vis, [[maybe_unused]] Storage&&... storage)  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
-        YK_RVARIANT_VISIT_NOEXCEPT(multi_visit_noexcept<R, std::index_sequence<Is...>, Visitor, Storage...>::value)
+        IRIS_RVARIANT_VISIT_NOEXCEPT(multi_visit_noexcept<R, std::index_sequence<Is...>, Visitor, Storage...>::value)
     {
         if constexpr (((!std::remove_cvref_t<Storage>::never_valueless && Is == 0) || ...)) {
             detail::throw_bad_variant_access();
 
         } else {
-#define YK_MULTI_VISITOR_INVOKE \
+#define IRIS_MULTI_VISITOR_INVOKE \
             std::invoke_r<R>( \
                 std::forward<Visitor>(vis), \
                 unwrap_recursive( \
                     raw_get<valueless_unbias<Storage>(Is)>(std::forward<Storage>(storage)) \
                 )... \
             )
-#if YK_CI
+#if IRIS_CI
             static_assert(
-                noexcept(YK_MULTI_VISITOR_INVOKE)
+                noexcept(IRIS_MULTI_VISITOR_INVOKE)
                 == multi_visit_noexcept<R, std::index_sequence<Is...>, Visitor, Storage...>::value
             );
 #endif
-            return YK_MULTI_VISITOR_INVOKE;
-#undef YK_MULTI_VISITOR_INVOKE
+            return IRIS_MULTI_VISITOR_INVOKE;
+#undef IRIS_MULTI_VISITOR_INVOKE
         }
     }
 };
@@ -468,8 +468,8 @@ template<>
 struct visit_dispatch<-1>
 {
     template<class R, class OverloadSeq, class Visitor, class... Storage>
-    [[nodiscard]] YK_FORCEINLINE static constexpr R apply(std::size_t const flat_i, [[maybe_unused]] Visitor&& vis, [[maybe_unused]] Storage&&... storage)
-        YK_RVARIANT_VISIT_NOEXCEPT(multi_visit_noexcept<R, OverloadSeq, Visitor, Storage...>::value)
+    [[nodiscard]] IRIS_FORCEINLINE static constexpr R apply(std::size_t const flat_i, [[maybe_unused]] Visitor&& vis, [[maybe_unused]] Storage&&... storage)
+        IRIS_RVARIANT_VISIT_NOEXCEPT(multi_visit_noexcept<R, OverloadSeq, Visitor, Storage...>::value)
     {
         constexpr auto const& table = visit_table<R, OverloadSeq, Visitor, Storage...>::table;
         auto const& f = table[flat_i];
@@ -477,7 +477,7 @@ struct visit_dispatch<-1>
     }
 };
 
-#define YK_VISIT_CASE(n) \
+#define IRIS_VISIT_CASE(n) \
     case (n): \
         if constexpr ((n) < OverloadSeq::size) { \
             return multi_visitor<core::at_c_t<(n), OverloadSeq>>::template apply<R, Visitor, Storage...>( \
@@ -485,34 +485,34 @@ struct visit_dispatch<-1>
             ); \
         } else std::unreachable(); [[fallthrough]]
 
-#define YK_VISIT_DISPATCH_DEF(strategy) \
+#define IRIS_VISIT_DISPATCH_DEF(strategy) \
     template<> \
     struct visit_dispatch<(strategy)> \
     { \
         template<class R, class OverloadSeq, class Visitor, class... Storage> \
         [[nodiscard]] static constexpr R apply(std::size_t const flat_i, [[maybe_unused]] Visitor&& vis, [[maybe_unused]] Storage&&... storage) \
-            YK_RVARIANT_VISIT_NOEXCEPT(multi_visit_noexcept<R, OverloadSeq, Visitor, Storage...>::value) \
+            IRIS_RVARIANT_VISIT_NOEXCEPT(multi_visit_noexcept<R, OverloadSeq, Visitor, Storage...>::value) \
         { \
             static_assert((1uz << ((strategy) * 2uz)) <= OverloadSeq::size && OverloadSeq::size <= (1uz << (((strategy) + 1) * 2uz))); \
             switch (flat_i) { \
-            YK_VISIT_CASES_ ## strategy (YK_VISIT_CASE, 0); \
+            IRIS_VISIT_CASES_ ## strategy (IRIS_VISIT_CASE, 0); \
             default: std::unreachable(); \
             } \
         } \
     }
 
-YK_VISIT_DISPATCH_DEF(0);
-YK_VISIT_DISPATCH_DEF(1);
-YK_VISIT_DISPATCH_DEF(2);
-YK_VISIT_DISPATCH_DEF(3);
+IRIS_VISIT_DISPATCH_DEF(0);
+IRIS_VISIT_DISPATCH_DEF(1);
+IRIS_VISIT_DISPATCH_DEF(2);
+IRIS_VISIT_DISPATCH_DEF(3);
 
-#undef YK_VISIT_DISPATCH_DEF
-#undef YK_VISIT_CASE
+#undef IRIS_VISIT_DISPATCH_DEF
+#undef IRIS_VISIT_CASE
 
-#undef YK_VISIT_CASES_0
-#undef YK_VISIT_CASES_1
-#undef YK_VISIT_CASES_2
-#undef YK_VISIT_CASES_3
+#undef IRIS_VISIT_CASES_0
+#undef IRIS_VISIT_CASES_1
+#undef IRIS_VISIT_CASES_2
+#undef IRIS_VISIT_CASES_3
 
 
 template<class Ns, bool... NeverValueless>
@@ -522,7 +522,7 @@ template<std::size_t... Ns, bool... NeverValueless>
 struct flat_index<std::index_sequence<Ns...>, NeverValueless...>
 {
     template<class... RuntimeIndex>
-    [[nodiscard]] YK_FORCEINLINE static constexpr std::size_t
+    [[nodiscard]] IRIS_FORCEINLINE static constexpr std::size_t
     get(RuntimeIndex... index) noexcept
     {
         static_assert(sizeof...(RuntimeIndex) == sizeof...(Ns));
@@ -532,7 +532,7 @@ struct flat_index<std::index_sequence<Ns...>, NeverValueless...>
 
 private:
     template<std::size_t... Stride, class... RuntimeIndex>
-    [[nodiscard]] YK_FORCEINLINE static constexpr std::size_t
+    [[nodiscard]] IRIS_FORCEINLINE static constexpr std::size_t
     get_impl(std::index_sequence<Stride...>, RuntimeIndex... index) noexcept
     {
         return ((Stride * detail::valueless_bias<NeverValueless>(index)) + ...);
@@ -586,7 +586,7 @@ struct visit_impl<
 {
     template<class Visitor, class... Variants, class OverloadSeq = make_OverloadSeq<Variants...>>
     static constexpr R apply(Visitor&& vis, Variants&&... vars)  // NOLINT(cppcoreguidelines-missing-std-forward)
-        YK_RVARIANT_VISIT_NOEXCEPT(multi_visit_noexcept<R, OverloadSeq, Visitor, forward_storage_t<as_variant_t<Variants>>...>::value)
+        IRIS_RVARIANT_VISIT_NOEXCEPT(multi_visit_noexcept<R, OverloadSeq, Visitor, forward_storage_t<as_variant_t<Variants>>...>::value)
     {
         std::size_t const flat_i = flat_index<
             std::index_sequence<n...>,
@@ -609,8 +609,8 @@ template<
     class = std::void_t<detail::as_variant_t<Variants>...>
 >
 detail::visit_result_t<Visitor, detail::as_variant_t<Variants>...>
-YK_FORCEINLINE constexpr visit(Visitor&& vis, Variants&&... vars)
-    YK_RVARIANT_VISIT_NOEXCEPT(detail::multi_visit_noexcept<
+IRIS_FORCEINLINE constexpr visit(Visitor&& vis, Variants&&... vars)
+    IRIS_RVARIANT_VISIT_NOEXCEPT(detail::multi_visit_noexcept<
         detail::visit_result_t<Visitor, detail::as_variant_t<Variants>...>,
         detail::make_OverloadSeq<Variants...>,
         Visitor,
@@ -643,8 +643,8 @@ template<
     // https://eel.is/c++draft/variant.visit#2
     class = std::void_t<detail::as_variant_t<Variants>...>
 >
-YK_FORCEINLINE constexpr R visit(Visitor&& vis, Variants&&... vars)
-    YK_RVARIANT_VISIT_NOEXCEPT(detail::multi_visit_noexcept<
+IRIS_FORCEINLINE constexpr R visit(Visitor&& vis, Variants&&... vars)
+    IRIS_RVARIANT_VISIT_NOEXCEPT(detail::multi_visit_noexcept<
         R,
         detail::make_OverloadSeq<Variants...>,
         Visitor,

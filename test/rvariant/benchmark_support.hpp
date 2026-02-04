@@ -1,5 +1,5 @@
-#ifndef YK_RVARIANT_BENCHMARK_SUPPORT_HPP
-#define YK_RVARIANT_BENCHMARK_SUPPORT_HPP
+#ifndef IRIS_RVARIANT_BENCHMARK_SUPPORT_HPP
+#define IRIS_RVARIANT_BENCHMARK_SUPPORT_HPP
 
 // SPDX-License-Identifier: MIT
 
@@ -9,19 +9,19 @@
 namespace benchmark {
 
 #ifdef _WIN32
-# define YK_BENCHMARK_API __declspec(dllexport)
+# define IRIS_BENCHMARK_API __declspec(dllexport)
 #else
-# define YK_BENCHMARK_API __attribute__((visibility("default")))
+# define IRIS_BENCHMARK_API __attribute__((visibility("default")))
 #endif
 
 namespace detail {
 
-YK_BENCHMARK_API void disable_optimization_impl(void const*) noexcept;
-YK_BENCHMARK_API void asm_trace(std::uint_least32_t line) noexcept;
+IRIS_BENCHMARK_API void disable_optimization_impl(void const*) noexcept;
+IRIS_BENCHMARK_API void asm_trace(std::uint_least32_t line) noexcept;
 
 } // detail
 
-#define YK_ASM_TRACE ::benchmark::detail::asm_trace(__LINE__);
+#define IRIS_ASM_TRACE ::benchmark::detail::asm_trace(__LINE__);
 
 template<class T>
 void disable_optimization(T const& v) noexcept

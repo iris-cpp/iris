@@ -1,5 +1,5 @@
-#ifndef YK_RVARIANT_RVARIANT_HPP
-#define YK_RVARIANT_RVARIANT_HPP
+#ifndef IRIS_RVARIANT_RVARIANT_HPP
+#define IRIS_RVARIANT_RVARIANT_HPP
 
 // SPDX-License-Identifier: MIT
 
@@ -65,7 +65,7 @@ protected:
         : storage_{} // valueless
     {}
 
-YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
+IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
     // Primary constructor called from derived class
     template<std::size_t I, class... Args>
         requires std::is_constructible_v<core::pack_indexing_t<I, Ts...>, Args...>
@@ -74,7 +74,7 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
         : storage_(std::in_place_index<I>, std::forward<Args>(args)...)
         , index_{static_cast<variant_index_t<sizeof...(Ts)>>(I)}
     {}
-YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
+IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
     // Primary constructor called from derived class
     constexpr explicit rvariant_base(valueless_t) noexcept
@@ -89,9 +89,9 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
             noexcept(std::conjunction_v<std::is_nothrow_copy_constructible<Ts>...>)
         {
             if constexpr (j != std::variant_npos) {
-            YK_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
+            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
                 construct_on_valueless<j>(alt);
-            YK_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
+            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
             } else {
                 (void)this;
             }
@@ -107,9 +107,9 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         {
             if constexpr (j != std::variant_npos) {
                 static_assert(std::is_rvalue_reference_v<T&&>);
-            YK_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
+            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
                 construct_on_valueless<j>(std::move(alt)); // NOLINT(bugprone-move-forwarding-reference)
-            YK_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
+            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
             } else {
                 (void)this;
             }
@@ -120,7 +120,7 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     constexpr void _copy_assign(rvariant_base const& rhs)
         noexcept(std::conjunction_v<variant_nothrow_copy_assignable<Ts>...>)
     {
-    YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
+    IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
         rhs.raw_visit([this]<std::size_t j, class T>(std::in_place_index_t<j>, T const& rhs_alt)
             noexcept(std::conjunction_v<variant_nothrow_copy_assignable<Ts>...>)
         {
@@ -128,7 +128,7 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
                 (void)rhs_alt;
                 visit_reset();
             } else {
-            YK_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
+            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
                 if (index_ == j) {
                     raw_get<j>(storage()) = rhs_alt;
                 } else {
@@ -143,10 +143,10 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
                         reset_construct<j>(std::move(tmp)); // B
                     }
                 }
-            YK_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
+            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
             }
         });
-    YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
+    IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     }
 
     // Move assignment
@@ -162,13 +162,13 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
             } else {
                 static_assert(std::is_rvalue_reference_v<T&&>);
 
-            YK_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
+            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
                 if (index_ == j) {
                     raw_get<j>(storage()) = std::move(rhs_alt); // NOLINT(bugprone-move-forwarding-reference)
                 } else {
                     reset_construct<j>(std::move(rhs_alt)); // NOLINT(bugprone-move-forwarding-reference)
                 }
-            YK_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
+            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
             }
         });
     }
@@ -238,7 +238,7 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         }
     }
 
-YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
+IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
     template<std::size_t I, class... Args>
     constexpr void construct_on_valueless(Args&&... args)
         noexcept(std::is_nothrow_constructible_v<core::pack_indexing_t<I, Ts...>, Args...>)
@@ -285,7 +285,7 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
         index_ = static_cast<variant_index_t<sizeof...(Ts)>>(I);
     }
 
-YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
+IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
     // used in swap operation
     constexpr void reset_steal_from(rvariant_base&& rhs)
@@ -305,12 +305,12 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
     // -----------------------------------------------------------
 
-YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
+IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
     template<std::size_t I, class... Args>
         requires std::is_constructible_v<core::pack_indexing_t<I, Ts...>, Args...>
     constexpr variant_alternative_t<I, rvariant<Ts...>>&
     emplace_impl(Args&&... args)
-        noexcept(std::is_nothrow_constructible_v<core::pack_indexing_t<I, Ts...>, Args...>) YK_LIFETIMEBOUND
+        noexcept(std::is_nothrow_constructible_v<core::pack_indexing_t<I, Ts...>, Args...>) IRIS_LIFETIMEBOUND
     {
         static_assert(I < sizeof...(Ts));
         using T = core::pack_indexing_t<I, Ts...>;
@@ -422,7 +422,7 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
         }
         return detail::unwrap_recursive(detail::raw_get<I>(storage_));
     }
-YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
+IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
     // -----------------------------------------------------------
 
@@ -432,7 +432,7 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     [[nodiscard]] constexpr storage_type const&& storage() const&& noexcept { return std::move(storage_); }
 
     template<class Self, class Visitor>
-    YK_FORCEINLINE constexpr auto
+    IRIS_FORCEINLINE constexpr auto
     raw_visit(this Self&& self, Visitor&& vis)  // NOLINT(cppcoreguidelines-missing-std-forward)
         noexcept(detail::raw_visit_noexcept_all<Visitor, decltype(std::forward_like<Self>(self.storage_))>)
         -> detail::raw_visit_result_t<Visitor, decltype(std::forward_like<Self>(self.storage_))>
@@ -530,7 +530,7 @@ public:
         : base_type(std::in_place_index<core::aggregate_initialize_resolution<T, Ts...>::index>, std::forward<T>(t))
     {}
 
-YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
+IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
     // Generic assignment operator
     // <https://eel.is/c++draft/variant.assign#lib:operator=,variant__>
     template<class T>
@@ -577,7 +577,7 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
         });
         return *this;
     }
-YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
+IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
     // --------------------------------------
 
@@ -762,7 +762,7 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
             detail::non_wrapped_exactly_once_v<T, unwrapped_types> &&
             std::is_constructible_v<detail::select_maybe_wrapped_t<T, Ts...>, Args...>
     constexpr T& emplace(Args&&... args)
-        noexcept(std::is_nothrow_constructible_v<detail::select_maybe_wrapped_t<T, Ts...>, Args...>) YK_LIFETIMEBOUND
+        noexcept(std::is_nothrow_constructible_v<detail::select_maybe_wrapped_t<T, Ts...>, Args...>) IRIS_LIFETIMEBOUND
     {
         return base_type::template emplace_impl<detail::select_maybe_wrapped_index<T, Ts...>>(std::forward<Args>(args)...);
     }
@@ -772,7 +772,7 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
             detail::non_wrapped_exactly_once_v<T, unwrapped_types> &&
             std::is_constructible_v<detail::select_maybe_wrapped_t<T, Ts...>, std::initializer_list<U>&, Args...>
     constexpr T& emplace(std::initializer_list<U> il, Args&&... args)
-        noexcept(std::is_nothrow_constructible_v<detail::select_maybe_wrapped_t<T, Ts...>, std::initializer_list<U>&, Args...>) YK_LIFETIMEBOUND
+        noexcept(std::is_nothrow_constructible_v<detail::select_maybe_wrapped_t<T, Ts...>, std::initializer_list<U>&, Args...>) IRIS_LIFETIMEBOUND
     {
         return base_type::template emplace_impl<detail::select_maybe_wrapped_index<T, Ts...>>(il, std::forward<Args>(args)...);
     }
@@ -781,7 +781,7 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         requires std::is_constructible_v<core::pack_indexing_t<I, Ts...>, Args...>
     constexpr variant_alternative_t<I, rvariant>&
     emplace(Args&&... args)
-        noexcept(std::is_nothrow_constructible_v<core::pack_indexing_t<I, Ts...>, Args...>) YK_LIFETIMEBOUND
+        noexcept(std::is_nothrow_constructible_v<core::pack_indexing_t<I, Ts...>, Args...>) IRIS_LIFETIMEBOUND
     {
         static_assert(I < sizeof...(Ts));
         return base_type::template emplace_impl<I>(std::forward<Args>(args)...);
@@ -791,7 +791,7 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         requires std::is_constructible_v<core::pack_indexing_t<I, Ts...>, std::initializer_list<U>&, Args...>
     constexpr variant_alternative_t<I, rvariant>&
     emplace(std::initializer_list<U> il, Args&&... args)
-        noexcept(std::is_nothrow_constructible_v<core::pack_indexing_t<I, Ts...>, std::initializer_list<U>&, Args...>) YK_LIFETIMEBOUND
+        noexcept(std::is_nothrow_constructible_v<core::pack_indexing_t<I, Ts...>, std::initializer_list<U>&, Args...>) IRIS_LIFETIMEBOUND
     {
         static_assert(I < sizeof...(Ts));
         return base_type::template emplace_impl<I>(il, std::forward<Args>(args)...);
@@ -811,7 +811,7 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
             std::swap(index_, rhs.index_);
 
         } else if constexpr (sizeof...(Ts) * sizeof...(Ts) < 1024) {
-        YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
+        IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
             this->raw_visit([this, &rhs]<std::size_t i, class ThisAlt>(std::in_place_index_t<i>, [[maybe_unused]] ThisAlt& this_alt)
                 noexcept(all_nothrow_swappable)
             {
@@ -842,7 +842,7 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
                     }
                 });
             });
-        YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
+        IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         } else {
             if (index_ == rhs.index_) {
                 rhs.raw_visit([this]<std::size_t i, class RhsAlt>(std::in_place_index_t<i>, [[maybe_unused]] RhsAlt& rhs_alt)
@@ -971,7 +971,7 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     // <https://eel.is/c++draft/variant.visit#lib:visit,variant_>
     template<int = 0, class Self, class Visitor>
     constexpr decltype(auto) visit(this Self&& self, Visitor&& vis)
-        YK_RVARIANT_VISIT_NOEXCEPT(noexcept(iris::visit(
+        IRIS_RVARIANT_VISIT_NOEXCEPT(noexcept(iris::visit(
             std::forward<Visitor>(vis),
             (typename base_type::template like_rvariant_t<Self>)self
         )))
@@ -986,7 +986,7 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     // <https://eel.is/c++draft/variant.visit#lib:visit,variant__>
     template<class R, class Self, class Visitor>
     constexpr R visit(this Self&& self, Visitor&& vis)
-        YK_RVARIANT_VISIT_NOEXCEPT(noexcept(iris::visit<R>(
+        IRIS_RVARIANT_VISIT_NOEXCEPT(noexcept(iris::visit<R>(
             std::forward<Visitor>(vis),
             (typename base_type::template like_rvariant_t<Self>)self
         )))
@@ -1012,10 +1012,10 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     friend struct detail::forward_storage_t_impl;
 
     template<class Variant>
-    friend constexpr detail::forward_storage_t<Variant>&& detail::forward_storage(std::remove_reference_t<Variant>& v YK_LIFETIMEBOUND) noexcept;
+    friend constexpr detail::forward_storage_t<Variant>&& detail::forward_storage(std::remove_reference_t<Variant>& v IRIS_LIFETIMEBOUND) noexcept;
 
     template<class Variant>
-    friend constexpr detail::forward_storage_t<Variant>&& detail::forward_storage(std::remove_reference_t<Variant>&& v YK_LIFETIMEBOUND) noexcept;
+    friend constexpr detail::forward_storage_t<Variant>&& detail::forward_storage(std::remove_reference_t<Variant>&& v IRIS_LIFETIMEBOUND) noexcept;
 
     template<class Variant, class T>
     friend constexpr std::size_t detail::valueless_bias(T) noexcept;
@@ -1109,7 +1109,7 @@ template<class T, class... Ts>
 
 template<std::size_t I, class... Ts>
 [[nodiscard]] constexpr variant_alternative_t<I, rvariant<Ts...>>&
-get(rvariant<Ts...>& v YK_LIFETIMEBOUND)
+get(rvariant<Ts...>& v IRIS_LIFETIMEBOUND)
 {
     static_assert(I < sizeof...(Ts));
     if (v.index() == I) {
@@ -1120,7 +1120,7 @@ get(rvariant<Ts...>& v YK_LIFETIMEBOUND)
 
 template<std::size_t I, class... Ts>
 [[nodiscard]] constexpr variant_alternative_t<I, rvariant<Ts...>>&&
-get(rvariant<Ts...>&& v YK_LIFETIMEBOUND)  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+get(rvariant<Ts...>&& v IRIS_LIFETIMEBOUND)  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
 {
     static_assert(I < sizeof...(Ts));
     if (v.index() == I) {
@@ -1131,7 +1131,7 @@ get(rvariant<Ts...>&& v YK_LIFETIMEBOUND)  // NOLINT(cppcoreguidelines-rvalue-re
 
 template<std::size_t I, class... Ts>
 [[nodiscard]] constexpr variant_alternative_t<I, rvariant<Ts...>> const&
-get(rvariant<Ts...> const& v YK_LIFETIMEBOUND)
+get(rvariant<Ts...> const& v IRIS_LIFETIMEBOUND)
 {
     static_assert(I < sizeof...(Ts));
     if (v.index() == I) {
@@ -1142,7 +1142,7 @@ get(rvariant<Ts...> const& v YK_LIFETIMEBOUND)
 
 template<std::size_t I, class... Ts>
 [[nodiscard]] constexpr variant_alternative_t<I, rvariant<Ts...>> const&&
-get(rvariant<Ts...> const&& v YK_LIFETIMEBOUND)
+get(rvariant<Ts...> const&& v IRIS_LIFETIMEBOUND)
 {
     static_assert(I < sizeof...(Ts));
     if (v.index() == I) {
@@ -1153,7 +1153,7 @@ get(rvariant<Ts...> const&& v YK_LIFETIMEBOUND)
 
 template<class T, class... Ts>
 [[nodiscard]] constexpr T&
-get(rvariant<Ts...>& v YK_LIFETIMEBOUND)
+get(rvariant<Ts...>& v IRIS_LIFETIMEBOUND)
 {
     constexpr std::size_t I = detail::exactly_once_index_v<T, rvariant<Ts...>>;
     if (v.index() == I) {
@@ -1164,7 +1164,7 @@ get(rvariant<Ts...>& v YK_LIFETIMEBOUND)
 
 template<class T, class... Ts>
 [[nodiscard]] constexpr T&&
-get(rvariant<Ts...>&& v YK_LIFETIMEBOUND)  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+get(rvariant<Ts...>&& v IRIS_LIFETIMEBOUND)  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
 {
     constexpr std::size_t I = detail::exactly_once_index_v<T, rvariant<Ts...>>;
     if (v.index() == I) {
@@ -1175,7 +1175,7 @@ get(rvariant<Ts...>&& v YK_LIFETIMEBOUND)  // NOLINT(cppcoreguidelines-rvalue-re
 
 template<class T, class... Ts>
 [[nodiscard]] constexpr T const&
-get(rvariant<Ts...> const& v YK_LIFETIMEBOUND)
+get(rvariant<Ts...> const& v IRIS_LIFETIMEBOUND)
 {
     constexpr std::size_t I = detail::exactly_once_index_v<T, rvariant<Ts...>>;
     if (v.index() == I) {
@@ -1186,7 +1186,7 @@ get(rvariant<Ts...> const& v YK_LIFETIMEBOUND)
 
 template<class T, class... Ts>
 [[nodiscard]] constexpr T const&&
-get(rvariant<Ts...> const&& v YK_LIFETIMEBOUND)
+get(rvariant<Ts...> const&& v IRIS_LIFETIMEBOUND)
 {
     constexpr std::size_t I = detail::exactly_once_index_v<T, rvariant<Ts...>>;
     if (v.index() == I) {
@@ -1268,7 +1268,7 @@ struct relops_visitor
     >;
 
     template<std::size_t i, class T>
-    [[nodiscard]] YK_FORCEINLINE constexpr R operator()(std::in_place_index_t<i>, T const& w_alt) const
+    [[nodiscard]] IRIS_FORCEINLINE constexpr R operator()(std::in_place_index_t<i>, T const& w_alt) const
         noexcept(std::disjunction_v<
             std::bool_constant<i == std::variant_npos>,
             std::is_nothrow_invocable_r<R, Compare, T const&, T const&>
@@ -1382,7 +1382,7 @@ template<class... Ts>
 
 template<class... Ts>
     requires (std::three_way_comparable<Ts> && ...)
-[[nodiscard]] YK_FORCEINLINE constexpr std::common_comparison_category_t<std::compare_three_way_result_t<Ts>...>
+[[nodiscard]] IRIS_FORCEINLINE constexpr std::common_comparison_category_t<std::compare_three_way_result_t<Ts>...>
 operator<=>(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
     noexcept(std::conjunction_v<std::is_nothrow_invocable_r<
         std::common_comparison_category_t<std::compare_three_way_result_t<Ts>...>,
@@ -1489,10 +1489,10 @@ template<class... Ts>
 
 } // iris
 
-#undef YK_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
-#undef YK_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
+#undef IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
+#undef IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
 
-#undef YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
-#undef YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
+#undef IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
+#undef IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
 #endif

@@ -172,7 +172,7 @@ void benchmark_construct_16(Table::EntryList& entries, std::size_t const N, Vars
 }
 
 template<class Vars>
-YK_FORCEINLINE void benchmark_copy_assign(Table::EntryList& entries, std::size_t const N, Vars& vars)
+IRIS_FORCEINLINE void benchmark_copy_assign(Table::EntryList& entries, std::size_t const N, Vars& vars)
 {
     unsigned long long sum = 0;
 

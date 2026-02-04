@@ -1,5 +1,5 @@
-#ifndef YK_CORE_HASH_HPP
-#define YK_CORE_HASH_HPP
+#ifndef IRIS_CORE_HASH_HPP
+#define IRIS_CORE_HASH_HPP
 
 // SPDX-License-Identifier: MIT
 
@@ -122,4 +122,4 @@ constexpr bool is_nothrow_hashable_v = is_nothrow_hashable<T>::value;
 
 }  // iris::core
 
-#endif // YK_CORE_HASH_HPP
+#endif // IRIS_CORE_HASH_HPP

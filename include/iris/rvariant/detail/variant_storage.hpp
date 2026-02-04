@@ -1,5 +1,5 @@
-﻿#ifndef YK_RVARIANT_DETAIL_VARIANT_STORAGE_HPP
-#define YK_RVARIANT_DETAIL_VARIANT_STORAGE_HPP
+﻿#ifndef IRIS_RVARIANT_DETAIL_VARIANT_STORAGE_HPP
+#define IRIS_RVARIANT_DETAIL_VARIANT_STORAGE_HPP
 
 // SPDX-License-Identifier: MIT
 
@@ -13,20 +13,20 @@
 #include <cassert>
 
 #if defined(_MSC_VER)
-# define YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN \
+# define IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN \
     _Pragma("warning(push)") \
     _Pragma("warning(disable: 4702)")
-# define YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END \
+# define IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END \
     _Pragma("warning(pop)")
 #else
-# define YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
-# define YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
+# define IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
+# define IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 #endif
 
 namespace iris::detail {
 
 template<bool NeverValueless, class T>
-[[nodiscard]] YK_FORCEINLINE constexpr std::size_t valueless_bias(T i) noexcept
+[[nodiscard]] IRIS_FORCEINLINE constexpr std::size_t valueless_bias(T i) noexcept
 {
     if constexpr (NeverValueless) {
         return i;
@@ -36,7 +36,7 @@ template<bool NeverValueless, class T>
 }
 
 template<class Variant, class T>
-[[nodiscard]] YK_FORCEINLINE constexpr std::size_t valueless_bias(T i) noexcept
+[[nodiscard]] IRIS_FORCEINLINE constexpr std::size_t valueless_bias(T i) noexcept
 {
     if constexpr (std::remove_cvref_t<Variant>::never_valueless) {
         return i;
@@ -46,7 +46,7 @@ template<class Variant, class T>
 }
 
 template<bool NeverValueless, class T>
-[[nodiscard]] YK_FORCEINLINE constexpr std::size_t valueless_unbias(T i) noexcept
+[[nodiscard]] IRIS_FORCEINLINE constexpr std::size_t valueless_unbias(T i) noexcept
 {
     if constexpr (NeverValueless) {
         return i;
@@ -56,7 +56,7 @@ template<bool NeverValueless, class T>
 }
 
 template<class Variant, class T>
-[[nodiscard]] YK_FORCEINLINE constexpr std::size_t valueless_unbias(T i) noexcept
+[[nodiscard]] IRIS_FORCEINLINE constexpr std::size_t valueless_unbias(T i) noexcept
 {
     if constexpr (std::remove_cvref_t<Variant>::never_valueless) {
         return i;
@@ -161,14 +161,14 @@ struct variadic_union<true, T, Ts...>
     variadic_union& operator=(variadic_union&&)      requires((!std::conjunction_v<std::is_trivially_move_assignable<T>, std::is_trivially_move_assignable<Ts>...>)) = delete;
 #endif
 
-YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
+IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
     template<class... Args>
         requires std::is_constructible_v<T, Args...> // required for not confusing some compilers
     constexpr explicit variadic_union(std::in_place_index_t<0>, Args&&... args)
         noexcept(std::is_nothrow_constructible_v<T, Args...>)
         : first(std::forward<Args>(args)...) // value-initialize; https://eel.is/c++draft/variant.ctor#3
     {}
-YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
+IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
     template<std::size_t I, class... Args>
         requires (I != 0) && std::is_constructible_v<make_variadic_union_t<Ts...>, std::in_place_index_t<I - 1>, Args...>
@@ -209,14 +209,14 @@ struct variadic_union<false, T, Ts...>
     variadic_union& operator=(variadic_union&&)      requires((!std::conjunction_v<std::is_trivially_move_assignable<T>, std::is_trivially_move_assignable<Ts>...>)) = delete;
 #endif
 
-YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
+IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
     template<class... Args>
         requires std::is_constructible_v<T, Args...> // required for not confusing some compilers
     constexpr explicit variadic_union(std::in_place_index_t<0>, Args&&... args)
         noexcept(std::is_nothrow_constructible_v<T, Args...>)
         : first(std::forward<Args>(args)...) // value-initialize; https://eel.is/c++draft/variant.ctor#3
     {}
-YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
+IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
     template<std::size_t I, class... Args>
         requires (I != 0) && std::is_constructible_v<make_variadic_union_t<Ts...>, std::in_place_index_t<I - 1>, Args...>
@@ -245,22 +245,22 @@ template<class Variant>
 using forward_storage_t = typename forward_storage_t_impl<Variant>::type;
 
 template<class Variant>
-[[nodiscard]] YK_FORCEINLINE constexpr forward_storage_t<Variant>&&
-forward_storage(std::remove_reference_t<Variant>& v YK_LIFETIMEBOUND) noexcept
+[[nodiscard]] IRIS_FORCEINLINE constexpr forward_storage_t<Variant>&&
+forward_storage(std::remove_reference_t<Variant>& v IRIS_LIFETIMEBOUND) noexcept
 {
     return std::forward<Variant>(v).storage();
 }
 
 template<class Variant>
-[[nodiscard]] YK_FORCEINLINE constexpr forward_storage_t<Variant>&&
-forward_storage(std::remove_reference_t<Variant>&& v YK_LIFETIMEBOUND) noexcept  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+[[nodiscard]] IRIS_FORCEINLINE constexpr forward_storage_t<Variant>&&
+forward_storage(std::remove_reference_t<Variant>&& v IRIS_LIFETIMEBOUND) noexcept  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
 {
     return std::forward<Variant>(v).storage();
 }
 
 
 template<std::size_t I, class Storage>
-[[nodiscard]] YK_FORCEINLINE constexpr auto&& raw_get(Storage&& storage YK_LIFETIMEBOUND) noexcept
+[[nodiscard]] IRIS_FORCEINLINE constexpr auto&& raw_get(Storage&& storage IRIS_LIFETIMEBOUND) noexcept
 {
          if constexpr (I ==  0) return std::forward<Storage>(storage).first;
     else if constexpr (I ==  1) return std::forward<Storage>(storage).rest.first;

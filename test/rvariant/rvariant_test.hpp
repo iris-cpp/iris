@@ -1,5 +1,5 @@
-#ifndef YK_RVARIANT_TEST_HPP
-#define YK_RVARIANT_TEST_HPP
+#ifndef IRIS_RVARIANT_TEST_HPP
+#define IRIS_RVARIANT_TEST_HPP
 
 // SPDX-License-Identifier: MIT
 
@@ -16,11 +16,11 @@
 #include <utility>
 #include <format>
 
-#define YK_REQUIRE_STATIC_NOTHROW(...) \
+#define IRIS_REQUIRE_STATIC_NOTHROW(...) \
     STATIC_REQUIRE(noexcept(__VA_ARGS__)); \
     REQUIRE_NOTHROW(__VA_ARGS__)
 
-#define YK_CHECK_STATIC_NOTHROW(...) \
+#define IRIS_CHECK_STATIC_NOTHROW(...) \
     STATIC_CHECK(noexcept(__VA_ARGS__)); \
     CHECK_NOTHROW(__VA_ARGS__)
 

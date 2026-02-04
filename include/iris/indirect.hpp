@@ -1,5 +1,5 @@
-#ifndef YK_INDIRECT_HPP
-#define YK_INDIRECT_HPP
+#ifndef IRIS_INDIRECT_HPP
+#define IRIS_INDIRECT_HPP
 
 // SPDX-License-Identifier: MIT
 
@@ -47,7 +47,7 @@ public:
     [[nodiscard]] constexpr pointer release() noexcept { return std::exchange(ptr_, nullptr); }
 
 private:
-    YK_NO_UNIQUE_ADDRESS Alloc alloc_;
+    IRIS_NO_UNIQUE_ADDRESS Alloc alloc_;
     pointer ptr_;
 };
 
@@ -322,13 +322,13 @@ public:
         return *this;
     }
 
-    [[nodiscard]] constexpr T& operator*() & noexcept YK_LIFETIMEBOUND { return *ptr_; }
-    [[nodiscard]] constexpr T const& operator*() const& noexcept YK_LIFETIMEBOUND { return *ptr_; }
-    [[nodiscard]] constexpr T&& operator*() && noexcept YK_LIFETIMEBOUND { return std::move(*ptr_); }
-    [[nodiscard]] constexpr T const&& operator*() const&& noexcept YK_LIFETIMEBOUND { return std::move(*ptr_); }
+    [[nodiscard]] constexpr T& operator*() & noexcept IRIS_LIFETIMEBOUND { return *ptr_; }
+    [[nodiscard]] constexpr T const& operator*() const& noexcept IRIS_LIFETIMEBOUND { return *ptr_; }
+    [[nodiscard]] constexpr T&& operator*() && noexcept IRIS_LIFETIMEBOUND { return std::move(*ptr_); }
+    [[nodiscard]] constexpr T const&& operator*() const&& noexcept IRIS_LIFETIMEBOUND { return std::move(*ptr_); }
 
-    [[nodiscard]] constexpr pointer operator->() noexcept YK_LIFETIMEBOUND { return ptr_; }
-    [[nodiscard]] constexpr const_pointer operator->() const noexcept YK_LIFETIMEBOUND { return ptr_; }
+    [[nodiscard]] constexpr pointer operator->() noexcept IRIS_LIFETIMEBOUND { return ptr_; }
+    [[nodiscard]] constexpr const_pointer operator->() const noexcept IRIS_LIFETIMEBOUND { return ptr_; }
 
     [[nodiscard]] constexpr bool valueless_after_move() const noexcept { return ptr_ == nullptr; }
 
@@ -368,7 +368,7 @@ private:
         return sa.release();
     }
 
-    YK_NO_UNIQUE_ADDRESS Allocator alloc_ = Allocator();
+    IRIS_NO_UNIQUE_ADDRESS Allocator alloc_ = Allocator();
     pointer ptr_;
 };
 
@@ -460,4 +460,4 @@ template<class T, class Allocator>
 
 } // iris
 
-#endif  // YK_INDIRECT_HPP
+#endif  // IRIS_INDIRECT_HPP

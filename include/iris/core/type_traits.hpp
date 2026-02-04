@@ -1,5 +1,5 @@
-﻿#ifndef YK_CORE_TYPE_TRAITS_HPP
-#define YK_CORE_TYPE_TRAITS_HPP
+﻿#ifndef IRIS_CORE_TYPE_TRAITS_HPP
+#define IRIS_CORE_TYPE_TRAITS_HPP
 
 // SPDX-License-Identifier: MIT
 
@@ -87,7 +87,7 @@ using at_c_t = typename at_c<I, T>::type;
 #  pragma clang diagnostic ignored "-Wc++26-extensions"
 # endif
 
-# define YK_CORE_PACK_INDEXING(I, Ts_ellipsis) Ts_ellipsis[I]
+# define IRIS_CORE_PACK_INDEXING(I, Ts_ellipsis) Ts_ellipsis[I]
 
 template<std::size_t I, class... Ts> struct pack_indexing { using type = Ts...[I]; };
 template<std::size_t I, class... Ts> using pack_indexing_t = Ts...[I];
@@ -116,7 +116,7 @@ struct pack_indexing
 template<std::size_t I, class... Ts>
 using pack_indexing_t = typename pack_indexing<I, Ts...>::type;
 
-# define YK_CORE_PACK_INDEXING(I, Ts_ellipsis) ::iris::core::pack_indexing_t<I, Ts_ellipsis>
+# define IRIS_CORE_PACK_INDEXING(I, Ts_ellipsis) ::iris::core::pack_indexing_t<I, Ts_ellipsis>
 
 
 template<std::size_t I, auto... Ns>
