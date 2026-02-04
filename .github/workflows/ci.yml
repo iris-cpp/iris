@@ -1,0 +1,188 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - 'main'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IRIS_BUILD_JOBS: 4
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      iris_component: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            iris:
+              - '.github/workflows/*.yml'
+              - 'CMakeLists.txt'
+              - 'include/iris/**/*'
+              - 'test/CMakeLists.txt'
+              - 'test/**/*'
+
+  build:
+    name: "[${{ matrix.cpp_version.name }}] ${{ matrix.iris_component }} | ${{ matrix.compiler.toolset }}-${{ matrix.compiler.version }} (${{ matrix.build_type.name }}) @ ${{ matrix.os.name }}-${{ matrix.os.version }}"
+
+    needs: changes
+    if: ${{ needs.changes.outputs.iris_component != '[]' && needs.changes.outputs.iris_component != '' }}
+
+    runs-on: ${{ matrix.os.name }}-${{ matrix.os.version }}
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        os:
+          - name: ubuntu
+            version: 24.04
+          - name: windows
+            version: 2022
+        build_type:
+          - name: Debug
+            lowercase: debug
+          - name: Release
+            lowercase: release
+        cpp_version:
+          - name: C++23
+            number: 23
+          - name: C++26
+            number: 26
+        compiler:
+          - name: GCC
+            toolset: gcc
+            version: 14
+            executable: g++-14
+            cxxflags: -fdiagnostics-color=always
+          - name: Clang
+            toolset: clang
+            version: 21
+            executable: clang++-21
+            cxxflags: -stdlib=libc++ -fcolor-diagnostics
+          - name: MSVC
+            toolset: msvc
+            version: 2022
+            builder_additional_args: -- "-consoleLoggerParameters:ForceConsoleColor"
+            executable: cl
+
+        iris_component: ${{ fromJSON(needs.changes.outputs.iris_component) }}
+
+        exclude:
+          # Blacklist all invalid combinations of environments
+          - os:
+              name: windows
+            compiler:
+              name: GCC
+          - os:
+              name: windows
+            compiler:
+              name: Clang
+          - os:
+              name: ubuntu
+            compiler:
+              name: MSVC
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Initialize Ubuntu
+        if: matrix.os.name == 'ubuntu'
+        run: |
+          sudo echo "set man-db/auto-update false" | sudo debconf-communicate
+          sudo dpkg-reconfigure man-db
+
+      - name: Setup GCC
+        if: matrix.compiler.toolset == 'gcc'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-${{ matrix.compiler.version }}
+
+      - name: Setup Clang
+        if: matrix.compiler.toolset == 'clang'
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x ./llvm.sh
+          sudo ./llvm.sh ${{ matrix.compiler.version }}
+          sudo apt-get install -y libc++-${{ matrix.compiler.version }}-dev libc++abi-${{ matrix.compiler.version }}-dev libunwind-${{ matrix.compiler.version }}-dev
+
+      - uses: TheMrMilchmann/setup-msvc-dev@v3
+        if: matrix.os.name == 'windows'
+        with:
+          arch: x64
+
+      - name: Fetch Environment Info
+        id: env-info
+        shell: bash
+        run: |
+          set -e
+          case "${{ matrix.compiler.toolset }}" in
+            "gcc")
+              COMPILER_FULL_VERSION=$(${{ matrix.compiler.executable }} -dumpfullversion -dumpversion)
+              ;;
+            "clang")
+              COMPILER_FULL_VERSION=$(${{ matrix.compiler.executable }} -dumpversion)
+              ;;
+            "msvc")
+              COMPILER_FULL_VERSION=$(powershell -NoProfile -Command "(Get-Command ${{ matrix.compiler.executable }}).FileVersionInfo.FileVersion")
+              ;;
+          esac
+          echo "COMPILER_FULL_VERSION=$COMPILER_FULL_VERSION"
+          echo "compiler-full-version=$COMPILER_FULL_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Cache CMake Dependencies (restore)
+        id: cache-deps
+        uses: actions/cache/restore@v4
+        with:
+          key: deps-${{ matrix.os.name }}-${{ matrix.os.version }}-${{ matrix.compiler.toolset }}-${{ steps.env-info.outputs.compiler-full-version }}-${{ matrix.cpp_version.name }}-${{ matrix.build_type.name }}
+          path: ${{ github.workspace }}/build/_deps
+
+      # Adapt CMP0168; enable caching in CI
+      # https://cmake.org/cmake/help/latest/module/FetchContent.html#variable:FETCHCONTENT_UPDATES_DISCONNECTED
+      - name: Setup Cached CMake Dependencies
+        id: deps-info
+        shell: bash
+        run: |
+          if [ "${{ steps.cache-deps.outputs.cache-hit }}" = "true" ]; then
+            echo "IRIS_CMAKE_ARGS=-DFETCHCONTENT_FULLY_DISCONNECTED=ON" >> "$GITHUB_OUTPUT"
+          else
+            echo "IRIS_CMAKE_ARGS=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure
+        shell: bash
+        run: |
+          set -xe
+          cmake ${{ steps.deps-info.outputs.IRIS_CMAKE_ARGS }} -B build \
+            -DCMAKE_CXX_COMPILER=${{ matrix.compiler.executable }} \
+            -DCMAKE_CXX_FLAGS="${{ matrix.compiler.cxxflags }}" \
+            -DCMAKE_CXX_STANDARD=${{ matrix.cpp_version.number }} \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type.name }} \
+            -S .
+
+      - name: Build Tests
+        run: |
+          cmake --build build --verbose --config ${{ matrix.build_type.name }} -j${{ env.IRIS_BUILD_JOBS }} ${{ matrix.compiler.builder_additional_args }}
+          # TODO: remove --verbose
+
+      - name: Cache CMake Dependencies (save)
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          key: ${{ steps.cache-deps.outputs.cache-primary-key }}
+          path: ${{ github.workspace }}/build/_deps
+
+      - name: Test
+        env:
+          CLICOLOR_FORCE: 1
+        working-directory: ${{ github.workspace }}/build
+        run: ctest --output-on-failure -C ${{ matrix.build_type.name }}
