@@ -2,7 +2,7 @@
 
 #include "rvariant_test.hpp"
 
-#include "iris/core/type_traits.hpp"
+#include "iris/type_traits.hpp"
 #include "iris/core/hash.hpp"
 
 #include "iris/rvariant/recursive_wrapper.hpp"
@@ -1389,7 +1389,7 @@ TEST_CASE("self emplace")
 TEST_CASE("swap")
 {
     {
-        STATIC_REQUIRE(iris::core::is_trivially_swappable_v<int>);
+        STATIC_REQUIRE(iris::is_trivially_swappable_v<int>);
         iris::rvariant<int> a = 33, b = 4;
         IRIS_REQUIRE_STATIC_NOTHROW(a.swap(b));
         CHECK(iris::get<0>(a) == 4);
@@ -1411,7 +1411,7 @@ TEST_CASE("swap")
             S& operator=(S&&) noexcept(false) { return *this; }
         };
 
-        STATIC_REQUIRE(!iris::core::is_trivially_swappable_v<S>);
+        STATIC_REQUIRE(!iris::is_trivially_swappable_v<S>);
         iris::rvariant<int, S> a{42}, b{S{}};
         REQUIRE_NOTHROW(a.swap(b));
         CHECK(iris::holds_alternative<S>(a));

@@ -10,7 +10,7 @@
 // provide sufficient concepts for their code.
 
 #include <iris/rvariant/detail/rvariant_fwd.hpp>
-#include <iris/core/type_traits.hpp>
+#include <iris/type_traits.hpp>
 
 #include <utility>
 #include <type_traits>
@@ -97,7 +97,7 @@ template<std::size_t I, class Variant>
 struct variant_alternative<I, Variant const> : std::add_const<variant_alternative_t<I, Variant>> {};
 
 template<std::size_t I, class... Ts>
-struct variant_alternative<I, rvariant<Ts...>> : core::pack_indexing<I, unwrap_recursive_t<Ts>...>
+struct variant_alternative<I, rvariant<Ts...>> : pack_indexing<I, unwrap_recursive_t<Ts>...>
 {
     static_assert(I < sizeof...(Ts));
 };

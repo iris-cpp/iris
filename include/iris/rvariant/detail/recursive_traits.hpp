@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: MIT
 
 #include <iris/rvariant/detail/rvariant_fwd.hpp>
-#include <iris/core/type_traits.hpp>
+#include <iris/type_traits.hpp>
 
 namespace iris::detail {
 

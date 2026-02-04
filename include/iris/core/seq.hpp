@@ -6,11 +6,12 @@
 #include <type_traits>
 #include <utility>
 
-namespace iris::core {
+namespace iris {
 
 template<class... Ts>
 struct type_list;
 
+namespace core {
 
 namespace detail {
 
@@ -137,6 +138,8 @@ struct seq_cartesian_product_entry<F, std::integer_sequence<T, As...>, Rest...>
 template<template<auto...> class F, class... Ss>
 using seq_cartesian_product = typename detail::seq_cartesian_product_entry<F, Ss...>::type;
 
-} // iris::core
+} // core
+
+} // iris
 
 #endif

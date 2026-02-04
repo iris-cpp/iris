@@ -5,7 +5,7 @@
 
 #include <iris/rvariant/detail/rvariant_fwd.hpp>
 #include <iris/rvariant/variant_helper.hpp>
-#include <iris/core/type_traits.hpp>
+#include <iris/type_traits.hpp>
 
 #include <type_traits>
 
@@ -17,10 +17,10 @@ template<class From, class To>
 struct subset_reindex_impl;
 
 template<class... Ts, class... Us>
-struct subset_reindex_impl<core::type_list<Ts...>, core::type_list<Us...>>
+struct subset_reindex_impl<type_list<Ts...>, type_list<Us...>>
 {
     static constexpr std::size_t table[]{
-        core::find_index_v<Ts, core::type_list<Us...>>...
+        find_index_v<Ts, type_list<Us...>>...
     };
 };
 
@@ -46,8 +46,8 @@ template<class... Us, class... Ts>
 struct is_subset_of<rvariant<Us...>, rvariant<Ts...>>
     : std::conjunction<
         std::disjunction<
-            core::is_in<Us, Ts...>,
-            core::is_in<Us, unwrap_recursive_t<Ts>...>
+            is_in<Us, Ts...>,
+            is_in<Us, unwrap_recursive_t<Ts>...>
         >...
     >
 {};

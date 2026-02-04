@@ -8,7 +8,7 @@
 #include <iris/rvariant/variant_helper.hpp>
 
 #include <iris/core/seq.hpp>
-#include <iris/core/type_traits.hpp>
+#include <iris/type_traits.hpp>
 
 #include <variant> // std::bad_variant_access
 #include <utility>
@@ -276,7 +276,7 @@ template<class T0R, class Visitor, class ArgsList, class... Variants>
 struct visit_check_impl;
 
 template<class T0R, class Visitor, class... Args>
-struct visit_check_impl<T0R, Visitor, core::type_list<Args...>>
+struct visit_check_impl<T0R, Visitor, type_list<Args...>>
 {
     static constexpr bool accepts_all_alternatives = std::is_invocable_v<Visitor, Args...>;
 
@@ -303,27 +303,27 @@ struct visit_check_impl<T0R, Visitor, core::type_list<Args...>>
 };
 
 template<class T0R, class Visitor, class... Args, class... Ts, class... Rest>
-struct visit_check_impl<T0R, Visitor, core::type_list<Args...>, rvariant<Ts...>&, Rest...>
-    : std::conjunction<visit_check_impl<T0R, Visitor, core::type_list<Args..., unwrap_recursive_t<Ts>&>, Rest...>...> {};
+struct visit_check_impl<T0R, Visitor, type_list<Args...>, rvariant<Ts...>&, Rest...>
+    : std::conjunction<visit_check_impl<T0R, Visitor, type_list<Args..., unwrap_recursive_t<Ts>&>, Rest...>...> {};
 template<class T0R, class Visitor, class... Args, class... Ts, class... Rest>
-struct visit_check_impl<T0R, Visitor, core::type_list<Args...>, rvariant<Ts...> const&, Rest...>
-    : std::conjunction<visit_check_impl<T0R, Visitor, core::type_list<Args..., unwrap_recursive_t<Ts> const&>, Rest...>...> {};
+struct visit_check_impl<T0R, Visitor, type_list<Args...>, rvariant<Ts...> const&, Rest...>
+    : std::conjunction<visit_check_impl<T0R, Visitor, type_list<Args..., unwrap_recursive_t<Ts> const&>, Rest...>...> {};
 template<class T0R, class Visitor, class... Args, class... Ts, class... Rest>
-struct visit_check_impl<T0R, Visitor, core::type_list<Args...>, rvariant<Ts...>&&, Rest...>
-    : std::conjunction<visit_check_impl<T0R, Visitor, core::type_list<Args..., unwrap_recursive_t<Ts>>, Rest...>...> {};
+struct visit_check_impl<T0R, Visitor, type_list<Args...>, rvariant<Ts...>&&, Rest...>
+    : std::conjunction<visit_check_impl<T0R, Visitor, type_list<Args..., unwrap_recursive_t<Ts>>, Rest...>...> {};
 template<class T0R, class Visitor, class... Args, class... Ts, class... Rest>
-struct visit_check_impl<T0R, Visitor, core::type_list<Args...>, rvariant<Ts...> const&&, Rest...>
-    : std::conjunction<visit_check_impl<T0R, Visitor, core::type_list<Args..., unwrap_recursive_t<Ts> const>, Rest...>...> {};
+struct visit_check_impl<T0R, Visitor, type_list<Args...>, rvariant<Ts...> const&&, Rest...>
+    : std::conjunction<visit_check_impl<T0R, Visitor, type_list<Args..., unwrap_recursive_t<Ts> const>, Rest...>...> {};
 
 template<class T0R, class Visitor, class... Variants>
-using visit_check = visit_check_impl<T0R, Visitor, core::type_list<>, Variants...>;
+using visit_check = visit_check_impl<T0R, Visitor, type_list<>, Variants...>;
 
 
 template<class R, class Visitor, class ArgsList, class... Variants>
 struct visit_R_check_impl;
 
 template<class R, class Visitor, class... Args>
-struct visit_R_check_impl<R, Visitor, core::type_list<Args...>>
+struct visit_R_check_impl<R, Visitor, type_list<Args...>>
 {
     // Note that this can't be `std::is_invocable_r_v`,
     // because we make sure the conditions for `static_assert` be
@@ -354,20 +354,20 @@ struct visit_R_check_impl<R, Visitor, core::type_list<Args...>>
 };
 
 template<class R, class Visitor, class... Args, class... Ts, class... Rest>
-struct visit_R_check_impl<R, Visitor, core::type_list<Args...>, rvariant<Ts...>&, Rest...>
-    : std::conjunction<visit_R_check_impl<R, Visitor, core::type_list<Args..., unwrap_recursive_t<Ts>&>, Rest...>...> {};
+struct visit_R_check_impl<R, Visitor, type_list<Args...>, rvariant<Ts...>&, Rest...>
+    : std::conjunction<visit_R_check_impl<R, Visitor, type_list<Args..., unwrap_recursive_t<Ts>&>, Rest...>...> {};
 template<class R, class Visitor, class... Args, class... Ts, class... Rest>
-struct visit_R_check_impl<R, Visitor, core::type_list<Args...>, rvariant<Ts...> const&, Rest...>
-    : std::conjunction<visit_R_check_impl<R, Visitor, core::type_list<Args..., unwrap_recursive_t<Ts> const&>, Rest...>...> {};
+struct visit_R_check_impl<R, Visitor, type_list<Args...>, rvariant<Ts...> const&, Rest...>
+    : std::conjunction<visit_R_check_impl<R, Visitor, type_list<Args..., unwrap_recursive_t<Ts> const&>, Rest...>...> {};
 template<class R, class Visitor, class... Args, class... Ts, class... Rest>
-struct visit_R_check_impl<R, Visitor, core::type_list<Args...>, rvariant<Ts...>&&, Rest...>
-    : std::conjunction<visit_R_check_impl<R, Visitor, core::type_list<Args..., unwrap_recursive_t<Ts>>, Rest...>...> {};
+struct visit_R_check_impl<R, Visitor, type_list<Args...>, rvariant<Ts...>&&, Rest...>
+    : std::conjunction<visit_R_check_impl<R, Visitor, type_list<Args..., unwrap_recursive_t<Ts>>, Rest...>...> {};
 template<class R, class Visitor, class... Args, class... Ts, class... Rest>
-struct visit_R_check_impl<R, Visitor, core::type_list<Args...>, rvariant<Ts...> const&&, Rest...>
-    : std::conjunction<visit_R_check_impl<R, Visitor, core::type_list<Args..., unwrap_recursive_t<Ts> const>, Rest...>...> {};
+struct visit_R_check_impl<R, Visitor, type_list<Args...>, rvariant<Ts...> const&&, Rest...>
+    : std::conjunction<visit_R_check_impl<R, Visitor, type_list<Args..., unwrap_recursive_t<Ts> const>, Rest...>...> {};
 
 template<class R, class Visitor, class... Variants>
-using visit_R_check = visit_R_check_impl<R, Visitor, core::type_list<>, Variants...>;
+using visit_R_check = visit_R_check_impl<R, Visitor, type_list<>, Variants...>;
 
 
 // --------------------------------------------------
@@ -405,7 +405,7 @@ public:
 };
 
 template<class R, class... OverloadSeq, class Visitor, class... Storage>
-struct multi_visit_noexcept<R, core::type_list<OverloadSeq...>, Visitor, Storage...>
+struct multi_visit_noexcept<R, type_list<OverloadSeq...>, Visitor, Storage...>
     : std::conjunction<multi_visit_noexcept<R, OverloadSeq, Visitor, Storage...>...>
 {};
 
@@ -449,7 +449,7 @@ struct visit_table;
 template<class R, class... OverloadSeq, class Visitor, class... Storage>
 struct visit_table<
     R,
-    core::type_list<OverloadSeq...>,
+    type_list<OverloadSeq...>,
     Visitor,
     Storage...
 >
@@ -480,7 +480,7 @@ struct visit_dispatch<-1>
 #define IRIS_VISIT_CASE(n) \
     case (n): \
         if constexpr ((n) < OverloadSeq::size) { \
-            return multi_visitor<core::at_c_t<(n), OverloadSeq>>::template apply<R, Visitor, Storage...>( \
+            return multi_visitor<at_c_t<(n), OverloadSeq>>::template apply<R, Visitor, Storage...>( \
                 static_cast<Visitor&&>(vis), static_cast<Storage&&>(storage)... \
             ); \
         } else std::unreachable(); [[fallthrough]]
@@ -550,7 +550,7 @@ private:
             return flat_index::calc_single_stride<Ns_i>(
                 std::index_sequence<i_rest...>{},
                 std::index_sequence<biased_Ns...>{},
-                stride * core::npack_indexing_v<Ns_i_max - i, biased_Ns...>
+                stride * npack_indexing_v<Ns_i_max - i, biased_Ns...>
             );
         }
     }
@@ -580,7 +580,7 @@ struct visit_impl;
 template<class R, class... V, std::size_t... n>
 struct visit_impl<
     R,
-    core::type_list<V...>,
+    type_list<V...>,
     n...
 >
 {
@@ -631,7 +631,7 @@ IRIS_FORCEINLINE constexpr visit(Visitor&& vis, Variants&&... vars)
     );
     return detail::visit_impl<
         T0R,
-        core::type_list<detail::as_variant_t<Variants>...>,
+        type_list<detail::as_variant_t<Variants>...>,
         variant_size_v<std::remove_reference_t<detail::as_variant_t<Variants>>>...
     >::apply(std::forward<Visitor>(vis), std::forward<Variants>(vars)...);
 }
@@ -665,7 +665,7 @@ IRIS_FORCEINLINE constexpr R visit(Visitor&& vis, Variants&&... vars)
 
     return detail::visit_impl<
         R,
-        core::type_list<detail::as_variant_t<Variants>...>,
+        type_list<detail::as_variant_t<Variants>...>,
         variant_size_v<std::remove_reference_t<detail::as_variant_t<Variants>>>...
     >::apply(std::forward<Visitor>(vis), std::forward<Variants>(vars)...);
 }

@@ -535,8 +535,8 @@ TEST_CASE("visit (Constraints)")
 
     // for `visit(...)`
     {
-        using IntChecker = iris::detail::visit_check_impl<std::string_view, Visitor, iris::core::type_list<int>>;
-        using DoubleChecker = iris::detail::visit_check_impl<std::string_view, Visitor, iris::core::type_list<double>>;
+        using IntChecker = iris::detail::visit_check_impl<std::string_view, Visitor, iris::type_list<int>>;
+        using DoubleChecker = iris::detail::visit_check_impl<std::string_view, Visitor, iris::type_list<double>>;
 
         STATIC_REQUIRE(IntChecker::accepts_all_alternatives);
         STATIC_REQUIRE(IntChecker::value);
@@ -563,8 +563,8 @@ TEST_CASE("visit (Constraints)")
     }
     // for `visit<R>(...)`
     {
-        using IntChecker = iris::detail::visit_R_check_impl<std::string_view, Visitor, iris::core::type_list<int>>;
-        using DoubleChecker = iris::detail::visit_R_check_impl<std::string_view, Visitor, iris::core::type_list<double>>;
+        using IntChecker = iris::detail::visit_R_check_impl<std::string_view, Visitor, iris::type_list<int>>;
+        using DoubleChecker = iris::detail::visit_R_check_impl<std::string_view, Visitor, iris::type_list<double>>;
 
         STATIC_REQUIRE(IntChecker::accepts_all_alternatives);
         STATIC_REQUIRE(IntChecker::return_type_convertible_to_R);

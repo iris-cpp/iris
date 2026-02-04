@@ -5,7 +5,7 @@
 
 #include <iris/rvariant/detail/rvariant_fwd.hpp>
 
-#include <iris/core/type_traits.hpp>
+#include <iris/type_traits.hpp>
 
 #include <iris/type_traits.hpp>
 
@@ -61,7 +61,7 @@ struct check_recursive_wrapper_duplicate<T, T, Ts...>
 {};
 
 template<class T, class List>
-struct non_wrapped_exactly_once : core::exactly_once<T, List>
+struct non_wrapped_exactly_once : exactly_once<T, List>
 {
     static_assert(
         !is_ttp_specialization_of_v<T, recursive_wrapper>,
@@ -77,8 +77,8 @@ constexpr bool non_wrapped_exactly_once_v = non_wrapped_exactly_once<T, List>::v
 template<class T, class Variant>
 struct exactly_once_index
 {
-    static_assert(core::exactly_once_v<T, typename Variant::unwrapped_types>, "T or recursive_wrapper<T> must occur exactly once in Ts...");
-    static constexpr std::size_t value = core::find_index_v<T, typename Variant::unwrapped_types>;
+    static_assert(exactly_once_v<T, typename Variant::unwrapped_types>, "T or recursive_wrapper<T> must occur exactly once in Ts...");
+    static constexpr std::size_t value = find_index_v<T, typename Variant::unwrapped_types>;
 };
 
 template<class T, class Variant>
