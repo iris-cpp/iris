@@ -12,7 +12,7 @@
 #include <iris/rvariant/subset.hpp>
 
 #include <iris/core/library.hpp>
-#include <iris/core/cond_trivial.hpp>
+#include <iris/core/cond_trivial_smf.hpp>
 #include <iris/core/hash.hpp>
 
 #include <iris/type_traits.hpp>
