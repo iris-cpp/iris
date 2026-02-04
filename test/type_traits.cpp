@@ -32,11 +32,11 @@ TEST_CASE("specialization_of")
     STATIC_CHECK(!iris::is_ttp_specialization_of_v<tuple<int>, type_list>);
     STATIC_CHECK(!iris::is_ttp_specialization_of_v<tuple<int, double>, type_list>);
 
-    STATIC_CHECK(iris::is_nttp_specialization_of_v<n_tuple<>, n_tuple>);
-    STATIC_CHECK(iris::is_nttp_specialization_of_v<n_tuple<0>, n_tuple>);
-    STATIC_CHECK(iris::is_nttp_specialization_of_v<n_tuple<0, 1>, n_tuple>);
+    STATIC_CHECK(iris::is_ctp_specialization_of_v<n_tuple<>, n_tuple>);
+    STATIC_CHECK(iris::is_ctp_specialization_of_v<n_tuple<0>, n_tuple>);
+    STATIC_CHECK(iris::is_ctp_specialization_of_v<n_tuple<0, 1>, n_tuple>);
 
-    STATIC_CHECK(!iris::is_nttp_specialization_of_v<n_tuple<>, n_list>);
-    STATIC_CHECK(!iris::is_nttp_specialization_of_v<n_tuple<0>, n_list>);
-    STATIC_CHECK(!iris::is_nttp_specialization_of_v<n_tuple<0, 1>, n_list>);
+    STATIC_CHECK(!iris::is_ctp_specialization_of_v<n_tuple<>, n_list>);
+    STATIC_CHECK(!iris::is_ctp_specialization_of_v<n_tuple<0>, n_list>);
+    STATIC_CHECK(!iris::is_ctp_specialization_of_v<n_tuple<0, 1>, n_list>);
 }
