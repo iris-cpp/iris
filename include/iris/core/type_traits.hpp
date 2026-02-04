@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: MIT
 
 // ReSharper disable once CppUnusedIncludeDirective
-#include <iris/core/config.hpp>
+#include <iris/config.hpp>
 // ReSharper disable once CppUnusedIncludeDirective
 #include <iris/core/requirements.hpp>
 
