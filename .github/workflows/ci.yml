@@ -149,7 +149,7 @@ jobs:
           path: ${{ github.workspace }}/build/_deps
 
       # Adapt CMP0168; enable caching in CI
-      # https://cmake.org/cmake/help/latest/module/FetchContent.html#variable:FETCHCONTENT_UPDATES_DISCONNECTED
+      # https://cmake.org/cmake/help/latest/module/FetchContent.html#variable:FETCHCONTENT_FULLY_DISCONNECTED
       - name: Setup Cached CMake Dependencies
         id: deps-info
         shell: bash
