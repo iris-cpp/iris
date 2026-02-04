@@ -1,7 +1,4 @@
-﻿// Copyright 2025 Nana Sakisaka
-// Copyright 2025 Yaito Kakeyama
-// Distributed under the Boost Software License, Version 1.0.
-// https://www.boost.org/LICENSE_1_0.txt
+﻿// SPDX-License-Identifier: MIT
 
 #include <iostream>
 

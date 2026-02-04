@@ -1,9 +1,7 @@
-﻿// Copyright 2025 Nana Sakisaka
-// Distributed under the Boost Software License, Version 1.0.
-// https://www.boost.org/LICENSE_1_0.txt
-
-#ifndef YK_DEFAULT_INIT_ALLOCATOR_HPP
+﻿#ifndef YK_DEFAULT_INIT_ALLOCATOR_HPP
 #define YK_DEFAULT_INIT_ALLOCATOR_HPP
+
+// SPDX-License-Identifier: MIT
 
 #include <memory>
 #include <new>

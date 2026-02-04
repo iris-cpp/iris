@@ -1,10 +1,7 @@
 #ifndef YK_CORE_LIBRARY_HPP
 #define YK_CORE_LIBRARY_HPP
 
-// Copyright 2025 Yaito Kakeyama
-// Copyright 2025 Nana Sakisaka
-// Distributed under the Boost Software License, Version 1.0.
-// https://www.boost.org/LICENSE_1_0.txt
+// SPDX-License-Identifier: MIT
 
 #include <yk/core/requirements.hpp>
 
