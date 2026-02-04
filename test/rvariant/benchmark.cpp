@@ -2,9 +2,9 @@
 
 #include "benchmark_support.hpp"
 
-#include <yk/rvariant/rvariant.hpp>
+#include <iris/rvariant/rvariant.hpp>
 
-#include <yk/default_init_allocator.hpp>
+#include <iris/default_init_allocator.hpp>
 
 #include <fstream>
 #include <ranges>
@@ -373,7 +373,7 @@ void do_bench(Table& table_3, Table& table_16, std::size_t const N)
             using V = many_V_t<std::variant, AltN, T>;
             auto& entries = table_3.std_datas;
 
-            std::vector<V, yk::default_init_allocator<V>> vars;
+            std::vector<V, iris::default_init_allocator<V>> vars;
             benchmark_construct_3<T>(entries, N, vars);
             benchmark_copy_assign(entries, N, vars);
 
@@ -391,10 +391,10 @@ void do_bench(Table& table_3, Table& table_16, std::size_t const N)
             benchmark_operator<std::compare_three_way>(entries, N, vars);
         }
         {
-            using V = many_V_t<yk::rvariant, AltN, T>;
+            using V = many_V_t<iris::rvariant, AltN, T>;
             auto& entries = table_3.rva_datas;
 
-            std::vector<V, yk::default_init_allocator<V>> vars;
+            std::vector<V, iris::default_init_allocator<V>> vars;
             benchmark_construct_3<T>(entries, N, vars);
             benchmark_copy_assign(entries, N, vars);
 
@@ -420,7 +420,7 @@ void do_bench(Table& table_3, Table& table_16, std::size_t const N)
             using V = many_V_t<std::variant, AltN, T>;
             auto& entries = table_16.std_datas;
 
-            std::vector<V, yk::default_init_allocator<V>> vars;
+            std::vector<V, iris::default_init_allocator<V>> vars;
             benchmark_construct_16<T>(entries, N, vars);
             benchmark_copy_assign(entries, N, vars);
 
@@ -438,10 +438,10 @@ void do_bench(Table& table_3, Table& table_16, std::size_t const N)
             benchmark_operator<std::compare_three_way>(entries, N, vars);
         }
         {
-            using V = many_V_t<yk::rvariant, AltN, T>;
+            using V = many_V_t<iris::rvariant, AltN, T>;
             auto& entries = table_16.rva_datas;
 
-            std::vector<V, yk::default_init_allocator<V>> vars;
+            std::vector<V, iris::default_init_allocator<V>> vars;
             benchmark_construct_16<T>(entries, N, vars);
             benchmark_copy_assign(entries, N, vars);
 
@@ -537,7 +537,7 @@ int benchmark_main(std::size_t const N)
 int main(int argc, char* argv[])
 {
     if (argc <= 1) {
-        std::println("usage: ./yk_rvariant_benchmark [N]");
+        std::println("usage: ./iris_rvariant_benchmark [N]");
         return EXIT_FAILURE;
     }
     std::string_view const N_str(argv[1]);

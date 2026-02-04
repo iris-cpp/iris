@@ -3,12 +3,12 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <yk/rvariant/detail/rvariant_fwd.hpp>
-#include <yk/rvariant/detail/variant_storage.hpp>
-#include <yk/rvariant/variant_helper.hpp>
+#include <iris/rvariant/detail/rvariant_fwd.hpp>
+#include <iris/rvariant/detail/variant_storage.hpp>
+#include <iris/rvariant/variant_helper.hpp>
 
-#include <yk/core/seq.hpp>
-#include <yk/core/type_traits.hpp>
+#include <iris/core/seq.hpp>
+#include <iris/core/type_traits.hpp>
 
 #include <variant> // std::bad_variant_access
 #include <utility>
@@ -18,7 +18,7 @@
 #include <cstddef>
 
 
-namespace yk {
+namespace iris {
 
 namespace detail {
 
@@ -233,7 +233,7 @@ YK_FORCEINLINE constexpr raw_visit_result_t<Visitor, forward_storage_t<Variant>>
 raw_visit(Variant&& v, Visitor&& vis)  // NOLINT(cppcoreguidelines-missing-std-forward)
     noexcept(raw_visit_noexcept_all<Visitor, forward_storage_t<Variant>>)
 {
-    constexpr std::size_t N = detail::valueless_bias<Variant>(yk::variant_size_v<std::remove_reference_t<Variant>>);
+    constexpr std::size_t N = detail::valueless_bias<Variant>(iris::variant_size_v<std::remove_reference_t<Variant>>);
     return raw_visit_dispatch<std::remove_cvref_t<Variant>::never_valueless, visit_strategy<N>>::template apply<N>(
         detail::valueless_bias<Variant>(v.index_),
         std::forward<Visitor>(vis),
@@ -246,7 +246,7 @@ YK_FORCEINLINE constexpr raw_visit_result_t<Visitor, forward_storage_t<Variant>>
 raw_visit_i(std::size_t const biased_i, Variant&& v, Visitor&& vis)  // NOLINT(cppcoreguidelines-missing-std-forward)
     noexcept(raw_visit_noexcept_all<Visitor, forward_storage_t<Variant>>)
 {
-    constexpr std::size_t N = detail::valueless_bias<Variant>(yk::variant_size_v<std::remove_reference_t<Variant>>);
+    constexpr std::size_t N = detail::valueless_bias<Variant>(iris::variant_size_v<std::remove_reference_t<Variant>>);
     return raw_visit_dispatch<std::remove_cvref_t<Variant>::never_valueless, visit_strategy<N>>::template apply<N>(
         biased_i,
         std::forward<Visitor>(vis),
@@ -569,7 +569,7 @@ using make_OverloadSeq = core::seq_cartesian_product<
     std::index_sequence,
     std::make_index_sequence<
         detail::valueless_bias<detail::as_variant_t<Variants>>(
-            yk::variant_size_v<std::remove_reference_t<detail::as_variant_t<Variants>>> // aka `n`
+            iris::variant_size_v<std::remove_reference_t<detail::as_variant_t<Variants>>> // aka `n`
         )
     >...
 >;
@@ -670,6 +670,6 @@ YK_FORCEINLINE constexpr R visit(Visitor&& vis, Variants&&... vars)
     >::apply(std::forward<Visitor>(vis), std::forward<Variants>(vars)...);
 }
 
-} // yk
+} // iris
 
 #endif

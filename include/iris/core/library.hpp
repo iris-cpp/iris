@@ -3,7 +3,7 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <yk/core/requirements.hpp>
+#include <iris/core/requirements.hpp>
 
 #include <compare>
 #include <functional>
@@ -11,7 +11,7 @@
 
 // Utilities defined in [library]
 // https://eel.is/c++draft/library
-namespace yk::core {
+namespace iris::core {
 
 namespace detail {
 
@@ -92,6 +92,6 @@ template<class T>
     requires requires(T const& t) { { t >= t } -> std::convertible_to<bool>; }
 struct relop_bool_expr<std::greater_equal<>, T> : std::true_type {};
 
-}  // yk::core
+}  // iris::core
 
 #endif

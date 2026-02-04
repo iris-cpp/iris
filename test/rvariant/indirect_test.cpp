@@ -1,6 +1,6 @@
 ﻿// SPDX-License-Identifier: MIT
 
-#include "yk/indirect.hpp"
+#include "iris/indirect.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -8,9 +8,9 @@ namespace unit_test {
 
 TEST_CASE("construction and assignment", "[indirect]")
 {
-    yk::indirect<int> a(42);
-    yk::indirect<int> b = a;             // copy ctor
-    yk::indirect<int> c = std::move(a);  // move ctor
+    iris::indirect<int> a(42);
+    iris::indirect<int> b = a;             // copy ctor
+    iris::indirect<int> c = std::move(a);  // move ctor
     c = b;                               // copy assign
     (void)c;
     c = std::move(b);                    // move assign
@@ -36,9 +36,9 @@ TEST_CASE("construction and assignment (stateful allocator)", "[indirect]")
     {
         using is_always_equal = std::false_type;
     };
-    yk::indirect<int, MyAllocator> a(42);
-    yk::indirect<int, MyAllocator> b = a;             // copy ctor
-    yk::indirect<int, MyAllocator> c = std::move(a);  // move ctor
+    iris::indirect<int, MyAllocator> a(42);
+    iris::indirect<int, MyAllocator> b = a;             // copy ctor
+    iris::indirect<int, MyAllocator> c = std::move(a);  // move ctor
     c = b;                               // copy assign
     (void)c;
     c = std::move(b);                    // move assign
@@ -60,7 +60,7 @@ TEST_CASE("construction and assignment (stateful allocator)", "[indirect]")
 
 TEST_CASE("dereference", "[indirect]")
 {
-    yk::indirect<int> a(42);
+    iris::indirect<int> a(42);
 
     CHECK(*a == 42);
     STATIC_CHECK(std::is_same_v<decltype(*a), int&>);
@@ -78,7 +78,7 @@ TEST_CASE("dereference", "[indirect]")
 TEST_CASE("relational operators", "[indirect]")
 {
     {
-        yk::indirect<int> a(33), b(4);
+        iris::indirect<int> a(33), b(4);
 
         CHECK(a == a);
         CHECK(a != b);
@@ -92,7 +92,7 @@ TEST_CASE("relational operators", "[indirect]")
         CHECK((a <=> b) == std::strong_ordering::greater);
     }
     {
-        yk::indirect<int> a(33);
+        iris::indirect<int> a(33);
         int b = 4;
 
         CHECK(a == a);
@@ -108,7 +108,7 @@ TEST_CASE("relational operators", "[indirect]")
     }
     {
         int a = 33;
-        yk::indirect<int> b(4);
+        iris::indirect<int> b(4);
 
         CHECK(a == a);
         CHECK(a != b);
@@ -124,8 +124,8 @@ TEST_CASE("relational operators", "[indirect]")
     {
         struct MyAllocator : std::allocator<int> {};
 
-        yk::indirect<int> a(33);
-        yk::indirect<int, MyAllocator> b(4);
+        iris::indirect<int> a(33);
+        iris::indirect<int, MyAllocator> b(4);
 
         CHECK(a == a);
         CHECK(a != b);

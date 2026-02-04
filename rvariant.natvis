@@ -9,7 +9,7 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://schemas.microsoft.com/vstudio/debugger/natvis/2010 file:///C:/Program%20Files/Microsoft%20Visual%20Studio/2022/Community/Xml/Schemas/1033/natvis.xsd"
 >
-    <Type Name="yk::indirect&lt;*&gt;">
+    <Type Name="iris::indirect&lt;*&gt;">
         <SmartPointer Usage="Minimal">ptr_</SmartPointer>
         <DisplayString Condition="ptr_ == 0">[valueless_after_move]</DisplayString>
         <DisplayString Condition="ptr_ != 0">{*ptr_}</DisplayString>
@@ -18,7 +18,7 @@
         </Expand>
     </Type>
 
-    <Type Name="yk::rvariant&lt;*&gt;">
+    <Type Name="iris::rvariant&lt;*&gt;">
 		<DisplayString Condition="index_ &lt; 0">[valueless_by_exception]</DisplayString>
 
 		<DisplayString IncludeView="NoType" Condition="index_ ==  0" Optional="true">{storage_.first}</DisplayString>

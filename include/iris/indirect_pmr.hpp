@@ -3,16 +3,16 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <yk/indirect.hpp>
+#include <iris/indirect.hpp>
 
 #include <memory_resource>
 
 
-namespace yk::pmr {
+namespace iris::pmr {
 
 template<class T>
-using indirect = yk::indirect<T, std::pmr::polymorphic_allocator<T>>;
+using indirect = iris::indirect<T, std::pmr::polymorphic_allocator<T>>;
 
-} // yk::pmr
+} // iris::pmr
 
 #endif

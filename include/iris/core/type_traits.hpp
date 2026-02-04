@@ -4,16 +4,16 @@
 // SPDX-License-Identifier: MIT
 
 // ReSharper disable once CppUnusedIncludeDirective
-#include <yk/core/config.hpp>
+#include <iris/core/config.hpp>
 // ReSharper disable once CppUnusedIncludeDirective
-#include <yk/core/requirements.hpp>
+#include <iris/core/requirements.hpp>
 
 #include <type_traits>
 #include <utility>
 
 #include <cstddef>
 
-namespace yk::core {
+namespace iris::core {
 
 template<class T, template<class...> class TT>
 struct is_ttp_specialization_of : std::false_type {};
@@ -116,7 +116,7 @@ struct pack_indexing
 template<std::size_t I, class... Ts>
 using pack_indexing_t = typename pack_indexing<I, Ts...>::type;
 
-# define YK_CORE_PACK_INDEXING(I, Ts_ellipsis) ::yk::core::pack_indexing_t<I, Ts_ellipsis>
+# define YK_CORE_PACK_INDEXING(I, Ts_ellipsis) ::iris::core::pack_indexing_t<I, Ts_ellipsis>
 
 
 template<std::size_t I, auto... Ns>
@@ -330,6 +330,6 @@ template<class F, class... Args>
         })
 struct is_function_object<F, Args...> : std::true_type {};
 
-} // yk::core
+} // iris::core
 
 #endif

@@ -3,9 +3,9 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <yk/core/library.hpp>
-#include <yk/core/type_traits.hpp>
-#include <yk/core/hash.hpp>
+#include <iris/core/library.hpp>
+#include <iris/core/type_traits.hpp>
+#include <iris/core/hash.hpp>
 
 #include <compare>
 #include <memory>
@@ -14,7 +14,7 @@
 
 #include <cassert>
 
-namespace yk {
+namespace iris {
 
 namespace detail {
 
@@ -425,17 +425,17 @@ constexpr auto operator<=>(indirect<T, Allocator> const& lhs, U const& rhs)
     }
 }
 
-}  // yk
+}  // iris
 
 
 namespace std {
 
 template<class T, class Allocator>
-    requires ::yk::core::is_hash_enabled_v<T>
-struct hash<::yk::indirect<T, Allocator>>
+    requires ::iris::core::is_hash_enabled_v<T>
+struct hash<::iris::indirect<T, Allocator>>
 {
-    [[nodiscard]] static size_t operator()(::yk::indirect<T, Allocator> const& obj)
-        noexcept(::yk::core::is_nothrow_hashable_v<T>)
+    [[nodiscard]] static size_t operator()(::iris::indirect<T, Allocator> const& obj)
+        noexcept(::iris::core::is_nothrow_hashable_v<T>)
     {
         if (obj.valueless_after_move()) [[unlikely]] {
             return 0xbaddeadbeefuz;
@@ -448,7 +448,7 @@ struct hash<::yk::indirect<T, Allocator>>
 } // std
 
 
-namespace yk {
+namespace iris {
 
 template<class T, class Allocator>
     requires core::is_hash_enabled_v<T>
@@ -458,6 +458,6 @@ template<class T, class Allocator>
     return std::hash<indirect<T, Allocator>>{}(obj);
 }
 
-} // yk
+} // iris
 
 #endif  // YK_INDIRECT_HPP

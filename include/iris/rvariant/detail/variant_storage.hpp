@@ -3,8 +3,8 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <yk/rvariant/detail/rvariant_fwd.hpp>
-#include <yk/rvariant/variant_helper.hpp>
+#include <iris/rvariant/detail/rvariant_fwd.hpp>
+#include <iris/rvariant/variant_helper.hpp>
 
 #include <functional>
 #include <utility>
@@ -23,7 +23,7 @@
 # define YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 #endif
 
-namespace yk::detail {
+namespace iris::detail {
 
 template<bool NeverValueless, class T>
 [[nodiscard]] YK_FORCEINLINE constexpr std::size_t valueless_bias(T i) noexcept
@@ -329,6 +329,6 @@ constexpr auto&& as_variant(rvariant<Ts...> const&& var) { return std::move(var)
 template<class T>
 using as_variant_t = decltype(as_variant_impl::as_variant(std::declval<T>()));
 
-} // yk::detail
+} // iris::detail
 
 #endif

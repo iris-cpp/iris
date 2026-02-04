@@ -3,10 +3,10 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <yk/rvariant/detail/rvariant_fwd.hpp>
-#include <yk/core/type_traits.hpp>
+#include <iris/rvariant/detail/rvariant_fwd.hpp>
+#include <iris/core/type_traits.hpp>
 
-namespace yk::detail {
+namespace iris::detail {
 
 template<bool Found, std::size_t I, class U, class... Ts>
 struct select_maybe_wrapped_impl;
@@ -44,6 +44,6 @@ using select_maybe_wrapped_t = typename select_maybe_wrapped<U, Ts...>::type;
 template<class U, class... Ts>
 constexpr std::size_t select_maybe_wrapped_index = select_maybe_wrapped<U, Ts...>::index;
 
-} // yk::detail
+} // iris::detail
 
 #endif

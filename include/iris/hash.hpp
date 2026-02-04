@@ -3,7 +3,7 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <yk/core/hash.hpp>
+#include <iris/core/hash.hpp>
 
 #include <functional>
 #include <bit>
@@ -14,7 +14,7 @@
 // https://datatracker.ietf.org/doc/html/draft-eastlake-fnv-03#section-2
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=59406
 
-namespace yk {
+namespace iris {
 
 namespace detail {
 
@@ -128,6 +128,6 @@ template<class T>
     );
 }
 
-} // yk
+} // iris
 
 #endif

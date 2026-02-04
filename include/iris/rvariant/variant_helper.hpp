@@ -9,14 +9,14 @@
 // third-party codes may depend on only this header to
 // provide sufficient concepts for their code.
 
-#include <yk/rvariant/detail/rvariant_fwd.hpp>
-#include <yk/core/type_traits.hpp>
+#include <iris/rvariant/detail/rvariant_fwd.hpp>
+#include <iris/core/type_traits.hpp>
 
 #include <utility>
 #include <type_traits>
 #include <cstddef>
 
-namespace yk {
+namespace iris {
 
 namespace detail {
 
@@ -160,6 +160,6 @@ template<class VT, class RHS>
 
 } // detail
 
-} // yk
+} // iris
 
 #endif

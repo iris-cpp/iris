@@ -7,7 +7,7 @@
 #include <type_traits>
 
 
-namespace yk {
+namespace iris {
 
 template<class charT>
 struct format_traits;
@@ -69,6 +69,6 @@ struct select_char_t_impl<CharLike...>
 template<class... CharLike>
 using select_char_t = typename detail::select_char_t_impl<CharLike...>::type;
 
-} // yk
+} // iris
 
 #endif

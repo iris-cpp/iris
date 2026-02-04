@@ -3,20 +3,20 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <yk/rvariant/detail/rvariant_fwd.hpp>
-#include <yk/rvariant/detail/variant_requirements.hpp>
-#include <yk/rvariant/detail/variant_storage.hpp>
-#include <yk/rvariant/detail/visit.hpp>
-#include <yk/rvariant/detail/recursive_traits.hpp>
-#include <yk/rvariant/variant_helper.hpp>
-#include <yk/rvariant/subset.hpp>
+#include <iris/rvariant/detail/rvariant_fwd.hpp>
+#include <iris/rvariant/detail/variant_requirements.hpp>
+#include <iris/rvariant/detail/variant_storage.hpp>
+#include <iris/rvariant/detail/visit.hpp>
+#include <iris/rvariant/detail/recursive_traits.hpp>
+#include <iris/rvariant/variant_helper.hpp>
+#include <iris/rvariant/subset.hpp>
 
-#include <yk/core/type_traits.hpp>
-#include <yk/core/library.hpp>
-#include <yk/core/cond_trivial.hpp>
-#include <yk/core/hash.hpp>
+#include <iris/core/type_traits.hpp>
+#include <iris/core/library.hpp>
+#include <iris/core/cond_trivial.hpp>
+#include <iris/core/hash.hpp>
 
-#include <yk/hash.hpp>
+#include <iris/hash.hpp>
 
 #include <functional>
 #include <initializer_list>
@@ -28,7 +28,7 @@
 #include <cstddef>
 #include <cassert>
 
-namespace yk {
+namespace iris {
 
 namespace detail {
 
@@ -971,12 +971,12 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     // <https://eel.is/c++draft/variant.visit#lib:visit,variant_>
     template<int = 0, class Self, class Visitor>
     constexpr decltype(auto) visit(this Self&& self, Visitor&& vis)
-        YK_RVARIANT_VISIT_NOEXCEPT(noexcept(yk::visit(
+        YK_RVARIANT_VISIT_NOEXCEPT(noexcept(iris::visit(
             std::forward<Visitor>(vis),
             (typename base_type::template like_rvariant_t<Self>)self
         )))
     {
-        return yk::visit(
+        return iris::visit(
             std::forward<Visitor>(vis),
             (typename base_type::template like_rvariant_t<Self>)self
         );
@@ -986,12 +986,12 @@ YK_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     // <https://eel.is/c++draft/variant.visit#lib:visit,variant__>
     template<class R, class Self, class Visitor>
     constexpr R visit(this Self&& self, Visitor&& vis)
-        YK_RVARIANT_VISIT_NOEXCEPT(noexcept(yk::visit<R>(
+        YK_RVARIANT_VISIT_NOEXCEPT(noexcept(iris::visit<R>(
             std::forward<Visitor>(vis),
             (typename base_type::template like_rvariant_t<Self>)self
         )))
     {
-        return yk::visit<R>(
+        return iris::visit<R>(
             std::forward<Visitor>(vis),
             (typename base_type::template like_rvariant_t<Self>)self
         );
@@ -1396,23 +1396,23 @@ operator<=>(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
         detail::raw_visit_i(wi, w, detail::relops_visitor<std::compare_three_way, Ts...>{v.storage_});
 }
 
-}  // yk
+}  // iris
 
 
 namespace std {
 
 // https://eel.is/c++draft/variant.hash
 template<class... Ts>
-    requires std::conjunction_v<::yk::core::is_hash_enabled<std::remove_const_t<Ts>>...>
-struct hash<::yk::rvariant<Ts...>>  // NOLINT(cert-dcl58-cpp)
+    requires std::conjunction_v<::iris::core::is_hash_enabled<std::remove_const_t<Ts>>...>
+struct hash<::iris::rvariant<Ts...>>  // NOLINT(cert-dcl58-cpp)
 {
-    [[nodiscard]] static /* constexpr */ std::size_t operator()(::yk::rvariant<Ts...> const& v)
-        noexcept(std::conjunction_v<::yk::core::is_nothrow_hashable<std::remove_const_t<Ts>>...>)
+    [[nodiscard]] static /* constexpr */ std::size_t operator()(::iris::rvariant<Ts...> const& v)
+        noexcept(std::conjunction_v<::iris::core::is_nothrow_hashable<std::remove_const_t<Ts>>...>)
     {
-        return ::yk::detail::raw_visit(v, []<std::size_t i, class T>(std::in_place_index_t<i>, T const& t) static
+        return ::iris::detail::raw_visit(v, []<std::size_t i, class T>(std::in_place_index_t<i>, T const& t) static
             noexcept(std::disjunction_v<
                 std::bool_constant<i == std::variant_npos>,
-                ::yk::core::is_nothrow_hashable<T>
+                ::iris::core::is_nothrow_hashable<T>
             >)
         {
             if constexpr (i == std::variant_npos) {
@@ -1467,7 +1467,7 @@ struct hash<::yk::rvariant<Ts...>>  // NOLINT(cert-dcl58-cpp)
                 // We assume `hash_combine` is unnecessary here, since the collision
                 // is very unlikely to occur as long as the `index_hash` is NOT
                 // evaluated as the re-interpreted bit representation.
-                constexpr std::size_t index_hash = ::yk::FNV_hash<>::hash(i);
+                constexpr std::size_t index_hash = ::iris::FNV_hash<>::hash(i);
                 return index_hash + std::hash<T>{}(t);
             }
         });
@@ -1477,7 +1477,7 @@ struct hash<::yk::rvariant<Ts...>>  // NOLINT(cert-dcl58-cpp)
 } // std
 
 
-namespace yk {
+namespace iris {
 
 template<class... Ts>
     requires std::conjunction_v<core::is_hash_enabled<std::remove_const_t<Ts>>...>
@@ -1487,7 +1487,7 @@ template<class... Ts>
     return std::hash<rvariant<Ts...>>{}(v);
 }
 
-} // yk
+} // iris
 
 #undef YK_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
 #undef YK_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END

@@ -2,14 +2,14 @@
 
 #include "rvariant_test.hpp"
 
-#include "yk/core/type_traits.hpp"
-#include "yk/core/hash.hpp"
+#include "iris/core/type_traits.hpp"
+#include "iris/core/hash.hpp"
 
-#include "yk/rvariant/recursive_wrapper.hpp"
-#include "yk/rvariant/rvariant.hpp"
-#include "yk/rvariant/pack.hpp"
+#include "iris/rvariant/recursive_wrapper.hpp"
+#include "iris/rvariant/rvariant.hpp"
+#include "iris/rvariant/pack.hpp"
 
-#include "yk/indirect.hpp"
+#include "iris/indirect.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -28,11 +28,11 @@
 namespace unit_test {
 
 template<class Variant>
-constexpr bool is_never_valueless = ::yk::detail::valueless_bias<Variant>(0) == 0;
+constexpr bool is_never_valueless = ::iris::detail::valueless_bias<Variant>(0) == 0;
 
 TEST_CASE("make_valueless", "[detail]")
 {
-    yk::rvariant<int, MC_Thrower> valueless = make_valueless<int>(42);
+    iris::rvariant<int, MC_Thrower> valueless = make_valueless<int>(42);
     CHECK(valueless.valueless_by_exception());
     CHECK(valueless.index() == std::variant_npos);
     // ReSharper disable once CppStaticAssertFailure
@@ -50,8 +50,8 @@ TEST_CASE("never_valueless", "[detail]")
         BadType& operator=(BadType const&) = default;
         BadType& operator=(BadType&&) = default;
     };
-    STATIC_REQUIRE(!yk::detail::is_never_valueless_v<BadType>);
-    STATIC_REQUIRE(!is_never_valueless<yk::rvariant<BadType>>);
+    STATIC_REQUIRE(!iris::detail::is_never_valueless_v<BadType>);
+    STATIC_REQUIRE(!is_never_valueless<iris::rvariant<BadType>>);
 
     // Test many minimal trait combinations for variant to be never_valueless.
     {
@@ -69,10 +69,10 @@ TEST_CASE("never_valueless", "[detail]")
         static_assert( std::is_trivially_move_assignable_v<S>);
         static_assert( std::is_standard_layout_v<S>);
 
-        STATIC_REQUIRE(yk::detail::is_never_valueless_v<S>);
-        STATIC_REQUIRE(is_never_valueless<yk::rvariant<S>>);
-        STATIC_REQUIRE( std::is_standard_layout_v<yk::rvariant<S>>);
-        STATIC_REQUIRE(!is_never_valueless<yk::rvariant<S, BadType>>);
+        STATIC_REQUIRE(iris::detail::is_never_valueless_v<S>);
+        STATIC_REQUIRE(is_never_valueless<iris::rvariant<S>>);
+        STATIC_REQUIRE( std::is_standard_layout_v<iris::rvariant<S>>);
+        STATIC_REQUIRE(!is_never_valueless<iris::rvariant<S, BadType>>);
     }
     {
         // strange type, but...
@@ -89,9 +89,9 @@ TEST_CASE("never_valueless", "[detail]")
         static_assert(!std::is_trivially_move_constructible_v<S>);
         static_assert(!std::is_trivially_move_assignable_v<S>);
 
-        STATIC_REQUIRE(yk::detail::is_never_valueless_v<S>);
-        STATIC_REQUIRE(is_never_valueless<yk::rvariant<S>>);
-        STATIC_REQUIRE(!is_never_valueless<yk::rvariant<S, BadType>>);
+        STATIC_REQUIRE(iris::detail::is_never_valueless_v<S>);
+        STATIC_REQUIRE(is_never_valueless<iris::rvariant<S>>);
+        STATIC_REQUIRE(!is_never_valueless<iris::rvariant<S, BadType>>);
     }
     {
         // strange type, but...
@@ -108,10 +108,10 @@ TEST_CASE("never_valueless", "[detail]")
         static_assert( std::is_trivially_move_constructible_v<S>);
         static_assert(!std::is_trivially_move_assignable_v<S>);
 
-        STATIC_REQUIRE(yk::detail::is_never_valueless_v<S>);
-        STATIC_REQUIRE(is_never_valueless<yk::rvariant<S>>);
-        STATIC_REQUIRE(!yk::detail::is_never_valueless_v<yk::rvariant<S>>); // wow https://eel.is/c++draft/variant.assign#5
-        STATIC_REQUIRE(!is_never_valueless<yk::rvariant<S, BadType>>);
+        STATIC_REQUIRE(iris::detail::is_never_valueless_v<S>);
+        STATIC_REQUIRE(is_never_valueless<iris::rvariant<S>>);
+        STATIC_REQUIRE(!iris::detail::is_never_valueless_v<iris::rvariant<S>>); // wow https://eel.is/c++draft/variant.assign#5
+        STATIC_REQUIRE(!is_never_valueless<iris::rvariant<S, BadType>>);
     }
 }
 
@@ -123,8 +123,8 @@ TEST_CASE("storage", "[detail]")
     // NOLINTBEGIN(modernize-use-equals-default)
     {
         using T = int;
-        using VD = yk::detail::variadic_union<true, T>;
-        STATIC_REQUIRE(std::is_same_v<yk::detail::make_variadic_union_t<T>, VD>);
+        using VD = iris::detail::variadic_union<true, T>;
+        STATIC_REQUIRE(std::is_same_v<iris::detail::make_variadic_union_t<T>, VD>);
         {
             STATIC_REQUIRE(std::is_nothrow_default_constructible_v<VD>);   // valueless
 
@@ -151,9 +151,9 @@ TEST_CASE("storage", "[detail]")
             STATIC_REQUIRE(!std::is_constructible_v<VD, std::in_place_index_t<0>, NonExistent>);
         }
 
-        using V = yk::rvariant<T>;
+        using V = iris::rvariant<T>;
 
-        using Base = yk::detail::rvariant_base<T>;
+        using Base = iris::detail::rvariant_base<T>;
         {
             STATIC_REQUIRE(std::is_trivially_copy_constructible_v<Base>);
             STATIC_REQUIRE(std::is_trivially_move_constructible_v<Base>);
@@ -182,8 +182,8 @@ TEST_CASE("storage", "[detail]")
             int j;
         };
         static_assert(std::is_standard_layout_v<S>);
-        STATIC_REQUIRE(std::is_standard_layout_v<yk::detail::make_variadic_union_t<S>>);
-        STATIC_REQUIRE(std::is_standard_layout_v<yk::rvariant<S>>);
+        STATIC_REQUIRE(std::is_standard_layout_v<iris::detail::make_variadic_union_t<S>>);
+        STATIC_REQUIRE(std::is_standard_layout_v<iris::rvariant<S>>);
     }
     {
         struct S
@@ -195,9 +195,9 @@ TEST_CASE("storage", "[detail]")
         };
         static_assert(!std::is_standard_layout_v<S>);
         // ReSharper disable once CppStaticAssertFailure
-        STATIC_REQUIRE(!std::is_standard_layout_v<yk::detail::make_variadic_union_t<S>>);
+        STATIC_REQUIRE(!std::is_standard_layout_v<iris::detail::make_variadic_union_t<S>>);
         // ReSharper disable once CppStaticAssertFailure
-        STATIC_REQUIRE(!std::is_standard_layout_v<yk::rvariant<S>>);
+        STATIC_REQUIRE(!std::is_standard_layout_v<iris::rvariant<S>>);
     }
 
     {
@@ -220,9 +220,9 @@ TEST_CASE("storage", "[detail]")
             STATIC_REQUIRE(!std::is_trivially_copyable_v<T>);
         }
 
-        using V = yk::rvariant<T>;
+        using V = iris::rvariant<T>;
 
-        using Base = yk::detail::rvariant_base_t<T>;
+        using Base = iris::detail::rvariant_base_t<T>;
         static_assert(std::is_base_of_v<Base, V>);
         {
             STATIC_REQUIRE(!std::is_trivially_copy_constructible_v<Base>);
@@ -263,7 +263,7 @@ TEST_CASE("storage", "[detail]")
         STATIC_REQUIRE(!std::is_trivially_copyable_v<S>);
         STATIC_REQUIRE(std::is_standard_layout_v<S>);
 
-        using V = yk::rvariant<S>;
+        using V = iris::rvariant<S>;
         STATIC_REQUIRE( std::is_copy_constructible_v<V>);
         STATIC_REQUIRE(!std::is_trivially_copy_constructible_v<V>);
 
@@ -283,7 +283,7 @@ TEST_CASE("storage", "[detail]")
             S() = default;
             S(int) {}
         };
-        using VD = yk::detail::variadic_union<true, S>;
+        using VD = iris::detail::variadic_union<true, S>;
 
         STATIC_REQUIRE(std::is_nothrow_default_constructible_v<VD>);
 
@@ -317,7 +317,7 @@ TEST_CASE("storage", "[detail]")
             S() = default;
             S(int) {}
         };
-        using VD = yk::detail::variadic_union<true, S, int>;
+        using VD = iris::detail::variadic_union<true, S, int>;
 
         STATIC_REQUIRE(std::is_nothrow_default_constructible_v<VD>);
 
@@ -358,7 +358,7 @@ TEST_CASE("storage", "[detail]")
             S() = default;
             S(int) {}
         };
-        using VD = yk::detail::variadic_union<true, int, S>;
+        using VD = iris::detail::variadic_union<true, int, S>;
 
         STATIC_REQUIRE(std::is_nothrow_default_constructible_v<VD>);
 
@@ -402,7 +402,7 @@ TEST_CASE("storage", "[detail]")
             S& operator=(S&&) noexcept { return *this; }
             ~S() noexcept {}
         };
-        using VD = yk::detail::variadic_union<false, S>;
+        using VD = iris::detail::variadic_union<false, S>;
 
         STATIC_REQUIRE(std::is_nothrow_default_constructible_v<VD>);
 
@@ -426,14 +426,14 @@ namespace {
 template<class Variant>
 [[nodiscard]] int test_forward_storage(Variant&& v)  // NOLINT(cppcoreguidelines-missing-std-forward)
 {
-    using yk::detail::forward_storage_t;
-    using yk::detail::forward_storage;
-    using yk::detail::as_variant_t;
+    using iris::detail::forward_storage_t;
+    using iris::detail::forward_storage;
+    using iris::detail::as_variant_t;
     using V = std::remove_cvref_t<Variant>;
-    using ExactV = yk::rvariant<int>;
-    using VU = yk::detail::make_variadic_union_t<int>;
+    using ExactV = iris::rvariant<int>;
+    using VU = iris::detail::make_variadic_union_t<int>;
 
-    constexpr bool IsExact = yk::core::is_ttp_specialization_of_v<V, yk::rvariant>;
+    constexpr bool IsExact = iris::core::is_ttp_specialization_of_v<V, iris::rvariant>;
 
     if constexpr (std::is_same_v<Variant&&, V&>) {
         STATIC_REQUIRE(std::is_same_v<as_variant_t<Variant>, ExactV&>);
@@ -482,7 +482,7 @@ template<class Variant>
 }
 
 template<class... Ts>
-struct DerivedVariant : yk::rvariant<Ts...>
+struct DerivedVariant : iris::rvariant<Ts...>
 {
     using DerivedVariant::rvariant::rvariant;
 };
@@ -493,7 +493,7 @@ TEST_CASE("forward_storage", "[detail]")
 {
     // NOLINTBEGIN(performance-move-const-arg)
     {
-        yk::rvariant<int> v;
+        iris::rvariant<int> v;
         CHECK(test_forward_storage(v) == 0);
         CHECK(test_forward_storage(std::as_const(v)) == 1);
         CHECK(test_forward_storage(std::move(std::as_const(v))) == 3);
@@ -512,30 +512,30 @@ TEST_CASE("forward_storage", "[detail]")
 TEST_CASE("variant_index_t", "[detail]")
 {
     // NOLINTBEGIN(modernize-use-integer-sign-comparison)
-    STATIC_REQUIRE(static_cast<std::size_t>(static_cast<yk::detail::variant_index_t<126>>(-1)) == std::variant_npos);
-    STATIC_REQUIRE(static_cast<std::size_t>(static_cast<yk::detail::variant_index_t<127>>(-1)) == std::variant_npos);
-    STATIC_REQUIRE(static_cast<std::size_t>(static_cast<yk::detail::variant_index_t<128>>(-1)) == std::variant_npos);
+    STATIC_REQUIRE(static_cast<std::size_t>(static_cast<iris::detail::variant_index_t<126>>(-1)) == std::variant_npos);
+    STATIC_REQUIRE(static_cast<std::size_t>(static_cast<iris::detail::variant_index_t<127>>(-1)) == std::variant_npos);
+    STATIC_REQUIRE(static_cast<std::size_t>(static_cast<iris::detail::variant_index_t<128>>(-1)) == std::variant_npos);
     // NOLINTEND(modernize-use-integer-sign-comparison)
 
-    STATIC_REQUIRE(yk::detail::valueless_bias<false>(static_cast<yk::detail::variant_index_t<126>>(125)) == 126);
-    STATIC_REQUIRE(yk::detail::valueless_bias<false>(static_cast<yk::detail::variant_index_t<127>>(126)) == 127);
-    STATIC_REQUIRE(yk::detail::valueless_bias<false>(static_cast<yk::detail::variant_index_t<128>>(127)) == 128);
+    STATIC_REQUIRE(iris::detail::valueless_bias<false>(static_cast<iris::detail::variant_index_t<126>>(125)) == 126);
+    STATIC_REQUIRE(iris::detail::valueless_bias<false>(static_cast<iris::detail::variant_index_t<127>>(126)) == 127);
+    STATIC_REQUIRE(iris::detail::valueless_bias<false>(static_cast<iris::detail::variant_index_t<128>>(127)) == 128);
 }
 
 // --------------------------------------------
 
 TEST_CASE("helper class")
 {
-    STATIC_REQUIRE(yk::variant_size_v<yk::rvariant<int>> == 1);
-    STATIC_REQUIRE(yk::variant_size_v<yk::rvariant<int, float>> == 2);
+    STATIC_REQUIRE(iris::variant_size_v<iris::rvariant<int>> == 1);
+    STATIC_REQUIRE(iris::variant_size_v<iris::rvariant<int, float>> == 2);
 
-    STATIC_REQUIRE(std::is_same_v<yk::variant_alternative_t<0, yk::rvariant<int>>, int>);
-    STATIC_REQUIRE(std::is_same_v<yk::variant_alternative_t<0, yk::rvariant<int, float>>, int>);
-    STATIC_REQUIRE(std::is_same_v<yk::variant_alternative_t<1, yk::rvariant<int, float>>, float>);
+    STATIC_REQUIRE(std::is_same_v<iris::variant_alternative_t<0, iris::rvariant<int>>, int>);
+    STATIC_REQUIRE(std::is_same_v<iris::variant_alternative_t<0, iris::rvariant<int, float>>, int>);
+    STATIC_REQUIRE(std::is_same_v<iris::variant_alternative_t<1, iris::rvariant<int, float>>, float>);
 
-    STATIC_REQUIRE(std::is_same_v<yk::variant_alternative_t<0, yk::rvariant<int> const>, int const>);
-    STATIC_REQUIRE(std::is_same_v<yk::variant_alternative_t<0, yk::rvariant<int, float> const>, int const>);
-    STATIC_REQUIRE(std::is_same_v<yk::variant_alternative_t<1, yk::rvariant<int, float> const>, float const>);
+    STATIC_REQUIRE(std::is_same_v<iris::variant_alternative_t<0, iris::rvariant<int> const>, int const>);
+    STATIC_REQUIRE(std::is_same_v<iris::variant_alternative_t<0, iris::rvariant<int, float> const>, int const>);
+    STATIC_REQUIRE(std::is_same_v<iris::variant_alternative_t<1, iris::rvariant<int, float> const>, float const>);
 }
 
 // --------------------------------------------
@@ -543,11 +543,11 @@ TEST_CASE("helper class")
 TEST_CASE("rvariant.rvariant.general", "[wrapper]")
 {
     // [rvariant.rvariant.general]
-    //yk::rvariant<int, yk::recursive_wrapper<int>>{}; // hard error
-    //yk::rvariant<yk::recursive_wrapper<int>, int>{}; // hard error
-    (void)yk::rvariant<yk::recursive_wrapper<int>, yk::recursive_wrapper<int>>{}; // ok
+    //iris::rvariant<int, iris::recursive_wrapper<int>>{}; // hard error
+    //iris::rvariant<iris::recursive_wrapper<int>, int>{}; // hard error
+    (void)iris::rvariant<iris::recursive_wrapper<int>, iris::recursive_wrapper<int>>{}; // ok
     //struct MyAllocator : std::allocator<int> {};
-    //yk::rvariant<yk::recursive_wrapper<int>, yk::recursive_wrapper<int, MyAllocator>>{}; // hard error
+    //iris::rvariant<iris::recursive_wrapper<int>, iris::recursive_wrapper<int, MyAllocator>>{}; // hard error
 }
 
 TEST_CASE("special member function resolution")
@@ -567,17 +567,17 @@ TEST_CASE("special member function resolution")
         STATIC_REQUIRE( std::is_move_constructible_v<NCC>);
         STATIC_REQUIRE( std::is_move_assignable_v<NCC>);
 
-        using V_NCC = yk::rvariant<NCC>;
+        using V_NCC = iris::rvariant<NCC>;
         V_NCC temp;
 
         STATIC_CHECK( std::is_default_constructible_v<V_NCC>);
-        CHECK(yk::get<0>(V_NCC{}).log == "DC ");
+        CHECK(iris::get<0>(V_NCC{}).log == "DC ");
         STATIC_CHECK(!std::is_copy_constructible_v<V_NCC>);
         STATIC_CHECK(!std::is_copy_assignable_v<V_NCC>); // strengthened; https://eel.is/c++draft/variant.assign#5
         STATIC_CHECK( std::is_move_constructible_v<V_NCC>);
-        CHECK(yk::get<0>(V_NCC{std::move(temp)}).log == "MC "); // construction from xvalue
+        CHECK(iris::get<0>(V_NCC{std::move(temp)}).log == "MC "); // construction from xvalue
         STATIC_CHECK( std::is_move_assignable_v<V_NCC>);
-        CHECK(yk::get<0>(V_NCC{} = V_NCC{}).log == "DC MA ");
+        CHECK(iris::get<0>(V_NCC{} = V_NCC{}).log == "DC MA ");
     }
     {
         struct NMC : SMF_Logger
@@ -594,19 +594,19 @@ TEST_CASE("special member function resolution")
         STATIC_REQUIRE(!std::is_move_constructible_v<NMC>);
         STATIC_REQUIRE( std::is_move_assignable_v<NMC>);
 
-        using V_NMC = yk::rvariant<NMC>;
+        using V_NMC = iris::rvariant<NMC>;
         V_NMC temp;
 
         STATIC_CHECK( std::is_default_constructible_v<V_NMC>);
-        CHECK(yk::get<0>(V_NMC{}).log == "DC ");
+        CHECK(iris::get<0>(V_NMC{}).log == "DC ");
         STATIC_CHECK( std::is_copy_constructible_v<V_NMC>);
-        CHECK(yk::get<0>(V_NMC{temp}).log == "CC ");
+        CHECK(iris::get<0>(V_NMC{temp}).log == "CC ");
         STATIC_CHECK( std::is_copy_assignable_v<V_NMC>);
-        CHECK(yk::get<0>(V_NMC{} = temp).log == "DC CA ");
+        CHECK(iris::get<0>(V_NMC{} = temp).log == "DC CA ");
         STATIC_CHECK( std::is_move_constructible_v<V_NMC>); // falls back to CC; https://eel.is/c++draft/variant.ctor#10
-        CHECK(yk::get<0>(V_NMC{std::move(temp)}).log == "CC ");
+        CHECK(iris::get<0>(V_NMC{std::move(temp)}).log == "CC ");
         STATIC_CHECK( std::is_move_assignable_v<V_NMC>);
-        CHECK(yk::get<0>(V_NMC{} = V_NMC{}).log == "DC CA "); // falls back to CA; https://eel.is/c++draft/variant.assign#7
+        CHECK(iris::get<0>(V_NMC{} = V_NMC{}).log == "DC CA "); // falls back to CA; https://eel.is/c++draft/variant.assign#7
     }
 
     {
@@ -624,18 +624,18 @@ TEST_CASE("special member function resolution")
         STATIC_REQUIRE( std::is_move_constructible_v<NCA>);
         STATIC_REQUIRE( std::is_move_assignable_v<NCA>);
 
-        using V_NCA = yk::rvariant<NCA>;
+        using V_NCA = iris::rvariant<NCA>;
         V_NCA temp;
 
         STATIC_CHECK( std::is_default_constructible_v<V_NCA>);
-        CHECK(yk::get<0>(V_NCA{}).log == "DC ");
+        CHECK(iris::get<0>(V_NCA{}).log == "DC ");
         STATIC_CHECK( std::is_copy_constructible_v<V_NCA>);
-        CHECK(yk::get<0>(V_NCA{temp}).log == "CC ");
+        CHECK(iris::get<0>(V_NCA{temp}).log == "CC ");
         STATIC_CHECK(!std::is_copy_assignable_v<V_NCA>);
         STATIC_CHECK( std::is_move_constructible_v<V_NCA>);
-        CHECK(yk::get<0>(V_NCA{std::move(temp)}).log == "MC "); // construction from xvalue
+        CHECK(iris::get<0>(V_NCA{std::move(temp)}).log == "MC "); // construction from xvalue
         STATIC_CHECK( std::is_move_assignable_v<V_NCA>);
-        CHECK(yk::get<0>(V_NCA{} = V_NCA{}).log == "DC MA ");
+        CHECK(iris::get<0>(V_NCA{} = V_NCA{}).log == "DC MA ");
     }
     {
         struct NMA : SMF_Logger
@@ -652,19 +652,19 @@ TEST_CASE("special member function resolution")
         STATIC_REQUIRE( std::is_move_constructible_v<NMA>);
         STATIC_REQUIRE(!std::is_move_assignable_v<NMA>);
 
-        using V_NMA = yk::rvariant<NMA>;
+        using V_NMA = iris::rvariant<NMA>;
         V_NMA temp;
 
         STATIC_CHECK( std::is_default_constructible_v<V_NMA>);
-        CHECK(yk::get<0>(V_NMA{}).log == "DC ");
+        CHECK(iris::get<0>(V_NMA{}).log == "DC ");
         STATIC_CHECK( std::is_copy_constructible_v<V_NMA>);
-        CHECK(yk::get<0>(V_NMA{temp}).log == "CC ");
+        CHECK(iris::get<0>(V_NMA{temp}).log == "CC ");
         STATIC_CHECK( std::is_copy_assignable_v<V_NMA>);
-        CHECK(yk::get<0>(V_NMA{} = temp).log == "DC CA ");
+        CHECK(iris::get<0>(V_NMA{} = temp).log == "DC CA ");
         STATIC_CHECK( std::is_move_constructible_v<V_NMA>);
-        CHECK(yk::get<0>(V_NMA{std::move(temp)}).log == "MC "); // construction from xvalue
+        CHECK(iris::get<0>(V_NMA{std::move(temp)}).log == "MC "); // construction from xvalue
         STATIC_CHECK( std::is_move_assignable_v<V_NMA>); // falls back to CA; https://eel.is/c++draft/variant.assign#7
-        CHECK(yk::get<0>(V_NMA{} = V_NMA{}).log == "DC CA ");
+        CHECK(iris::get<0>(V_NMA{} = V_NMA{}).log == "DC CA ");
     }
 
     {
@@ -682,17 +682,17 @@ TEST_CASE("special member function resolution")
         STATIC_REQUIRE( std::is_move_constructible_v<NCC_NCA>);
         STATIC_REQUIRE( std::is_move_assignable_v<NCC_NCA>);
 
-        using V_NCC_NCA = yk::rvariant<NCC_NCA>;
+        using V_NCC_NCA = iris::rvariant<NCC_NCA>;
         V_NCC_NCA temp;
 
         STATIC_CHECK( std::is_default_constructible_v<V_NCC_NCA>);
-        CHECK(yk::get<0>(V_NCC_NCA{}).log == "DC ");
+        CHECK(iris::get<0>(V_NCC_NCA{}).log == "DC ");
         STATIC_CHECK(!std::is_copy_constructible_v<V_NCC_NCA>);
         STATIC_CHECK(!std::is_copy_assignable_v<V_NCC_NCA>);
         STATIC_CHECK( std::is_move_constructible_v<V_NCC_NCA>);
-        CHECK(yk::get<0>(V_NCC_NCA{std::move(temp)}).log == "MC "); // construction from xvalue
+        CHECK(iris::get<0>(V_NCC_NCA{std::move(temp)}).log == "MC "); // construction from xvalue
         STATIC_CHECK( std::is_move_assignable_v<V_NCC_NCA>);
-        CHECK(yk::get<0>(V_NCC_NCA{} = V_NCC_NCA{}).log == "DC MA ");
+        CHECK(iris::get<0>(V_NCC_NCA{} = V_NCC_NCA{}).log == "DC MA ");
     }
     {
         struct NMC_NMA : SMF_Logger
@@ -709,19 +709,19 @@ TEST_CASE("special member function resolution")
         STATIC_REQUIRE(!std::is_move_constructible_v<NMC_NMA>);
         STATIC_REQUIRE(!std::is_move_assignable_v<NMC_NMA>);
 
-        using V_NMC_NMA = yk::rvariant<NMC_NMA>;
+        using V_NMC_NMA = iris::rvariant<NMC_NMA>;
         V_NMC_NMA temp;
 
         STATIC_CHECK( std::is_default_constructible_v<V_NMC_NMA>);
-        CHECK(yk::get<0>(V_NMC_NMA{}).log == "DC ");
+        CHECK(iris::get<0>(V_NMC_NMA{}).log == "DC ");
         STATIC_CHECK( std::is_copy_constructible_v<V_NMC_NMA>);
-        CHECK(yk::get<0>(V_NMC_NMA{temp}).log == "CC ");
+        CHECK(iris::get<0>(V_NMC_NMA{temp}).log == "CC ");
         STATIC_CHECK( std::is_copy_assignable_v<V_NMC_NMA>);
-        CHECK(yk::get<0>(V_NMC_NMA{} = temp).log == "DC CA ");
+        CHECK(iris::get<0>(V_NMC_NMA{} = temp).log == "DC CA ");
         STATIC_CHECK( std::is_move_constructible_v<V_NMC_NMA>); // falls back to CC; https://eel.is/c++draft/variant.ctor#10
-        CHECK(yk::get<0>(V_NMC_NMA{std::move(temp)}).log == "CC "); // construction from xvalue
+        CHECK(iris::get<0>(V_NMC_NMA{std::move(temp)}).log == "CC "); // construction from xvalue
         STATIC_CHECK( std::is_move_assignable_v<V_NMC_NMA>); // falls back to CA; https://eel.is/c++draft/variant.assign#7
-        CHECK(yk::get<0>(V_NMC_NMA{} = V_NMC_NMA{}).log == "DC CA ");
+        CHECK(iris::get<0>(V_NMC_NMA{} = V_NMC_NMA{}).log == "DC CA ");
     }
 
     {
@@ -739,11 +739,11 @@ TEST_CASE("special member function resolution")
         STATIC_REQUIRE(!std::is_move_constructible_v<NCC_NMC_NMA>);
         STATIC_REQUIRE(!std::is_move_assignable_v<NCC_NMC_NMA>);
 
-        using V_NCC_NMC_NMA = yk::rvariant<NCC_NMC_NMA>;
+        using V_NCC_NMC_NMA = iris::rvariant<NCC_NMC_NMA>;
         V_NCC_NMC_NMA temp;
 
         STATIC_CHECK( std::is_default_constructible_v<V_NCC_NMC_NMA>);
-        CHECK(yk::get<0>(V_NCC_NMC_NMA{}).log == "DC ");
+        CHECK(iris::get<0>(V_NCC_NMC_NMA{}).log == "DC ");
         STATIC_CHECK(!std::is_copy_constructible_v<V_NCC_NMC_NMA>);
         STATIC_CHECK(!std::is_copy_assignable_v<V_NCC_NMC_NMA>); // strengthened; https://eel.is/c++draft/variant.assign#5
         STATIC_CHECK(!std::is_move_constructible_v<V_NCC_NMC_NMA>); // falls back to CC(deleted)
@@ -764,16 +764,16 @@ TEST_CASE("special member function resolution")
         STATIC_REQUIRE(!std::is_move_constructible_v<NCA_NMC_NMA>);
         STATIC_REQUIRE(!std::is_move_assignable_v<NCA_NMC_NMA>);
 
-        using V_NMC_NMA = yk::rvariant<NCA_NMC_NMA>;
+        using V_NMC_NMA = iris::rvariant<NCA_NMC_NMA>;
         V_NMC_NMA temp;
 
         STATIC_CHECK( std::is_default_constructible_v<V_NMC_NMA>);
-        CHECK(yk::get<0>(V_NMC_NMA{}).log == "DC ");
+        CHECK(iris::get<0>(V_NMC_NMA{}).log == "DC ");
         STATIC_CHECK( std::is_copy_constructible_v<V_NMC_NMA>);
-        CHECK(yk::get<0>(V_NMC_NMA{temp}).log == "CC ");
+        CHECK(iris::get<0>(V_NMC_NMA{temp}).log == "CC ");
         STATIC_CHECK(!std::is_copy_assignable_v<V_NMC_NMA>);
         STATIC_CHECK( std::is_move_constructible_v<V_NMC_NMA>); // falls back to CC; https://eel.is/c++draft/variant.ctor#10
-        CHECK(yk::get<0>(V_NMC_NMA{std::move(temp)}).log == "CC "); // construction from xvalue
+        CHECK(iris::get<0>(V_NMC_NMA{std::move(temp)}).log == "CC "); // construction from xvalue
         STATIC_CHECK(!std::is_move_assignable_v<V_NMC_NMA>); // falls back to CA(deleted)
     }
 
@@ -792,11 +792,11 @@ TEST_CASE("special member function resolution")
         STATIC_REQUIRE(!std::is_copy_assignable_v<NCC_NCA_NMC_NMA>);
         STATIC_REQUIRE(!std::is_move_assignable_v<NCC_NCA_NMC_NMA>);
 
-        using V_NCC_NCA_NMC_NMA = yk::rvariant<NCC_NCA_NMC_NMA>;
+        using V_NCC_NCA_NMC_NMA = iris::rvariant<NCC_NCA_NMC_NMA>;
         V_NCC_NCA_NMC_NMA temp;
 
         STATIC_CHECK( std::is_default_constructible_v<V_NCC_NCA_NMC_NMA>);
-        CHECK(yk::get<0>(V_NCC_NCA_NMC_NMA{}).log == "DC ");
+        CHECK(iris::get<0>(V_NCC_NCA_NMC_NMA{}).log == "DC ");
         STATIC_CHECK(!std::is_copy_constructible_v<V_NCC_NCA_NMC_NMA>);
         STATIC_CHECK(!std::is_move_constructible_v<V_NCC_NCA_NMC_NMA>);
         STATIC_CHECK(!std::is_copy_assignable_v<V_NCC_NCA_NMC_NMA>);
@@ -812,37 +812,37 @@ TEST_CASE("default construction")
             S() = delete;
         };
 
-        STATIC_REQUIRE(!std::is_default_constructible_v<yk::rvariant<S>>);
-        STATIC_REQUIRE(!std::is_default_constructible_v<yk::rvariant<S, int>>);
-        STATIC_REQUIRE( std::is_default_constructible_v<yk::rvariant<int, S>>);
+        STATIC_REQUIRE(!std::is_default_constructible_v<iris::rvariant<S>>);
+        STATIC_REQUIRE(!std::is_default_constructible_v<iris::rvariant<S, int>>);
+        STATIC_REQUIRE( std::is_default_constructible_v<iris::rvariant<int, S>>);
     }
 
     // value-initialize
     {
-        STATIC_CHECK(std::is_trivially_copy_constructible_v<yk::rvariant<int>>);
-        STATIC_CHECK(std::is_trivially_move_constructible_v<yk::rvariant<int>>);
-        STATIC_CHECK(std::is_trivially_copy_assignable_v<yk::rvariant<int>>);
-        STATIC_CHECK(std::is_trivially_move_assignable_v<yk::rvariant<int>>);
-        STATIC_CHECK(std::is_trivially_destructible_v<yk::rvariant<int>>);
-        STATIC_CHECK(std::is_trivially_copyable_v<yk::rvariant<int>>);
+        STATIC_CHECK(std::is_trivially_copy_constructible_v<iris::rvariant<int>>);
+        STATIC_CHECK(std::is_trivially_move_constructible_v<iris::rvariant<int>>);
+        STATIC_CHECK(std::is_trivially_copy_assignable_v<iris::rvariant<int>>);
+        STATIC_CHECK(std::is_trivially_move_assignable_v<iris::rvariant<int>>);
+        STATIC_CHECK(std::is_trivially_destructible_v<iris::rvariant<int>>);
+        STATIC_CHECK(std::is_trivially_copyable_v<iris::rvariant<int>>);
 
         // NB: bit_cast from union type is not allowed in constant expression
-        using V = yk::rvariant<int>;
+        using V = iris::rvariant<int>;
         alignas(V) std::array<std::byte, sizeof(V)> storage;
         {
             V arbitrary_value(42);
             storage = std::bit_cast<decltype(storage)>(arbitrary_value);
         }
         V* v_ptr = new (&storage) V; // default-initialize
-        int const default_constructed_value = yk::get<int>(*v_ptr); // MUST be value-initialized as per https://eel.is/c++draft/variant.ctor#3
+        int const default_constructed_value = iris::get<int>(*v_ptr); // MUST be value-initialized as per https://eel.is/c++draft/variant.ctor#3
         v_ptr->~V();
 
         CHECK(default_constructed_value == 0);
     }
 
     {
-        yk::rvariant<int> var;
-        STATIC_REQUIRE(std::is_nothrow_default_constructible_v<yk::rvariant<int>>);
+        iris::rvariant<int> var;
+        STATIC_REQUIRE(std::is_nothrow_default_constructible_v<iris::rvariant<int>>);
         REQUIRE(var.valueless_by_exception() == false);
         CHECK(var.index() == 0);
     }
@@ -854,7 +854,7 @@ TEST_CASE("default construction")
         // ReSharper disable once CppStaticAssertFailure
         STATIC_REQUIRE(!std::is_nothrow_default_constructible_v<S>);
         // ReSharper disable once CppStaticAssertFailure
-        STATIC_REQUIRE(!std::is_nothrow_default_constructible_v<yk::rvariant<S>>);
+        STATIC_REQUIRE(!std::is_nothrow_default_constructible_v<iris::rvariant<S>>);
     }
     {
         struct S
@@ -862,23 +862,23 @@ TEST_CASE("default construction")
             S() = delete;
         };
         STATIC_REQUIRE(!std::is_default_constructible_v<S>);
-        STATIC_REQUIRE(!std::is_default_constructible_v<yk::rvariant<S>>);
+        STATIC_REQUIRE(!std::is_default_constructible_v<iris::rvariant<S>>);
     }
     {
         struct S
         {
             S() { throw std::exception(); }
         };
-        REQUIRE_THROWS(yk::rvariant<S>());
+        REQUIRE_THROWS(iris::rvariant<S>());
     }
 }
 
 TEST_CASE("copy construction")
 {
     {
-        STATIC_REQUIRE(std::is_trivially_copy_constructible_v<yk::rvariant<int>>);
-        yk::rvariant<int, double> a;
-        yk::rvariant<int, double> b(a);
+        STATIC_REQUIRE(std::is_trivially_copy_constructible_v<iris::rvariant<int>>);
+        iris::rvariant<int, double> a;
+        iris::rvariant<int, double> b(a);
         REQUIRE(b.valueless_by_exception() == false);
         CHECK(b.index() == 0);
     }
@@ -890,11 +890,11 @@ TEST_CASE("copy construction")
             S(S const&) {}
         };
         STATIC_REQUIRE(std::is_copy_constructible_v<S>);
-        STATIC_REQUIRE(std::is_copy_constructible_v<yk::rvariant<S>>);
-        STATIC_REQUIRE(std::is_copy_constructible_v<yk::rvariant<int, S>>);
+        STATIC_REQUIRE(std::is_copy_constructible_v<iris::rvariant<S>>);
+        STATIC_REQUIRE(std::is_copy_constructible_v<iris::rvariant<int, S>>);
         STATIC_REQUIRE_FALSE(std::is_trivially_copy_constructible_v<S>);
-        STATIC_REQUIRE_FALSE(std::is_trivially_copy_constructible_v<yk::rvariant<S>>);
-        STATIC_REQUIRE_FALSE(std::is_trivially_copy_constructible_v<yk::rvariant<int, S>>);
+        STATIC_REQUIRE_FALSE(std::is_trivially_copy_constructible_v<iris::rvariant<S>>);
+        STATIC_REQUIRE_FALSE(std::is_trivially_copy_constructible_v<iris::rvariant<int, S>>);
     }
     {
         struct S
@@ -902,8 +902,8 @@ TEST_CASE("copy construction")
             S(S const&) = delete;
         };
         STATIC_REQUIRE_FALSE(std::is_copy_constructible_v<S>);
-        STATIC_REQUIRE_FALSE(std::is_copy_constructible_v<yk::rvariant<S>>);
-        STATIC_REQUIRE_FALSE(std::is_copy_constructible_v<yk::rvariant<int, S>>);
+        STATIC_REQUIRE_FALSE(std::is_copy_constructible_v<iris::rvariant<S>>);
+        STATIC_REQUIRE_FALSE(std::is_copy_constructible_v<iris::rvariant<int, S>>);
     }
     {
         struct S
@@ -911,14 +911,14 @@ TEST_CASE("copy construction")
             S() = default;
             S(S const&) { throw std::exception(); }
         };
-        yk::rvariant<S> a;
-        REQUIRE_THROWS(yk::rvariant<S>(a));
+        iris::rvariant<S> a;
+        REQUIRE_THROWS(iris::rvariant<S>(a));
     }
     // NOLINTEND(modernize-use-equals-default)
 
     {
-        yk::rvariant<int, MC_Thrower> valueless = make_valueless<int>();
-        yk::rvariant<int, MC_Thrower> a(valueless);
+        iris::rvariant<int, MC_Thrower> valueless = make_valueless<int>();
+        iris::rvariant<int, MC_Thrower> a(valueless);
         CHECK(a.valueless_by_exception() == true);
     }
 }
@@ -926,9 +926,9 @@ TEST_CASE("copy construction")
 TEST_CASE("move construction")
 {
     {
-        STATIC_REQUIRE(std::is_trivially_move_constructible_v<yk::rvariant<int>>);
-        yk::rvariant<int, double> a;
-        yk::rvariant<int, double> b(std::move(a));
+        STATIC_REQUIRE(std::is_trivially_move_constructible_v<iris::rvariant<int>>);
+        iris::rvariant<int, double> a;
+        iris::rvariant<int, double> b(std::move(a));
         REQUIRE(b.valueless_by_exception() == false);
         CHECK(b.index() == 0);
     }
@@ -938,8 +938,8 @@ TEST_CASE("move construction")
             S(S&&) noexcept {}
         };
         STATIC_REQUIRE_FALSE(std::is_trivially_move_constructible_v<S>);
-        STATIC_REQUIRE_FALSE(std::is_trivially_move_constructible_v<yk::rvariant<S>>);
-        STATIC_REQUIRE_FALSE(std::is_trivially_move_constructible_v<yk::rvariant<int, S>>);
+        STATIC_REQUIRE_FALSE(std::is_trivially_move_constructible_v<iris::rvariant<S>>);
+        STATIC_REQUIRE_FALSE(std::is_trivially_move_constructible_v<iris::rvariant<int, S>>);
     }
     {
         struct S
@@ -947,8 +947,8 @@ TEST_CASE("move construction")
             S(S&&) = delete;
         };
         STATIC_REQUIRE_FALSE(std::is_move_constructible_v<S>);
-        STATIC_REQUIRE_FALSE(std::is_move_constructible_v<yk::rvariant<S>>);
-        STATIC_REQUIRE_FALSE(std::is_move_constructible_v<yk::rvariant<int, S>>);
+        STATIC_REQUIRE_FALSE(std::is_move_constructible_v<iris::rvariant<S>>);
+        STATIC_REQUIRE_FALSE(std::is_move_constructible_v<iris::rvariant<int, S>>);
     }
     {
         struct S
@@ -958,14 +958,14 @@ TEST_CASE("move construction")
             S& operator=(S&&) = delete;
         };
         static_assert(!std::is_move_assignable_v<S>);
-        yk::rvariant<S> a;
-        static_assert(std::is_move_constructible_v<yk::rvariant<S>>);
-        REQUIRE_THROWS(yk::rvariant<S>(std::move(a)));
+        iris::rvariant<S> a;
+        static_assert(std::is_move_constructible_v<iris::rvariant<S>>);
+        REQUIRE_THROWS(iris::rvariant<S>(std::move(a)));
     }
 
     {
-        yk::rvariant<int, MC_Thrower> valueless = make_valueless<int>();
-        yk::rvariant<int, MC_Thrower> a(std::move(valueless));
+        iris::rvariant<int, MC_Thrower> valueless = make_valueless<int>();
+        iris::rvariant<int, MC_Thrower> a(std::move(valueless));
         CHECK(a.valueless_by_exception() == true);
     }
 }
@@ -973,12 +973,12 @@ TEST_CASE("move construction")
 TEST_CASE("generic construction")
 {
     {
-        yk::rvariant<int, float> var = 42;
+        iris::rvariant<int, float> var = 42;
         REQUIRE(var.valueless_by_exception() == false);
         CHECK(var.index() == 0);
     }
     {
-        yk::rvariant<int, float> var = 3.14f;
+        iris::rvariant<int, float> var = 3.14f;
         REQUIRE(var.valueless_by_exception() == false);
         CHECK(var.index() == 1);
     }
@@ -987,34 +987,34 @@ TEST_CASE("generic construction")
 TEST_CASE("in_place_index construction")
 {
     {
-        yk::rvariant<int, float> var(std::in_place_index<0>, 42);
+        iris::rvariant<int, float> var(std::in_place_index<0>, 42);
         REQUIRE(var.valueless_by_exception() == false);
         CHECK(var.index() == 0);
     }
     {
-        yk::rvariant<int, float> var(std::in_place_index<1>, 3.14f);
+        iris::rvariant<int, float> var(std::in_place_index<1>, 3.14f);
         REQUIRE(var.valueless_by_exception() == false);
         CHECK(var.index() == 1);
     }
     {
-        yk::rvariant<std::vector<int>> var(std::in_place_index<0>, {3, 1, 4});
+        iris::rvariant<std::vector<int>> var(std::in_place_index<0>, {3, 1, 4});
     }
 }
 
 TEST_CASE("in_place_type construction")
 {
     {
-        yk::rvariant<int, float> var(std::in_place_type<int>, 42);
+        iris::rvariant<int, float> var(std::in_place_type<int>, 42);
         REQUIRE(var.valueless_by_exception() == false);
         CHECK(var.index() == 0);
     }
     {
-        yk::rvariant<int, float> var(std::in_place_type<float>, 3.14f);
+        iris::rvariant<int, float> var(std::in_place_type<float>, 3.14f);
         REQUIRE(var.valueless_by_exception() == false);
         CHECK(var.index() == 1);
     }
     {
-        yk::rvariant<std::vector<int>> var(std::in_place_type<std::vector<int>>, {3, 1, 4});
+        iris::rvariant<std::vector<int>> var(std::in_place_type<std::vector<int>>, {3, 1, 4});
     }
 }
 
@@ -1025,7 +1025,7 @@ TEST_CASE("copy assignment")
 
     // trivial case
     {
-        yk::rvariant<int, float> a = 42, b = 3.14f;
+        iris::rvariant<int, float> a = 42, b = 3.14f;
         YK_REQUIRE_STATIC_NOTHROW(a = b);  // different alternative
         REQUIRE(a.index() == 1);
         YK_REQUIRE_STATIC_NOTHROW(a = b);  // same alternative
@@ -1042,7 +1042,7 @@ TEST_CASE("copy assignment")
             S& operator=(S const&) noexcept { return *this; }
             S& operator=(S&&) noexcept(false) { throw std::exception{}; }
         };
-        yk::rvariant<S, int> a = 42, b;
+        iris::rvariant<S, int> a = 42, b;
         YK_REQUIRE_STATIC_NOTHROW(a = b);  // different alternative; use copy constructor
         YK_REQUIRE_STATIC_NOTHROW(a = b);  // same alternative; directly use copy assignment
     }
@@ -1055,13 +1055,13 @@ TEST_CASE("copy assignment")
             S& operator=(S const&) noexcept { return *this; }
             S& operator=(S&&) noexcept { return *this; }
         };
-        yk::rvariant<S, int> a = 42, b;
+        iris::rvariant<S, int> a = 42, b;
         REQUIRE_THROWS(a = b);  // different alternative; move temporary copy
     }
 
     {
-        yk::rvariant<int, MC_Thrower> valueless = make_valueless<int>();
-        yk::rvariant<int, MC_Thrower> a;
+        iris::rvariant<int, MC_Thrower> valueless = make_valueless<int>();
+        iris::rvariant<int, MC_Thrower> a;
         a = valueless;
         CHECK(a.valueless_by_exception() == true);
     }
@@ -1073,12 +1073,12 @@ TEST_CASE("move assignment")
 {
     // trivial case
     {
-        yk::rvariant<int, float> a = 42, b = 3.14f;
+        iris::rvariant<int, float> a = 42, b = 3.14f;
         YK_REQUIRE_STATIC_NOTHROW(a = std::move(b));  // different alternative
         REQUIRE(a.index() == 1);
     }
     {
-        yk::rvariant<int, float> a = 42, b = 33 - 4;
+        iris::rvariant<int, float> a = 42, b = 33 - 4;
         YK_REQUIRE_STATIC_NOTHROW(a = std::move(b));  // same alternative
         REQUIRE(a.index() == 0);
     }
@@ -1094,20 +1094,20 @@ TEST_CASE("move assignment")
             S& operator=(S&&) noexcept { return *this; }
         };
         {
-            yk::rvariant<S, int> a = 42, b;
+            iris::rvariant<S, int> a = 42, b;
             YK_CHECK_STATIC_NOTHROW(a = std::move(b));  // different alternative; use move constructor
             CHECK(a.index() == 0);
         }
         {
-            yk::rvariant<S, int> a, b;
+            iris::rvariant<S, int> a, b;
             YK_CHECK_STATIC_NOTHROW(a = std::move(b));  // same alternative; directly use move assignment
             CHECK(a.index() == 0);
         }
     }
 
     {
-        yk::rvariant<int, MC_Thrower> valueless = make_valueless<int>();
-        yk::rvariant<int, MC_Thrower> a;
+        iris::rvariant<int, MC_Thrower> valueless = make_valueless<int>();
+        iris::rvariant<int, MC_Thrower> a;
         a = std::move(valueless);
         CHECK(a.valueless_by_exception() == true);
     }
@@ -1116,7 +1116,7 @@ TEST_CASE("move assignment")
 TEST_CASE("generic assignment")
 {
     {
-        yk::rvariant<int, float> a{42};
+        iris::rvariant<int, float> a{42};
         CHECK(a.index() == 0);
 
         a = 33;
@@ -1127,22 +1127,22 @@ TEST_CASE("generic assignment")
     }
 
     {
-        yk::rvariant<int, MC_Thrower> a;
+        iris::rvariant<int, MC_Thrower> a;
         REQUIRE_THROWS_AS(a = MC_Thrower{}, MC_Thrower::exception);
         CHECK(a.valueless_by_exception() == true);
     }
     {
-        yk::rvariant<int, MC_Thrower> a;
+        iris::rvariant<int, MC_Thrower> a;
         YK_REQUIRE_STATIC_NOTHROW(a = MC_Thrower::non_throwing);
         CHECK(a.valueless_by_exception() == false);
     }
     {
-        yk::rvariant<int, MC_Thrower> a;
+        iris::rvariant<int, MC_Thrower> a;
         REQUIRE_THROWS_AS(a = MC_Thrower::throwing, MC_Thrower::exception);
         CHECK(a.valueless_by_exception() == true);
     }
     {
-        yk::rvariant<int, MC_Thrower> a;
+        iris::rvariant<int, MC_Thrower> a;
         STATIC_REQUIRE(noexcept(a = MC_Thrower::potentially_throwing) == false);
         REQUIRE_NOTHROW(a = MC_Thrower::potentially_throwing);
         CHECK(a.valueless_by_exception() == false);
@@ -1152,22 +1152,22 @@ TEST_CASE("generic assignment")
 TEST_CASE("emplace")
 {
     {
-        yk::rvariant<int> a;
+        iris::rvariant<int> a;
         STATIC_REQUIRE(std::is_same_v<decltype(a.emplace<int>()), int&>);
         STATIC_REQUIRE(std::is_same_v<decltype(std::move(a).emplace<int>()), int&>);
     }
     {
-        yk::rvariant<int> a = 42;
+        iris::rvariant<int> a = 42;
         YK_REQUIRE_STATIC_NOTHROW(a.emplace<int>(12));
         YK_REQUIRE_STATIC_NOTHROW(a.emplace<0>(12));
     }
     {
-        yk::rvariant<std::vector<int>> a;
+        iris::rvariant<std::vector<int>> a;
         a.emplace<std::vector<int>>({3, 1, 4});
         a.emplace<0>({3, 1, 4});
     }
     {
-        yk::rvariant<int, float> a = 42;
+        iris::rvariant<int, float> a = 42;
         a.emplace<1>(3.14f);
         CHECK(a.index() == 1);
     }
@@ -1179,7 +1179,7 @@ TEST_CASE("emplace")
             {
                 S() noexcept(false) {} // potentially-throwing
             };
-            using V = yk::rvariant<int, S>;
+            using V = iris::rvariant<int, S>;
             {
                 V v(std::in_place_type<int>);
                 v.emplace<S>(); // type-changing & no args; test T{}
@@ -1198,7 +1198,7 @@ TEST_CASE("emplace")
                 StrangeS& operator=(StrangeS&&) noexcept { return *this; } // not trivial
                 StrangeS& operator=(StrangeS const&) = default; // trivial
             };
-            using V = yk::rvariant<int, StrangeS>;
+            using V = iris::rvariant<int, StrangeS>;
             {
                 V v(std::in_place_type<int>);
                 v.emplace<StrangeS>(); // type-changing & no args; test T{}
@@ -1215,122 +1215,122 @@ TEST_CASE("emplace")
 
     struct BigType : Thrower_base
     {
-        std::byte dummy[yk::detail::never_valueless_trivial_size_limit + 1]{};
+        std::byte dummy[iris::detail::never_valueless_trivial_size_limit + 1]{};
     };
-    STATIC_REQUIRE(!yk::detail::is_never_valueless_v<BigType>);
+    STATIC_REQUIRE(!iris::detail::is_never_valueless_v<BigType>);
 
     // non type-changing
-    STATIC_REQUIRE(!is_never_valueless<yk::rvariant<BigType>>);
+    STATIC_REQUIRE(!is_never_valueless<iris::rvariant<BigType>>);
     {
-        yk::rvariant<BigType> a;
+        iris::rvariant<BigType> a;
         REQUIRE_THROWS_AS(a.emplace<0>(BigType::throwing), BigType::exception);
         CHECK(a.valueless_by_exception() == true);
     }
     // type-changing
-    STATIC_REQUIRE(!is_never_valueless<yk::rvariant<int, BigType>>);
+    STATIC_REQUIRE(!is_never_valueless<iris::rvariant<int, BigType>>);
     {
-        yk::rvariant<int, BigType> a;
+        iris::rvariant<int, BigType> a;
         REQUIRE_THROWS_AS(a.emplace<1>(BigType::throwing), BigType::exception);
         CHECK(a.valueless_by_exception() == true);
     }
 
     // non type-changing
-    STATIC_REQUIRE(is_never_valueless<yk::rvariant<Non_Thrower>>);
+    STATIC_REQUIRE(is_never_valueless<iris::rvariant<Non_Thrower>>);
     {
-        yk::rvariant<Non_Thrower> a;
+        iris::rvariant<Non_Thrower> a;
         YK_REQUIRE_STATIC_NOTHROW(a.emplace<0>(Non_Thrower{}));
         CHECK(a.valueless_by_exception() == false);
     }
     {
-        yk::rvariant<Non_Thrower> a;
+        iris::rvariant<Non_Thrower> a;
         YK_REQUIRE_STATIC_NOTHROW(a.emplace<0>(Non_Thrower::non_throwing));
         CHECK(a.valueless_by_exception() == false);
     }
     {
-        yk::rvariant<Non_Thrower> a;
+        iris::rvariant<Non_Thrower> a;
         REQUIRE_THROWS_AS(a.emplace<0>(Non_Thrower::throwing), Non_Thrower::exception);
         CHECK(a.valueless_by_exception() == false);
     }
     {
-        yk::rvariant<Non_Thrower> a;
+        iris::rvariant<Non_Thrower> a;
         REQUIRE_NOTHROW(a.emplace<0>(Non_Thrower::potentially_throwing));
         CHECK(a.valueless_by_exception() == false);
     }
 
     // type-changing
     STATIC_REQUIRE(std::is_nothrow_move_constructible_v<Non_Thrower>);
-    STATIC_REQUIRE(is_never_valueless<yk::rvariant<int, Non_Thrower>>);
+    STATIC_REQUIRE(is_never_valueless<iris::rvariant<int, Non_Thrower>>);
     {
-        yk::rvariant<int, Non_Thrower> a;
+        iris::rvariant<int, Non_Thrower> a;
         YK_REQUIRE_STATIC_NOTHROW(a.emplace<1>(Non_Thrower{}));
         CHECK(a.valueless_by_exception() == false);
     }
     {
-        yk::rvariant<int, Non_Thrower> a;
+        iris::rvariant<int, Non_Thrower> a;
         YK_REQUIRE_STATIC_NOTHROW(a.emplace<1>(Non_Thrower::non_throwing));
         CHECK(a.valueless_by_exception() == false);
     }
     {
-        yk::rvariant<int, Non_Thrower> a;
+        iris::rvariant<int, Non_Thrower> a;
         REQUIRE_THROWS_AS(a.emplace<1>(Non_Thrower::throwing), Non_Thrower::exception);
         CHECK(a.valueless_by_exception() == false);
     }
     {
-        yk::rvariant<int, Non_Thrower> a;
+        iris::rvariant<int, Non_Thrower> a;
         REQUIRE_NOTHROW(a.emplace<1>(Non_Thrower::potentially_throwing));
         CHECK(a.valueless_by_exception() == false);
     }
 
     // non type-changing
     STATIC_REQUIRE(!std::is_nothrow_move_constructible_v<MC_Thrower>);
-    STATIC_REQUIRE(!is_never_valueless<yk::rvariant<MC_Thrower>>);
+    STATIC_REQUIRE(!is_never_valueless<iris::rvariant<MC_Thrower>>);
     {
-        yk::rvariant<MC_Thrower> a;
+        iris::rvariant<MC_Thrower> a;
         REQUIRE_THROWS_AS(a.emplace<0>(MC_Thrower{}), MC_Thrower::exception);
         CHECK(a.valueless_by_exception() == true);
     }
     {
-        yk::rvariant<MC_Thrower> a;
+        iris::rvariant<MC_Thrower> a;
         YK_REQUIRE_STATIC_NOTHROW(a.emplace<0>(MC_Thrower::non_throwing));
         CHECK(a.valueless_by_exception() == false);
     }
     {
-        yk::rvariant<MC_Thrower> a;
+        iris::rvariant<MC_Thrower> a;
         REQUIRE_THROWS_AS(a.emplace<0>(MC_Thrower::throwing), MC_Thrower::exception);
         CHECK(a.valueless_by_exception() == true);
     }
     {
-        yk::rvariant<MC_Thrower> a;
+        iris::rvariant<MC_Thrower> a;
         REQUIRE_NOTHROW(a.emplace<0>(MC_Thrower::potentially_throwing));
         CHECK(a.valueless_by_exception() == false);
     }
 
     // type-changing
     STATIC_REQUIRE(!std::is_nothrow_move_constructible_v<MC_Thrower>);
-    STATIC_REQUIRE(!is_never_valueless<yk::rvariant<int, MC_Thrower>>);
+    STATIC_REQUIRE(!is_never_valueless<iris::rvariant<int, MC_Thrower>>);
     {
-        yk::rvariant<int, MC_Thrower> a;
+        iris::rvariant<int, MC_Thrower> a;
         REQUIRE_THROWS_AS(a.emplace<1>(MC_Thrower{}), MC_Thrower::exception);
         CHECK(a.valueless_by_exception() == true);
     }
     {
-        yk::rvariant<int, MC_Thrower> a;
+        iris::rvariant<int, MC_Thrower> a;
         YK_REQUIRE_STATIC_NOTHROW(a.emplace<1>(MC_Thrower::non_throwing));
         CHECK(a.valueless_by_exception() == false);
     }
     {
-        yk::rvariant<int, MC_Thrower> a;
+        iris::rvariant<int, MC_Thrower> a;
         REQUIRE_THROWS_AS(a.emplace<1>(MC_Thrower::throwing), MC_Thrower::exception);
         CHECK(a.valueless_by_exception() == true);
     }
     {
-        yk::rvariant<int, MC_Thrower> a;
+        iris::rvariant<int, MC_Thrower> a;
         REQUIRE_NOTHROW(a.emplace<1>(MC_Thrower::potentially_throwing));
         CHECK(a.valueless_by_exception() == false);
     }
 
-    STATIC_REQUIRE(yk::detail::is_never_valueless_v<yk::recursive_wrapper<int>>);
-    STATIC_REQUIRE(is_never_valueless<yk::rvariant<yk::recursive_wrapper<int>>>);
+    STATIC_REQUIRE(iris::detail::is_never_valueless_v<iris::recursive_wrapper<int>>);
+    STATIC_REQUIRE(is_never_valueless<iris::rvariant<iris::recursive_wrapper<int>>>);
 
     // ReSharper restore CppStaticAssertFailure
 }
@@ -1364,18 +1364,18 @@ TEST_CASE("self emplace")
 {
     // Valueless instance never triggers the self-emplace assertion
     STATIC_REQUIRE([] consteval {
-        auto v = yk::detail::make_valueless<int, any_consumer>();
+        auto v = iris::detail::make_valueless<int, any_consumer>();
         v.emplace<any_consumer>(v);
         return true;
     }());
     REQUIRE([] {
-        auto v = yk::detail::make_valueless<int, any_consumer>();
+        auto v = iris::detail::make_valueless<int, any_consumer>();
         v.emplace<any_consumer>(v);
         return true;
     }());
     // Triggers self-emplace assertion
     //REQUIRE([] {
-    //    yk::rvariant<int, any_consumer> v;
+    //    iris::rvariant<int, any_consumer> v;
     //    v.emplace<any_consumer>(v);
     //    return true;
     //}());
@@ -1389,17 +1389,17 @@ TEST_CASE("self emplace")
 TEST_CASE("swap")
 {
     {
-        STATIC_REQUIRE(yk::core::is_trivially_swappable_v<int>);
-        yk::rvariant<int> a = 33, b = 4;
+        STATIC_REQUIRE(iris::core::is_trivially_swappable_v<int>);
+        iris::rvariant<int> a = 33, b = 4;
         YK_REQUIRE_STATIC_NOTHROW(a.swap(b));
-        CHECK(yk::get<0>(a) == 4);
-        CHECK(yk::get<0>(b) == 33);
+        CHECK(iris::get<0>(a) == 4);
+        CHECK(iris::get<0>(b) == 33);
     }
     {
-        yk::rvariant<int, float> a = 42, b = 3.14f;
+        iris::rvariant<int, float> a = 42, b = 3.14f;
         YK_REQUIRE_STATIC_NOTHROW(a.swap(b));
-        CHECK(yk::get<1>(a) == 3.14f);
-        CHECK(yk::get<0>(b) == 42);
+        CHECK(iris::get<1>(a) == 3.14f);
+        CHECK(iris::get<0>(b) == 42);
     }
     {
         struct S
@@ -1411,16 +1411,16 @@ TEST_CASE("swap")
             S& operator=(S&&) noexcept(false) { return *this; }
         };
 
-        STATIC_REQUIRE(!yk::core::is_trivially_swappable_v<S>);
-        yk::rvariant<int, S> a{42}, b{S{}};
+        STATIC_REQUIRE(!iris::core::is_trivially_swappable_v<S>);
+        iris::rvariant<int, S> a{42}, b{S{}};
         REQUIRE_NOTHROW(a.swap(b));
-        CHECK(yk::holds_alternative<S>(a));
-        CHECK(yk::holds_alternative<int>(b));
+        CHECK(iris::holds_alternative<S>(a));
+        CHECK(iris::holds_alternative<int>(b));
     }
 
     {
-        yk::rvariant<int, MC_Thrower> a = make_valueless<int>();
-        yk::rvariant<int, MC_Thrower> b;
+        iris::rvariant<int, MC_Thrower> a = make_valueless<int>();
+        iris::rvariant<int, MC_Thrower> b;
         CHECK( a.valueless_by_exception());
         CHECK(!b.valueless_by_exception());
         try {
@@ -1431,8 +1431,8 @@ TEST_CASE("swap")
         CHECK( b.valueless_by_exception());
     }
     {
-        yk::rvariant<int, MC_Thrower> a;
-        yk::rvariant<int, MC_Thrower> b = make_valueless<int>();
+        iris::rvariant<int, MC_Thrower> a;
+        iris::rvariant<int, MC_Thrower> b = make_valueless<int>();
         CHECK(!a.valueless_by_exception());
         CHECK( b.valueless_by_exception());
         try {
@@ -1443,8 +1443,8 @@ TEST_CASE("swap")
         CHECK(!b.valueless_by_exception());
     }
     {
-        yk::rvariant<int, MC_Thrower> a = make_valueless<int>();
-        yk::rvariant<int, MC_Thrower> b = make_valueless<int>();
+        iris::rvariant<int, MC_Thrower> a = make_valueless<int>();
+        iris::rvariant<int, MC_Thrower> b = make_valueless<int>();
         CHECK(a.valueless_by_exception());
         CHECK(b.valueless_by_exception());
         CHECK_NOTHROW(a.swap(b));
@@ -1452,8 +1452,8 @@ TEST_CASE("swap")
         CHECK(b.valueless_by_exception());
     }
     {
-        yk::rvariant<int, MC_Thrower> a = make_valueless<int>();
-        yk::rvariant<int, MC_Thrower> b(std::in_place_type<MC_Thrower>);
+        iris::rvariant<int, MC_Thrower> a = make_valueless<int>();
+        iris::rvariant<int, MC_Thrower> b(std::in_place_type<MC_Thrower>);
         CHECK( a.valueless_by_exception());
         CHECK(!b.valueless_by_exception());
         try {
@@ -1464,8 +1464,8 @@ TEST_CASE("swap")
         CHECK(!b.valueless_by_exception());
     }
     {
-        yk::rvariant<int, MC_Thrower> a(std::in_place_type<int>);
-        yk::rvariant<int, MC_Thrower> b(std::in_place_type<MC_Thrower>);
+        iris::rvariant<int, MC_Thrower> a(std::in_place_type<int>);
+        iris::rvariant<int, MC_Thrower> b(std::in_place_type<MC_Thrower>);
         CHECK(!a.valueless_by_exception());
         CHECK(!b.valueless_by_exception());
         try {
@@ -1480,14 +1480,14 @@ TEST_CASE("swap")
 TEST_CASE("holds_alternative")
 {
     {
-        yk::rvariant<int, float> var = 42;
-        CHECK(yk::holds_alternative<int>(var));
+        iris::rvariant<int, float> var = 42;
+        CHECK(iris::holds_alternative<int>(var));
     }
 
     {
-        yk::rvariant<int, MC_Thrower> valueless = make_valueless<int>();
-        CHECK(!yk::holds_alternative<int>(valueless));
-        CHECK(!yk::holds_alternative<MC_Thrower>(valueless));
+        iris::rvariant<int, MC_Thrower> valueless = make_valueless<int>();
+        CHECK(!iris::holds_alternative<int>(valueless));
+        CHECK(!iris::holds_alternative<MC_Thrower>(valueless));
     }
 }
 
@@ -1499,72 +1499,72 @@ TEST_CASE("holds_alternative")
 TEST_CASE("recursive_wrapper") // not [recursive]
 {
     {
-        yk::recursive_wrapper<int> a(42);
+        iris::recursive_wrapper<int> a(42);
         CHECK_FALSE(a.valueless_after_move());
     }
 
     // NOLINTBEGIN(performance-unnecessary-value-param)
 
-    CHECK([](std::variant<yk::recursive_wrapper<int>> var) {
-        return std::holds_alternative<yk::recursive_wrapper<int>>(var);
+    CHECK([](std::variant<iris::recursive_wrapper<int>> var) {
+        return std::holds_alternative<iris::recursive_wrapper<int>>(var);
     }(42));
-    CHECK([](yk::rvariant<yk::recursive_wrapper<int>> var) {
-        return yk::holds_alternative<int>(var);
+    CHECK([](iris::rvariant<iris::recursive_wrapper<int>> var) {
+        return iris::holds_alternative<int>(var);
     }(42));
 
-    CHECK([](std::variant<yk::recursive_wrapper<int>> var) {
-        return std::holds_alternative<yk::recursive_wrapper<int>>(var);
+    CHECK([](std::variant<iris::recursive_wrapper<int>> var) {
+        return std::holds_alternative<iris::recursive_wrapper<int>>(var);
     }(3.14));
-    CHECK([](yk::rvariant<yk::recursive_wrapper<int>> var) {
-        return yk::holds_alternative<int>(var);
+    CHECK([](iris::rvariant<iris::recursive_wrapper<int>> var) {
+        return iris::holds_alternative<int>(var);
     }(3.14));
 
-    CHECK([](std::variant<yk::recursive_wrapper<int>, double> var) {
+    CHECK([](std::variant<iris::recursive_wrapper<int>, double> var) {
         return std::holds_alternative<double>(var);
     }(3.14f));
-    CHECK([](yk::rvariant<yk::recursive_wrapper<int>, double> var) {
-        return yk::holds_alternative<double>(var);
+    CHECK([](iris::rvariant<iris::recursive_wrapper<int>, double> var) {
+        return iris::holds_alternative<double>(var);
     }(3.14f));
 
-    CHECK([](std::variant<yk::recursive_wrapper<double>, int> var) {
-        return std::holds_alternative<yk::recursive_wrapper<double>>(var);
+    CHECK([](std::variant<iris::recursive_wrapper<double>, int> var) {
+        return std::holds_alternative<iris::recursive_wrapper<double>>(var);
     }(3.14));
-    CHECK([](yk::rvariant<yk::recursive_wrapper<double>, int> var) {
-        return yk::holds_alternative<double>(var);
+    CHECK([](iris::rvariant<iris::recursive_wrapper<double>, int> var) {
+        return iris::holds_alternative<double>(var);
     }(3.14));
 
-    CHECK([](std::variant<yk::recursive_wrapper<double>, int> var) {
-        return std::holds_alternative<yk::recursive_wrapper<double>>(var);
+    CHECK([](std::variant<iris::recursive_wrapper<double>, int> var) {
+        return std::holds_alternative<iris::recursive_wrapper<double>>(var);
     }(3.14f));
-    CHECK([](yk::rvariant<yk::recursive_wrapper<double>, int> var) {
-        return yk::holds_alternative<double>(var);
+    CHECK([](iris::rvariant<iris::recursive_wrapper<double>, int> var) {
+        return iris::holds_alternative<double>(var);
     }(3.14f));
 
-    CHECK([](std::variant<yk::recursive_wrapper<double>, int> var) {
+    CHECK([](std::variant<iris::recursive_wrapper<double>, int> var) {
         return std::holds_alternative<int>(var);
     }(3));
-    CHECK([](yk::rvariant<yk::recursive_wrapper<double>, int> var) {
-        return yk::holds_alternative<int>(var);
+    CHECK([](iris::rvariant<iris::recursive_wrapper<double>, int> var) {
+        return iris::holds_alternative<int>(var);
     }(3));
 
-    CHECK([](std::variant<yk::recursive_wrapper<double>, int> var) {
-        return std::holds_alternative<yk::recursive_wrapper<double>>(var);
-    }(yk::recursive_wrapper<double>(3.14)));
-    CHECK([](yk::rvariant<yk::recursive_wrapper<double>, int> var) {
-        return yk::holds_alternative<double>(var);
-    }(yk::recursive_wrapper<double>(3.14)));
+    CHECK([](std::variant<iris::recursive_wrapper<double>, int> var) {
+        return std::holds_alternative<iris::recursive_wrapper<double>>(var);
+    }(iris::recursive_wrapper<double>(3.14)));
+    CHECK([](iris::rvariant<iris::recursive_wrapper<double>, int> var) {
+        return iris::holds_alternative<double>(var);
+    }(iris::recursive_wrapper<double>(3.14)));
 
     // NOLINTEND(performance-unnecessary-value-param)
 
     {
-        yk::rvariant<yk::recursive_wrapper<int>> var = 42;
+        iris::rvariant<iris::recursive_wrapper<int>> var = 42;
         var = 33 - 4;
-        CHECK(yk::holds_alternative<int>(var));
+        CHECK(iris::holds_alternative<int>(var));
     }
     {
-        yk::rvariant<yk::recursive_wrapper<int>> var = 42;
-        var = yk::recursive_wrapper<int>{};
-        CHECK(yk::holds_alternative<int>(var));
+        iris::rvariant<iris::recursive_wrapper<int>> var = 42;
+        var = iris::recursive_wrapper<int>{};
+        CHECK(iris::holds_alternative<int>(var));
     }
 
     {
@@ -1573,18 +1573,18 @@ TEST_CASE("recursive_wrapper") // not [recursive]
             S(int, double) {}
         };
 
-        yk::rvariant<S> var(std::in_place_index<0>, 42, 3.14);
+        iris::rvariant<S> var(std::in_place_index<0>, 42, 3.14);
         (void)var;
     }
 
     {
-        yk::recursive_wrapper<int> wrapper(std::in_place, 42);
+        iris::recursive_wrapper<int> wrapper(std::in_place, 42);
         CHECK(*wrapper == 42);
-        yk::rvariant<yk::recursive_wrapper<int>> a(std::in_place_index<0>);
-        yk::rvariant<yk::recursive_wrapper<int>> b(std::in_place_index<0>, 42);
-        yk::rvariant<yk::recursive_wrapper<int>> c(std::in_place_index<0>, std::in_place);
-        yk::rvariant<yk::recursive_wrapper<int>> d(std::in_place_index<0>, std::in_place, 42);
-        yk::rvariant<yk::recursive_wrapper<int>> e(std::in_place_index<0>, std::allocator_arg, std::allocator<int>{});
+        iris::rvariant<iris::recursive_wrapper<int>> a(std::in_place_index<0>);
+        iris::rvariant<iris::recursive_wrapper<int>> b(std::in_place_index<0>, 42);
+        iris::rvariant<iris::recursive_wrapper<int>> c(std::in_place_index<0>, std::in_place);
+        iris::rvariant<iris::recursive_wrapper<int>> d(std::in_place_index<0>, std::in_place, 42);
+        iris::rvariant<iris::recursive_wrapper<int>> e(std::in_place_index<0>, std::allocator_arg, std::allocator<int>{});
     }
 }
 
@@ -1594,33 +1594,33 @@ TEST_CASE("recursive_wrapper") // not [recursive]
 
 TEST_CASE("unwrap_recursive") // not [recursive]
 {
-    STATIC_REQUIRE(std::is_same_v<decltype(yk::detail::unwrap_recursive(std::declval<int&>())), int&>);
-    STATIC_REQUIRE(std::is_same_v<decltype(yk::detail::unwrap_recursive(std::declval<int&&>())), int&&>);
-    STATIC_REQUIRE(std::is_same_v<decltype(yk::detail::unwrap_recursive(std::declval<int const&>())), int const&>);
-    STATIC_REQUIRE(std::is_same_v<decltype(yk::detail::unwrap_recursive(std::declval<int const&&>())), int const&&>);
+    STATIC_REQUIRE(std::is_same_v<decltype(iris::detail::unwrap_recursive(std::declval<int&>())), int&>);
+    STATIC_REQUIRE(std::is_same_v<decltype(iris::detail::unwrap_recursive(std::declval<int&&>())), int&&>);
+    STATIC_REQUIRE(std::is_same_v<decltype(iris::detail::unwrap_recursive(std::declval<int const&>())), int const&>);
+    STATIC_REQUIRE(std::is_same_v<decltype(iris::detail::unwrap_recursive(std::declval<int const&&>())), int const&&>);
 
-    STATIC_REQUIRE(std::is_same_v<decltype(yk::detail::unwrap_recursive(std::declval<yk::recursive_wrapper<int>&>())), int&>);
-    STATIC_REQUIRE(std::is_same_v<decltype(yk::detail::unwrap_recursive(std::declval<yk::recursive_wrapper<int>&&>())), int&&>);
-    STATIC_REQUIRE(std::is_same_v<decltype(yk::detail::unwrap_recursive(std::declval<yk::recursive_wrapper<int> const&>())), int const&>);
-    STATIC_REQUIRE(std::is_same_v<decltype(yk::detail::unwrap_recursive(std::declval<yk::recursive_wrapper<int> const&&>())), int const&&>);
+    STATIC_REQUIRE(std::is_same_v<decltype(iris::detail::unwrap_recursive(std::declval<iris::recursive_wrapper<int>&>())), int&>);
+    STATIC_REQUIRE(std::is_same_v<decltype(iris::detail::unwrap_recursive(std::declval<iris::recursive_wrapper<int>&&>())), int&&>);
+    STATIC_REQUIRE(std::is_same_v<decltype(iris::detail::unwrap_recursive(std::declval<iris::recursive_wrapper<int> const&>())), int const&>);
+    STATIC_REQUIRE(std::is_same_v<decltype(iris::detail::unwrap_recursive(std::declval<iris::recursive_wrapper<int> const&&>())), int const&&>);
 }
 
 TEST_CASE("maybe_wrapped") // not [recursive]
 {
-    STATIC_REQUIRE(std::same_as<yk::detail::select_maybe_wrapped_t<int, int>, int>);
-    STATIC_REQUIRE(yk::detail::select_maybe_wrapped_index<int, int> == 0);
+    STATIC_REQUIRE(std::same_as<iris::detail::select_maybe_wrapped_t<int, int>, int>);
+    STATIC_REQUIRE(iris::detail::select_maybe_wrapped_index<int, int> == 0);
 
-    STATIC_REQUIRE(std::same_as<yk::detail::select_maybe_wrapped_t<int, double, int>, int>);
-    STATIC_REQUIRE(yk::detail::select_maybe_wrapped_index<int, double, int> == 1);
+    STATIC_REQUIRE(std::same_as<iris::detail::select_maybe_wrapped_t<int, double, int>, int>);
+    STATIC_REQUIRE(iris::detail::select_maybe_wrapped_index<int, double, int> == 1);
 
-    STATIC_REQUIRE(std::same_as<yk::detail::select_maybe_wrapped_t<int, yk::recursive_wrapper<int>>, yk::recursive_wrapper<int>>);
-    STATIC_REQUIRE(yk::detail::select_maybe_wrapped_index<int, yk::recursive_wrapper<int>> == 0);
+    STATIC_REQUIRE(std::same_as<iris::detail::select_maybe_wrapped_t<int, iris::recursive_wrapper<int>>, iris::recursive_wrapper<int>>);
+    STATIC_REQUIRE(iris::detail::select_maybe_wrapped_index<int, iris::recursive_wrapper<int>> == 0);
 
-    STATIC_REQUIRE(std::same_as<yk::detail::select_maybe_wrapped_t<int, double, yk::recursive_wrapper<int>>, yk::recursive_wrapper<int>>);
-    STATIC_REQUIRE(yk::detail::select_maybe_wrapped_index<int, double, yk::recursive_wrapper<int>> == 1);
+    STATIC_REQUIRE(std::same_as<iris::detail::select_maybe_wrapped_t<int, double, iris::recursive_wrapper<int>>, iris::recursive_wrapper<int>>);
+    STATIC_REQUIRE(iris::detail::select_maybe_wrapped_index<int, double, iris::recursive_wrapper<int>> == 1);
 
     {
-        yk::rvariant<double, int> v{std::in_place_type<int>, 42};
+        iris::rvariant<double, int> v{std::in_place_type<int>, 42};
         CHECK(v.index() == 1);
 
         v.emplace<double>(3.14);
@@ -1630,7 +1630,7 @@ TEST_CASE("maybe_wrapped") // not [recursive]
         CHECK(v.index() == 1);
     }
     {
-        yk::rvariant<double, yk::recursive_wrapper<int>> v{std::in_place_type<int>, 42};
+        iris::rvariant<double, iris::recursive_wrapper<int>> v{std::in_place_type<int>, 42};
         CHECK(v.index() == 1);
 
         v.emplace<double>(3.14);
@@ -1652,7 +1652,7 @@ TEST_CASE("non_recursive_same_as_std") // not [recursive]
         //V{3.14}; // ill-formed
     }
     {
-        using V = yk::rvariant<int>;
+        using V = iris::rvariant<int>;
         STATIC_REQUIRE(std::is_constructible_v<V, V>);
         STATIC_REQUIRE(std::is_constructible_v<V, int>);
         STATIC_REQUIRE(!std::is_constructible_v<V, double>); // !!false!!
@@ -1688,16 +1688,16 @@ TEST_CASE("relational operators")
     {
         REQUIRE_NOTHROW(noneq_three_way_thrower{} < noneq_three_way_thrower{});
         STATIC_REQUIRE(!std::is_invocable_r_v<bool, std::equal_to<>, noneq_three_way_thrower const&, noneq_three_way_thrower const&>);
-        STATIC_REQUIRE(!yk::core::relop_bool_expr_v<std::equal_to<>, noneq_three_way_thrower>);
+        STATIC_REQUIRE(!iris::core::relop_bool_expr_v<std::equal_to<>, noneq_three_way_thrower>);
         REQUIRE_THROWS_AS(noneq_three_way_thrower{} <=> noneq_three_way_thrower{}, noneq_three_way_thrower::exception);
 
         // std::variant on GCC/Clang/MSVC all fails to evaluate these.
         // TODO: Is this a bug on their implementation?
         {
-            using V = yk::rvariant<noneq_three_way_thrower>;
+            using V = iris::rvariant<noneq_three_way_thrower>;
             CHECK_NOTHROW(V{} < V{});
             STATIC_REQUIRE(!std::is_invocable_r_v<bool, std::equal_to<>, V const&, V const&>);
-            STATIC_CHECK(!yk::core::relop_bool_expr_v<std::equal_to<>, V>);
+            STATIC_CHECK(!iris::core::relop_bool_expr_v<std::equal_to<>, V>);
         }
     }
 
@@ -1706,14 +1706,14 @@ TEST_CASE("relational operators")
 
     {
         STATIC_REQUIRE(std::is_invocable_r_v<bool, std::equal_to<>, eq_three_way_thrower const&, eq_three_way_thrower const&>);
-        STATIC_REQUIRE(yk::core::relop_bool_expr_v<std::equal_to<>, eq_three_way_thrower>);
+        STATIC_REQUIRE(iris::core::relop_bool_expr_v<std::equal_to<>, eq_three_way_thrower>);
         REQUIRE_NOTHROW(eq_three_way_thrower{} < eq_three_way_thrower{});
         REQUIRE_THROWS_AS(eq_three_way_thrower{} <=> eq_three_way_thrower{}, eq_three_way_thrower::exception);
 
         {
-            using V = yk::rvariant<eq_three_way_thrower>;
+            using V = iris::rvariant<eq_three_way_thrower>;
             STATIC_REQUIRE(std::is_invocable_r_v<bool, std::equal_to<>, V const&, V const&>);
-            STATIC_CHECK(yk::core::relop_bool_expr_v<std::equal_to<>, V>);
+            STATIC_CHECK(iris::core::relop_bool_expr_v<std::equal_to<>, V>);
             CHECK_NOTHROW(V{} == V{});
             CHECK_NOTHROW(V{} != V{});
             CHECK_NOTHROW(V{} <  V{}); // make sure <=> is not selected
@@ -1725,7 +1725,7 @@ TEST_CASE("relational operators")
     }
 
     {
-        yk::rvariant<int> a = 33, b = 4;
+        iris::rvariant<int> a = 33, b = 4;
         CHECK(a == a);
         CHECK(!(a == b));
 
@@ -1753,7 +1753,7 @@ TEST_CASE("relational operators")
         CHECK((a <=> b) == std::strong_ordering::greater);
     }
     {
-        yk::rvariant<int, double> a = 42, b = 3.14;
+        iris::rvariant<int, double> a = 42, b = 3.14;
 
         CHECK(a == a);
         CHECK(!(a == b));
@@ -1778,8 +1778,8 @@ TEST_CASE("relational operators")
         CHECK((b <=> a) == std::partial_ordering::greater);
     }
     {
-        yk::rvariant<int, MC_Thrower> valueless = make_valueless<int>();
-        yk::rvariant<int, MC_Thrower> a;
+        iris::rvariant<int, MC_Thrower> valueless = make_valueless<int>();
+        iris::rvariant<int, MC_Thrower> a;
 
         CHECK(valueless == valueless);
         CHECK(!(a == valueless));
@@ -1803,7 +1803,7 @@ TEST_CASE("relational operators")
         CHECK((a <=> valueless) == std::strong_ordering::greater);
     }
     {
-        std::vector<yk::rvariant<int, double>> vec {
+        std::vector<iris::rvariant<int, double>> vec {
             42,
             33,
             4,
@@ -1813,7 +1813,7 @@ TEST_CASE("relational operators")
             1.0618,
         };
         std::ranges::sort(vec);
-        CHECK(vec == std::vector<yk::rvariant<int, double>>{
+        CHECK(vec == std::vector<iris::rvariant<int, double>>{
             4,
             33,
             42,
@@ -1828,7 +1828,7 @@ TEST_CASE("relational operators")
 namespace {
 
 template<class T>
-[[nodiscard]] constexpr std::size_t do_hash(T const& t) noexcept(yk::core::is_nothrow_hashable_v<T>)
+[[nodiscard]] constexpr std::size_t do_hash(T const& t) noexcept(iris::core::is_nothrow_hashable_v<T>)
 {
     return std::hash<T>{}(t);
 }
@@ -1838,37 +1838,37 @@ template<class T>
 TEST_CASE("rvariant.hash")
 {
     {
-        STATIC_REQUIRE(yk::core::is_hash_enabled_v<int>);
-        STATIC_REQUIRE(yk::core::is_hash_enabled_v<yk::rvariant<int>>);
-        CHECK(do_hash(yk::rvariant<int>(42)) == hash_value(yk::rvariant<int>(42)));
+        STATIC_REQUIRE(iris::core::is_hash_enabled_v<int>);
+        STATIC_REQUIRE(iris::core::is_hash_enabled_v<iris::rvariant<int>>);
+        CHECK(do_hash(iris::rvariant<int>(42)) == hash_value(iris::rvariant<int>(42)));
     }
     {
         struct NonExistent {};
-        STATIC_REQUIRE(!yk::core::is_hash_enabled_v<NonExistent>);
-        STATIC_REQUIRE(!yk::core::is_hash_enabled_v<yk::rvariant<NonExistent>>);
+        STATIC_REQUIRE(!iris::core::is_hash_enabled_v<NonExistent>);
+        STATIC_REQUIRE(!iris::core::is_hash_enabled_v<iris::rvariant<NonExistent>>);
     }
     {
-        STATIC_REQUIRE(yk::core::is_hash_enabled_v<HashForwarded<int>>);
+        STATIC_REQUIRE(iris::core::is_hash_enabled_v<HashForwarded<int>>);
         CHECK(std::hash<int>{}(42) == std::hash<HashForwarded<int>>{}(HashForwarded<int>(42)));
     }
     {
-        STATIC_REQUIRE(yk::core::is_hash_enabled_v<yk::rvariant<HashForwarded<int>>>);
-        yk::rvariant<HashForwarded<int>> v(HashForwarded<int>(42));
+        STATIC_REQUIRE(iris::core::is_hash_enabled_v<iris::rvariant<HashForwarded<int>>>);
+        iris::rvariant<HashForwarded<int>> v(HashForwarded<int>(42));
         CHECK(do_hash(v) == hash_value(v));
     }
 
     // heuristic tests; may fail on collisions
     {
         using Int = HashForwarded<int>;
-        using V = yk::rvariant<int, Int>;
+        using V = iris::rvariant<int, Int>;
         CHECK(do_hash(V(std::in_place_type<int>, 42)) != do_hash(V(std::in_place_type<Int>, 42)));
     }
     {
-        using V = yk::rvariant<int, unsigned>;
+        using V = iris::rvariant<int, unsigned>;
         CHECK(do_hash(V(std::in_place_type<int>, 42)) != do_hash(V(std::in_place_type<unsigned>, 42)));
     }
     {
-        using V = yk::rvariant<int, long long>;
+        using V = iris::rvariant<int, long long>;
         CHECK(do_hash(V(std::in_place_type<int>, 42)) != do_hash(V(std::in_place_type<long long>, 42)));
     }
 }
@@ -1876,15 +1876,15 @@ TEST_CASE("rvariant.hash")
 TEST_CASE("rvariant.hash", "[wrapper]")
 {
     {
-        STATIC_REQUIRE(yk::core::is_hash_enabled_v<yk::recursive_wrapper<int>>);
-        CHECK(std::hash<int>{}(42) == std::hash<yk::recursive_wrapper<int>>{}(yk::recursive_wrapper<int>(42)));
-        CHECK(std::hash<int>{}(42) == hash_value(yk::recursive_wrapper<int>(42)));
+        STATIC_REQUIRE(iris::core::is_hash_enabled_v<iris::recursive_wrapper<int>>);
+        CHECK(std::hash<int>{}(42) == std::hash<iris::recursive_wrapper<int>>{}(iris::recursive_wrapper<int>(42)));
+        CHECK(std::hash<int>{}(42) == hash_value(iris::recursive_wrapper<int>(42)));
     }
     {
-        yk::recursive_wrapper<int> a(42);
+        iris::recursive_wrapper<int> a(42);
         auto b = std::move(a);
         REQUIRE(a.valueless_after_move());  // NOLINT(bugprone-use-after-move)
-        CHECK(std::hash<yk::recursive_wrapper<int>>{}(a) == hash_value(a));
+        CHECK(std::hash<iris::recursive_wrapper<int>>{}(a) == hash_value(a));
     }
 }
 
@@ -1892,21 +1892,21 @@ TEST_CASE("rvariant.hash", "[wrapper]")
 
 TEST_CASE("pack_union", "[pack][detail]")
 {
-    using yk::detail::pack_union_t;
-    STATIC_REQUIRE(std::is_same_v<pack_union_t<yk::rvariant, int, float>, yk::rvariant<int, float>>);
-    STATIC_REQUIRE(std::is_same_v<pack_union_t<yk::rvariant, yk::rvariant<int>, float>, yk::rvariant<int, float>>);
-    STATIC_REQUIRE(std::is_same_v<pack_union_t<yk::rvariant, int, yk::rvariant<float>>, yk::rvariant<int, float>>);
-    STATIC_REQUIRE(std::is_same_v<pack_union_t<yk::rvariant, yk::rvariant<int>, yk::rvariant<float>>, yk::rvariant<int, float>>);
+    using iris::detail::pack_union_t;
+    STATIC_REQUIRE(std::is_same_v<pack_union_t<iris::rvariant, int, float>, iris::rvariant<int, float>>);
+    STATIC_REQUIRE(std::is_same_v<pack_union_t<iris::rvariant, iris::rvariant<int>, float>, iris::rvariant<int, float>>);
+    STATIC_REQUIRE(std::is_same_v<pack_union_t<iris::rvariant, int, iris::rvariant<float>>, iris::rvariant<int, float>>);
+    STATIC_REQUIRE(std::is_same_v<pack_union_t<iris::rvariant, iris::rvariant<int>, iris::rvariant<float>>, iris::rvariant<int, float>>);
 
-    STATIC_REQUIRE(std::is_same_v<pack_union_t<yk::rvariant, int, int>, yk::rvariant<int>>);
-    STATIC_REQUIRE(std::is_same_v<pack_union_t<yk::rvariant, yk::rvariant<int, float>, yk::rvariant<int, double>>, yk::rvariant<int, float, double>>);
-    STATIC_REQUIRE(std::is_same_v<pack_union_t<yk::rvariant, yk::rvariant<float, int>, yk::rvariant<int, double>>, yk::rvariant<float, int, double>>);
+    STATIC_REQUIRE(std::is_same_v<pack_union_t<iris::rvariant, int, int>, iris::rvariant<int>>);
+    STATIC_REQUIRE(std::is_same_v<pack_union_t<iris::rvariant, iris::rvariant<int, float>, iris::rvariant<int, double>>, iris::rvariant<int, float, double>>);
+    STATIC_REQUIRE(std::is_same_v<pack_union_t<iris::rvariant, iris::rvariant<float, int>, iris::rvariant<int, double>>, iris::rvariant<float, int, double>>);
 }
 
 TEST_CASE("compact_alternative", "[pack]")
 {
-    STATIC_REQUIRE(std::is_same_v<yk::compact_alternative_t<yk::rvariant, int, float>, yk::rvariant<int, float>>);
-    STATIC_REQUIRE(std::is_same_v<yk::compact_alternative_t<yk::rvariant, int, int>, int>);
+    STATIC_REQUIRE(std::is_same_v<iris::compact_alternative_t<iris::rvariant, int, float>, iris::rvariant<int, float>>);
+    STATIC_REQUIRE(std::is_same_v<iris::compact_alternative_t<iris::rvariant, int, int>, int>);
 }
 
 }  // unit_test

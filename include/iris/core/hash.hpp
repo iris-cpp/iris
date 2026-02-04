@@ -3,12 +3,12 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <yk/core/hash_fwd.hpp>
-#include <yk/core/type_traits.hpp>
+#include <iris/core/hash_fwd.hpp>
+#include <iris/core/type_traits.hpp>
 
 #include <type_traits>
 
-namespace yk::core {
+namespace iris::core {
 
 namespace detail {
 
@@ -120,6 +120,6 @@ struct is_nothrow_hashable<T, std::void_t<decltype(std::hash<T>{}(std::declval<T
 template<class T>
 constexpr bool is_nothrow_hashable_v = is_nothrow_hashable<T>::value;
 
-}  // yk::core
+}  // iris::core
 
 #endif // YK_CORE_HASH_HPP

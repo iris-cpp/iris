@@ -3,12 +3,12 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <yk/rvariant/detail/rvariant_fwd.hpp>
+#include <iris/rvariant/detail/rvariant_fwd.hpp>
 
-#include <yk/core/type_traits.hpp>
+#include <iris/core/type_traits.hpp>
 
 
-namespace yk::detail {
+namespace iris::detail {
 
 template<class T, class U>
 struct check_recursive_wrapper_duplicate_impl : std::true_type {};
@@ -126,6 +126,6 @@ struct variant_nothrow_assignable : std::conjunction<std::is_nothrow_constructib
     static_assert(variant_assignable<T, U>::value);
 };
 
-} // yk::detail
+} // iris::detail
 
 #endif

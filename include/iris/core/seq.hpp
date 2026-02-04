@@ -6,7 +6,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace yk::core {
+namespace iris::core {
 
 template<class... Ts>
 struct type_list;
@@ -137,6 +137,6 @@ struct seq_cartesian_product_entry<F, std::integer_sequence<T, As...>, Rest...>
 template<template<auto...> class F, class... Ss>
 using seq_cartesian_product = typename detail::seq_cartesian_product_entry<F, Ss...>::type;
 
-} // yk::core
+} // iris::core
 
 #endif

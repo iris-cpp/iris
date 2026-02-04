@@ -3,15 +3,15 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <yk/rvariant/recursive_wrapper.hpp>
+#include <iris/rvariant/recursive_wrapper.hpp>
 
 #include <memory_resource>
 
-namespace yk::pmr {
+namespace iris::pmr {
 
 template<class T>
-using recursive_wrapper = yk::recursive_wrapper<T, std::pmr::polymorphic_allocator<T>>;
+using recursive_wrapper = iris::recursive_wrapper<T, std::pmr::polymorphic_allocator<T>>;
 
-} // yk::pmr
+} // iris::pmr
 
 #endif

@@ -8,7 +8,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace yk {
+namespace iris {
 
 // http://stackoverflow.com/a/21028912/273767
 
@@ -40,6 +40,6 @@ public:
     }
 };
 
-} // yk
+} // iris
 
 #endif

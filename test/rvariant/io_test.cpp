@@ -37,13 +37,13 @@ struct NonStreamable {};
 
 } // anonymous global
 
-#include "yk/core/io.hpp" // this finds `operator<<` in the global ns
+#include "iris/core/io.hpp" // this finds `operator<<` in the global ns
 
 #include "rvariant_test.hpp"
 
-#include "yk/rvariant/rvariant.hpp"
-#include "yk/rvariant/rvariant_io.hpp"
-#include "yk/rvariant/recursive_wrapper.hpp"
+#include "iris/rvariant/rvariant.hpp"
+#include "iris/rvariant/rvariant_io.hpp"
+#include "iris/rvariant/recursive_wrapper.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -102,30 +102,30 @@ TEST_CASE("rvariant.io, simple")
     using S_ns::S;
 
     {
-        yk::rvariant<int> v{42};
+        iris::rvariant<int> v{42};
         std::ostringstream oss;
         oss << v;
         CHECK(oss.str() == "42");
     }
     {
-        STATIC_REQUIRE(yk::core::ADL_ostreamable_v<S>);
-        STATIC_REQUIRE(yk::core::ADL_ostreamable_v<yk::rvariant<S>>);
-        yk::rvariant<S> v{S{"foo"}};
+        STATIC_REQUIRE(iris::core::ADL_ostreamable_v<S>);
+        STATIC_REQUIRE(iris::core::ADL_ostreamable_v<iris::rvariant<S>>);
+        iris::rvariant<S> v{S{"foo"}};
         std::ostringstream oss;
         oss << v;
         CHECK(oss.str() == "foo");
     }
     {
         struct NonExistent;
-        STATIC_REQUIRE(!yk::core::ADL_ostreamable_v<NonExistent>);
+        STATIC_REQUIRE(!iris::core::ADL_ostreamable_v<NonExistent>);
         struct NonExistent {};
-        STATIC_REQUIRE(!yk::core::ADL_ostreamable_v<yk::rvariant<NonExistent>>);
+        STATIC_REQUIRE(!iris::core::ADL_ostreamable_v<iris::rvariant<NonExistent>>);
     }
     {
         // ReSharper disable once CppStaticAssertFailure
-        STATIC_REQUIRE(!yk::core::ADL_ostreamable_v<NonStreamable_ns::NonStreamable>);
+        STATIC_REQUIRE(!iris::core::ADL_ostreamable_v<NonStreamable_ns::NonStreamable>);
         // ReSharper disable once CppStaticAssertFailure
-        STATIC_REQUIRE(!yk::core::ADL_ostreamable_v<yk::rvariant<NonStreamable_ns::NonStreamable>>);
+        STATIC_REQUIRE(!iris::core::ADL_ostreamable_v<iris::rvariant<NonStreamable_ns::NonStreamable>>);
 
         std::ostringstream oss;
         NonStreamable_ns::NonStreamable const non_streamable;
@@ -135,14 +135,14 @@ TEST_CASE("rvariant.io, simple")
 
     // alternative = int
     {
-        yk::rvariant<int, S> v{42};
+        iris::rvariant<int, S> v{42};
         std::ostringstream oss;
         oss << v;
         CHECK(oss.str() == "42");
     }
     // alternative = int
     {
-        yk::rvariant<S, int> v{42};
+        iris::rvariant<S, int> v{42};
         std::ostringstream oss;
         oss << v;
         CHECK(oss.str() == "42");
@@ -150,14 +150,14 @@ TEST_CASE("rvariant.io, simple")
 
     // alternative = S
     {
-        yk::rvariant<int, S> v{S{"foo"}};
+        iris::rvariant<int, S> v{S{"foo"}};
         std::ostringstream oss;
         oss << v;
         CHECK(oss.str() == "foo");
     }
     // alternative = S
     {
-        yk::rvariant<S, int> v{S{"foo"}};
+        iris::rvariant<S, int> v{S{"foo"}};
         std::ostringstream oss;
         oss << v;
         CHECK(oss.str() == "foo");
@@ -170,7 +170,7 @@ TEST_CASE("rvariant.io, exceptions")
 
     // good at first + no exceptions
     {
-        yk::rvariant<ThrowingValue> v;
+        iris::rvariant<ThrowingValue> v;
         std::ostringstream oss; // good at first
         REQUIRE_NOTHROW(oss << v);
         CHECK(oss.str() == "ThrowingValue");
@@ -178,7 +178,7 @@ TEST_CASE("rvariant.io, exceptions")
     }
     // bad at first + no exceptions
     {
-        yk::rvariant<ThrowingValue> v;
+        iris::rvariant<ThrowingValue> v;
         std::ostringstream oss;
         oss.setstate(std::ios_base::badbit); // BAD at first
         REQUIRE_NOTHROW(oss << v);
@@ -188,7 +188,7 @@ TEST_CASE("rvariant.io, exceptions")
 
     // good at first + exceptions
     {
-        yk::rvariant<ThrowingValue> v;
+        iris::rvariant<ThrowingValue> v;
         std::ostringstream oss; // good at first
         oss.exceptions(std::ios_base::badbit);
         REQUIRE_THROWS_AS(oss << v, ThrowingValue_ns::StrangeException);
@@ -197,7 +197,7 @@ TEST_CASE("rvariant.io, exceptions")
     }
     // bad at first + exceptions
     {
-        yk::rvariant<ThrowingValue> v;
+        iris::rvariant<ThrowingValue> v;
         std::ostringstream oss;
         oss.setstate(std::ios_base::badbit); // BAD at first
         try {
@@ -212,14 +212,14 @@ TEST_CASE("rvariant.io, exceptions")
 
     // [valueless] good at first + no exceptions
     {
-        yk::rvariant<int, MC_Thrower> v = make_valueless<int>();
+        iris::rvariant<int, MC_Thrower> v = make_valueless<int>();
         std::ostringstream oss; // good at first
         REQUIRE_THROWS_AS(oss << v, std::bad_variant_access); // valueless always throws
         CHECK(oss.str().empty());
     }
     // [valueless] bad at first + no exceptions
     {
-        yk::rvariant<int, MC_Thrower> v = make_valueless<int>();
+        iris::rvariant<int, MC_Thrower> v = make_valueless<int>();
         std::ostringstream oss;
         oss.setstate(std::ios_base::badbit); // BAD at first
         REQUIRE_NOTHROW(oss << v); // sentry should be engaged
@@ -229,7 +229,7 @@ TEST_CASE("rvariant.io, exceptions")
 
     // [valueless] good at first + exceptions
     {
-        yk::rvariant<int, MC_Thrower> v = make_valueless<int>();
+        iris::rvariant<int, MC_Thrower> v = make_valueless<int>();
         std::ostringstream oss; // good at first
         oss.exceptions(std::ios_base::badbit);
         REQUIRE_THROWS_AS(oss << v, std::bad_variant_access); // valueless always throws
@@ -237,7 +237,7 @@ TEST_CASE("rvariant.io, exceptions")
     }
     // [valueless] bad at first + exceptions
     {
-        yk::rvariant<int, MC_Thrower> v = make_valueless<int>();
+        iris::rvariant<int, MC_Thrower> v = make_valueless<int>();
         std::ostringstream oss;
         oss.setstate(std::ios_base::badbit); // BAD at first
         try {
@@ -252,14 +252,14 @@ TEST_CASE("rvariant.io, exceptions")
 
     // [nested valueless] good at first + no exceptions
     {
-        yk::rvariant<int, yk::rvariant<int, MC_Thrower>> v = make_valueless<int>();
+        iris::rvariant<int, iris::rvariant<int, MC_Thrower>> v = make_valueless<int>();
         std::ostringstream oss; // good at first
         REQUIRE_THROWS_AS(oss << v, std::bad_variant_access); // valueless always throws
         CHECK(oss.str().empty());
     }
     // [nested valueless] bad at first + no exceptions
     {
-        yk::rvariant<int, yk::rvariant<int, MC_Thrower>> v = make_valueless<int>();
+        iris::rvariant<int, iris::rvariant<int, MC_Thrower>> v = make_valueless<int>();
         std::ostringstream oss;
         oss.setstate(std::ios_base::badbit); // BAD at first
         REQUIRE_NOTHROW(oss << v);
@@ -269,7 +269,7 @@ TEST_CASE("rvariant.io, exceptions")
 
     // [nested valueless] good at first + exceptions
     {
-        yk::rvariant<int, yk::rvariant<int, MC_Thrower>> v = make_valueless<int>();
+        iris::rvariant<int, iris::rvariant<int, MC_Thrower>> v = make_valueless<int>();
         std::ostringstream oss; // good at first
         oss.exceptions(std::ios_base::badbit);
         REQUIRE_THROWS_AS(oss << v, std::bad_variant_access); // valueless always throws
@@ -277,7 +277,7 @@ TEST_CASE("rvariant.io, exceptions")
     }
     // [nested valueless] bad at first + exceptions
     {
-        yk::rvariant<int, yk::rvariant<int, MC_Thrower>> v = make_valueless<int>();
+        iris::rvariant<int, iris::rvariant<int, MC_Thrower>> v = make_valueless<int>();
         std::ostringstream oss;
         oss.setstate(std::ios_base::badbit); // BAD at first
         try {
@@ -294,7 +294,7 @@ TEST_CASE("rvariant.io, exceptions")
 TEST_CASE("rvariant.io", "[recursive]")
 {
     {
-        yk::rvariant<yk::recursive_wrapper<int>> v(42);
+        iris::rvariant<iris::recursive_wrapper<int>> v(42);
         std::ostringstream oss;
         oss << v;
         CHECK(oss.str() == "42");
@@ -303,96 +303,96 @@ TEST_CASE("rvariant.io", "[recursive]")
 
 TEST_CASE("rvariant formatter (char)")
 {
-    using V = yk::rvariant<int, double>;
+    using V = iris::rvariant<int, double>;
     CHECK(std::format("{}", V{42}) == "42");
     CHECK(std::format("{}", V{3.14}) == "3.14");
 
     {
-        constexpr auto v_fmt = yk::variant_format<int, double>("{:04d}", "{:.1f}");
+        constexpr auto v_fmt = iris::variant_format<int, double>("{:04d}", "{:.1f}");
         {
             V v(42);
-            CHECK(std::format("pre{}post", yk::format_by(v_fmt, v)) == "pre0042post");
+            CHECK(std::format("pre{}post", iris::format_by(v_fmt, v)) == "pre0042post");
         }
         {
             V v(3.14);
-            CHECK(std::format("pre{}post", yk::format_by(v_fmt, v)) == "pre3.1post");
+            CHECK(std::format("pre{}post", iris::format_by(v_fmt, v)) == "pre3.1post");
         }
     }
     {
-        constexpr auto v_fmt = yk::variant_format_for<V>("{:04d}", "{:.1f}");
+        constexpr auto v_fmt = iris::variant_format_for<V>("{:04d}", "{:.1f}");
         {
             V v(42);
-            CHECK(std::format("pre{}post", yk::format_by(v_fmt, v)) == "pre0042post");
+            CHECK(std::format("pre{}post", iris::format_by(v_fmt, v)) == "pre0042post");
         }
         {
             V v(3.14);
-            CHECK(std::format("pre{}post", yk::format_by(v_fmt, v)) == "pre3.1post");
+            CHECK(std::format("pre{}post", iris::format_by(v_fmt, v)) == "pre3.1post");
         }
     }
     {
         auto const v = make_valueless<int>();
         CHECK_THROWS_AS(std::format("{}", v), std::bad_variant_access);
         {
-            constexpr auto v_fmt = yk::variant_format_for<decltype(v)>("{}", "");
-            CHECK_THROWS_AS(std::format("{}", yk::format_by(v_fmt, v)), std::bad_variant_access);
+            constexpr auto v_fmt = iris::variant_format_for<decltype(v)>("{}", "");
+            CHECK_THROWS_AS(std::format("{}", iris::format_by(v_fmt, v)), std::bad_variant_access);
         }
         {
-            constexpr auto v_fmt = yk::variant_format<int, MC_Thrower>("{}", "");
-            CHECK_THROWS_AS(std::format("{}", yk::format_by(v_fmt, v)), std::bad_variant_access);
+            constexpr auto v_fmt = iris::variant_format<int, MC_Thrower>("{}", "");
+            CHECK_THROWS_AS(std::format("{}", iris::format_by(v_fmt, v)), std::bad_variant_access);
         }
     }
 }
 
 TEST_CASE("rvariant formatter (wchar_t)")
 {
-    using V = yk::rvariant<int, double>;
+    using V = iris::rvariant<int, double>;
     CHECK(std::format(L"{}", V{42}) == L"42");
     CHECK(std::format(L"{}", V{3.14}) == L"3.14");
 
     {
-        constexpr auto v_fmt = yk::variant_format<int, double>(L"{:04d}", L"{:.1f}");
+        constexpr auto v_fmt = iris::variant_format<int, double>(L"{:04d}", L"{:.1f}");
         {
             V v(42);
-            CHECK(std::format(L"pre{}post", yk::format_by(v_fmt, v)) == L"pre0042post");
+            CHECK(std::format(L"pre{}post", iris::format_by(v_fmt, v)) == L"pre0042post");
         }
         {
             V v(3.14);
-            CHECK(std::format(L"pre{}post", yk::format_by(v_fmt, v)) == L"pre3.1post");
+            CHECK(std::format(L"pre{}post", iris::format_by(v_fmt, v)) == L"pre3.1post");
         }
     }
     {
-        constexpr auto v_fmt = yk::variant_format_for<V>(L"{:04d}", L"{:.1f}");
+        constexpr auto v_fmt = iris::variant_format_for<V>(L"{:04d}", L"{:.1f}");
         {
             V v(42);
-            CHECK(std::format(L"pre{}post", yk::format_by(v_fmt, v)) == L"pre0042post");
+            CHECK(std::format(L"pre{}post", iris::format_by(v_fmt, v)) == L"pre0042post");
         }
         {
             V v(3.14);
-            CHECK(std::format(L"pre{}post", yk::format_by(v_fmt, v)) == L"pre3.1post");
+            CHECK(std::format(L"pre{}post", iris::format_by(v_fmt, v)) == L"pre3.1post");
         }
     }
     {
         auto const v = make_valueless<int>();
         CHECK_THROWS_AS(std::format(L"{}", v), std::bad_variant_access);
         {
-            constexpr auto v_fmt = yk::variant_format_for<decltype(v)>(L"{}", L"");
-            CHECK_THROWS_AS(std::format(L"{}", yk::format_by(v_fmt, v)), std::bad_variant_access);
+            constexpr auto v_fmt = iris::variant_format_for<decltype(v)>(L"{}", L"");
+            CHECK_THROWS_AS(std::format(L"{}", iris::format_by(v_fmt, v)), std::bad_variant_access);
         }
         {
-            constexpr auto v_fmt = yk::variant_format<int, MC_Thrower>(L"{}", L"");
-            CHECK_THROWS_AS(std::format(L"{}", yk::format_by(v_fmt, v)), std::bad_variant_access);
+            constexpr auto v_fmt = iris::variant_format<int, MC_Thrower>(L"{}", L"");
+            CHECK_THROWS_AS(std::format(L"{}", iris::format_by(v_fmt, v)), std::bad_variant_access);
         }
     }
 }
 
 TEST_CASE("rvariant formatter (char)", "[recursive]")
 {
-    CHECK(std::format("{}", yk::rvariant<yk::recursive_wrapper<int>>{42}) == "42");
+    CHECK(std::format("{}", iris::rvariant<iris::recursive_wrapper<int>>{42}) == "42");
 }
 
 TEST_CASE("rvariant formatter (wchar_t)", "[recursive]")
 {
-    CHECK(std::format(L"{}", yk::rvariant<yk::recursive_wrapper<int>>{42}) == L"42");
+    CHECK(std::format(L"{}", iris::rvariant<iris::recursive_wrapper<int>>{42}) == L"42");
 }
 
 } // unit_test

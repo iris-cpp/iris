@@ -3,8 +3,8 @@
 
 // SPDX-License-Identifier: MIT
 
-#include "yk/rvariant/rvariant.hpp"
-#include "yk/format_traits.hpp"
+#include "iris/rvariant/rvariant.hpp"
+#include "iris/format_traits.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -97,11 +97,11 @@ using Thrower_ADL_guard::MC_Thrower;
 
 
 template<class... Ts, class... Args>
-[[nodiscard]] constexpr yk::rvariant<Ts..., MC_Thrower> make_valueless(Args&&... args)
+[[nodiscard]] constexpr iris::rvariant<Ts..., MC_Thrower> make_valueless(Args&&... args)
 {
     static_assert(sizeof...(Ts) > 0);
 
-    using V = yk::rvariant<Ts..., MC_Thrower>;
+    using V = iris::rvariant<Ts..., MC_Thrower>;
     static_assert(std::is_nothrow_constructible_v<V, Args...>);
     V a(std::forward<Args>(args)...);
 
@@ -145,7 +145,7 @@ struct formatter<::unit_test::MC_Thrower, charT>  // NOLINT(cert-dcl58-cpp)
     parse(std::basic_format_parse_context<charT>& ctx)
     {
         if (ctx.begin() == ctx.end()) return ctx.begin();
-        if (*ctx.begin() == ::yk::format_traits<charT>::brace_close) return ctx.begin();
+        if (*ctx.begin() == ::iris::format_traits<charT>::brace_close) return ctx.begin();
         throw std::format_error("MC_Thrower does not accept non-empty format specification");
     }
 

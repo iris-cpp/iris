@@ -1,7 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 
-#include "yk/rvariant/recursive_wrapper.hpp"
-#include "yk/rvariant/rvariant.hpp"
+#include "iris/rvariant/recursive_wrapper.hpp"
+#include "iris/rvariant/rvariant.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -21,7 +21,7 @@ TEST_CASE("truly recursive", "[wrapper][recursive]")
     // std::variant
     {
         struct SubExpr;
-        using Expr = std::variant<yk::recursive_wrapper<SubExpr>>;
+        using Expr = std::variant<iris::recursive_wrapper<SubExpr>>;
         struct SubExpr { Expr expr; };
 
         STATIC_REQUIRE( std::is_constructible_v<Expr, Expr>);
@@ -38,7 +38,7 @@ TEST_CASE("truly recursive", "[wrapper][recursive]")
     // rvariant
     {
         struct SubExpr;
-        using Expr = yk::rvariant<yk::recursive_wrapper<SubExpr>>;
+        using Expr = iris::rvariant<iris::recursive_wrapper<SubExpr>>;
         struct SubExpr { Expr expr; };
 
         STATIC_REQUIRE( std::is_constructible_v<Expr, Expr>);
@@ -62,13 +62,13 @@ TEST_CASE("truly recursive", "[wrapper][recursive]")
             STATIC_REQUIRE(!std::is_constructible_v<V, double>);
         }
         {
-            using V = std::variant<yk::recursive_wrapper<int>>;
+            using V = std::variant<iris::recursive_wrapper<int>>;
             STATIC_REQUIRE( std::is_constructible_v<V, V>);
             STATIC_REQUIRE( std::is_constructible_v<V, int>);
             STATIC_REQUIRE( std::is_constructible_v<V, double>);  // !!true!!
         }
         {
-            using V = yk::rvariant<yk::recursive_wrapper<int>>;
+            using V = iris::rvariant<iris::recursive_wrapper<int>>;
             STATIC_REQUIRE( std::is_constructible_v<V, V>);
             STATIC_REQUIRE( std::is_constructible_v<V, int>);
             STATIC_REQUIRE( std::is_constructible_v<V, double>);  // !!true!!
@@ -77,7 +77,7 @@ TEST_CASE("truly recursive", "[wrapper][recursive]")
         // Sanity check
         {
             struct SubExpr;
-            using Expr = std::variant<int, yk::recursive_wrapper<SubExpr>>;
+            using Expr = std::variant<int, iris::recursive_wrapper<SubExpr>>;
             struct SubExpr { Expr expr; };
 
             STATIC_REQUIRE( std::is_constructible_v<Expr, int>);
@@ -88,7 +88,7 @@ TEST_CASE("truly recursive", "[wrapper][recursive]")
         }
 
         struct SubExpr;
-        using Expr = yk::rvariant<int, yk::recursive_wrapper<SubExpr>>;
+        using Expr = iris::rvariant<int, iris::recursive_wrapper<SubExpr>>;
         struct SubExpr { Expr expr; };
 
         STATIC_REQUIRE( std::is_constructible_v<Expr, int>);
@@ -111,7 +111,7 @@ TEST_CASE("truly recursive", "[wrapper][recursive]")
         STATIC_REQUIRE(std::is_constructible_v<Expr, int>);
         CHECK_NOTHROW(Expr{42});
 
-        constexpr auto vis = yk::overloaded{
+        constexpr auto vis = iris::overloaded{
             [](int const&)     { return 0; },
             [](SubExpr const&) { return 1; },
         };
@@ -120,12 +120,12 @@ TEST_CASE("truly recursive", "[wrapper][recursive]")
     }
     {
         struct BinaryExpr;
-        using Expr = yk::rvariant<int, double, yk::recursive_wrapper<BinaryExpr>>;
+        using Expr = iris::rvariant<int, double, iris::recursive_wrapper<BinaryExpr>>;
         enum class Op;
         struct BinaryExpr { Expr lhs, rhs; Op op{}; };
 
         Expr expr{BinaryExpr{Expr{42}, Expr{3.14}}};
-        expr.visit(yk::overloaded{
+        expr.visit(iris::overloaded{
             [](int const&) { /* ... */ },
             [](double const&) { /* ... */ },
             [](BinaryExpr const&) { /* ... */ },

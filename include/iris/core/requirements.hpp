@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace yk::core {
+namespace iris::core {
 
 namespace detail {
 
@@ -90,6 +90,6 @@ concept Cpp17Destructible = (!std::is_array_v<T>) && std::is_object_v<T> && requ
 template<class X>
 concept Cpp17Swappable = std::is_swappable_v<X&>;
 
-} // yk::core
+} // iris::core
 
 #endif

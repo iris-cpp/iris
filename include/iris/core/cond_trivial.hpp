@@ -5,7 +5,7 @@
 
 #include <type_traits>
 
-namespace yk::core {
+namespace iris::core {
 
 // Old-school helper utility for enabling trivial special
 // functions conditionally. Note that even when C++20's
@@ -203,6 +203,6 @@ using cond_trivial = std::conditional_t<
 
 using detail::cond_trivial_detail::cond_trivial;
 
-} // yk::core
+} // iris::core
 
 #endif

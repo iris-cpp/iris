@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace yk::core {
+namespace iris::core {
 
 namespace detail {
 
@@ -35,6 +35,6 @@ struct ADL_ostreamable : detail::ADL_ostreamable_poison_pill::ADL_ostreamable_im
 template<class T>
 constexpr bool ADL_ostreamable_v = ADL_ostreamable<T>::value;
 
-} // yk::core
+} // iris::core
 
 #endif

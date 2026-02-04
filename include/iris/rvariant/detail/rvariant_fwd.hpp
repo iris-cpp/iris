@@ -15,7 +15,7 @@
 # define YK_RVARIANT_VISIT_NOEXCEPT(...)
 #endif
 
-namespace yk {
+namespace iris {
 
 template<class... Ts>
 class rvariant;
@@ -35,6 +35,6 @@ inline constexpr valueless_t valueless{};
 
 } // detail
 
-} // yk
+} // iris
 
 #endif

@@ -3,15 +3,15 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <yk/rvariant/rvariant.hpp>
-#include <yk/core/io.hpp>
-#include <yk/format_traits.hpp>
+#include <iris/rvariant/rvariant.hpp>
+#include <iris/core/io.hpp>
+#include <iris/format_traits.hpp>
 
 #include <format>
 // ReSharper disable once CppUnusedIncludeDirective
 #include <ostream>
 
-namespace yk {
+namespace iris {
 
 namespace detail {
 
@@ -180,20 +180,20 @@ struct variant_alts_formattable<charT, rvariant<Ts...>>
 
 } // detail
 
-}  // yk
+}  // iris
 
 
 namespace std {
 
 template<class... Ts, class charT>
-    requires (std::formattable<::yk::unwrap_recursive_t<Ts>, charT> && ...)
-struct formatter<::yk::rvariant<Ts...>, charT>  // NOLINT(cert-dcl58-cpp)
+    requires (std::formattable<::iris::unwrap_recursive_t<Ts>, charT> && ...)
+struct formatter<::iris::rvariant<Ts...>, charT>  // NOLINT(cert-dcl58-cpp)
 {
     static constexpr typename std::basic_format_parse_context<charT>::const_iterator
     parse(std::basic_format_parse_context<charT>& ctx)
     {
         if (ctx.begin() == ctx.end()) return ctx.begin();
-        if (*ctx.begin() == ::yk::format_traits<charT>::brace_close) return ctx.begin();
+        if (*ctx.begin() == ::iris::format_traits<charT>::brace_close) return ctx.begin();
         throw std::format_error(
             "rvariant itself only accepts empty format spec `{}`; use "
             "`format_by` or manually dispatch alternatives in `visit` "
@@ -202,19 +202,19 @@ struct formatter<::yk::rvariant<Ts...>, charT>  // NOLINT(cert-dcl58-cpp)
     }
 
     template<class OutIt>
-    static OutIt format(::yk::rvariant<Ts...> const& v, std::basic_format_context<OutIt, charT>& ctx)
+    static OutIt format(::iris::rvariant<Ts...> const& v, std::basic_format_context<OutIt, charT>& ctx)
     {
-        return ::yk::detail::raw_visit(
+        return ::iris::detail::raw_visit(
             v,
             [&]<std::size_t i, class VT>(std::in_place_index_t<i>, VT const& alt) -> OutIt {
                 if constexpr (i == std::variant_npos) {
                     (void)alt;
-                    ::yk::detail::throw_bad_variant_access();
+                    ::iris::detail::throw_bad_variant_access();
                 } else {
                     return std::format_to(
                         ctx.out(),
-                        ::yk::format_traits<charT>::template brace_full<::yk::unwrap_recursive_t<VT> const&>,
-                        ::yk::detail::unwrap_recursive(alt)
+                        ::iris::format_traits<charT>::template brace_full<::iris::unwrap_recursive_t<VT> const&>,
+                        ::iris::detail::unwrap_recursive(alt)
                     );
                 }
             }
@@ -224,16 +224,16 @@ struct formatter<::yk::rvariant<Ts...>, charT>  // NOLINT(cert-dcl58-cpp)
 
 template<class VFormat, class Variant, class charT>
     requires
-        ::yk::core::is_ttp_specialization_of_v<std::remove_cvref_t<VFormat>, ::yk::detail::variant_format_string> &&
-        ::yk::core::is_ttp_specialization_of_v<std::remove_cvref_t<Variant>, ::yk::rvariant> &&
-        ::yk::detail::variant_alts_formattable<charT, std::remove_cvref_t<Variant>>::value
-struct formatter<::yk::detail::variant_format_proxy<VFormat, Variant>, charT>  // NOLINT(cert-dcl58-cpp)
+        ::iris::core::is_ttp_specialization_of_v<std::remove_cvref_t<VFormat>, ::iris::detail::variant_format_string> &&
+        ::iris::core::is_ttp_specialization_of_v<std::remove_cvref_t<Variant>, ::iris::rvariant> &&
+        ::iris::detail::variant_alts_formattable<charT, std::remove_cvref_t<Variant>>::value
+struct formatter<::iris::detail::variant_format_proxy<VFormat, Variant>, charT>  // NOLINT(cert-dcl58-cpp)
 {
     static constexpr typename std::basic_format_parse_context<charT>::const_iterator
     parse(std::basic_format_parse_context<charT>& ctx)
     {
         if (ctx.begin() == ctx.end()) return ctx.begin();
-        if (*ctx.begin() == ::yk::format_traits<charT>::brace_close) return ctx.begin();
+        if (*ctx.begin() == ::iris::format_traits<charT>::brace_close) return ctx.begin();
         throw std::format_error(
             "format_by only accepts empty format spec; use "
             "`variant_format` for full controls."
@@ -241,23 +241,23 @@ struct formatter<::yk::detail::variant_format_proxy<VFormat, Variant>, charT>  /
     }
 
     template<class OutIt>
-    static OutIt format(::yk::detail::variant_format_proxy<VFormat, Variant> const& proxy, std::basic_format_context<OutIt, charT>& ctx)
+    static OutIt format(::iris::detail::variant_format_proxy<VFormat, Variant> const& proxy, std::basic_format_context<OutIt, charT>& ctx)
     {
-        return ::yk::detail::raw_visit(
+        return ::iris::detail::raw_visit(
             proxy.v,
             [&]<std::size_t i, class VT>(std::in_place_index_t<i>, VT const& alt) -> OutIt {
                 if constexpr (i == std::variant_npos) {
                     (void)alt;
-                    ::yk::detail::throw_bad_variant_access();
+                    ::iris::detail::throw_bad_variant_access();
                 } else {
                     static_assert(
-                        std::is_invocable_v<VFormat, std::in_place_type_t<::yk::unwrap_recursive_t<VT>>>,
+                        std::is_invocable_v<VFormat, std::in_place_type_t<::iris::unwrap_recursive_t<VT>>>,
                         "`VFormat` must provide format string for all alternative types."
                     );
                     return std::format_to(
                         ctx.out(),
-                        std::invoke(proxy.v_fmt, std::in_place_type<::yk::unwrap_recursive_t<VT>>),
-                        ::yk::detail::unwrap_recursive(alt)
+                        std::invoke(proxy.v_fmt, std::in_place_type<::iris::unwrap_recursive_t<VT>>),
+                        ::iris::detail::unwrap_recursive(alt)
                     );
                 }
             }

@@ -86,6 +86,8 @@ endfunction()
 # --------------------------------------------
 
 if(PROJECT_IS_TOP_LEVEL)
+    add_subdirectory(rvariant)
+
     iris_define_tests(
         type_traits
     )

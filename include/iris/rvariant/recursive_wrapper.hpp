@@ -3,20 +3,20 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <yk/indirect.hpp>
-#include <yk/core/type_traits.hpp>
-#include <yk/core/hash.hpp>
+#include <iris/indirect.hpp>
+#include <iris/core/type_traits.hpp>
+#include <iris/core/hash.hpp>
 
 #include <compare>
 #include <initializer_list>
 #include <memory>
 #include <utility>
 
-namespace yk {
+namespace iris {
 
 template<class T, class Allocator = std::allocator<T>>
 class recursive_wrapper
-    : private yk::indirect<T, Allocator>
+    : private iris::indirect<T, Allocator>
 {
     static_assert(std::is_object_v<T>);
     static_assert(!std::is_array_v<T>);
@@ -25,7 +25,7 @@ class recursive_wrapper
     static_assert(!std::is_const_v<T> && !std::is_volatile_v<T>);
     static_assert(std::is_same_v<T, typename std::allocator_traits<Allocator>::value_type>);
 
-    using base_type = yk::indirect<T, Allocator>;
+    using base_type = iris::indirect<T, Allocator>;
 
 public:
     using typename base_type::allocator_type;
@@ -209,16 +209,16 @@ constexpr auto operator<=>(recursive_wrapper<T, A> const& lhs, U const& rhs) noe
     }
 }
 
-}  // yk
+}  // iris
 
 namespace std {
 
 template<class T, class Allocator>
-    requires ::yk::core::is_hash_enabled_v<T>
-struct hash<::yk::recursive_wrapper<T, Allocator>>  // NOLINT(cert-dcl58-cpp)
+    requires ::iris::core::is_hash_enabled_v<T>
+struct hash<::iris::recursive_wrapper<T, Allocator>>  // NOLINT(cert-dcl58-cpp)
 {
-    [[nodiscard]] static size_t operator()(::yk::recursive_wrapper<T, Allocator> const& obj)
-        noexcept(::yk::core::is_nothrow_hashable_v<T>)
+    [[nodiscard]] static size_t operator()(::iris::recursive_wrapper<T, Allocator> const& obj)
+        noexcept(::iris::core::is_nothrow_hashable_v<T>)
     {
         if (obj.valueless_after_move()) [[unlikely]] {
             return 0xbaddeadbeefuz;
@@ -231,7 +231,7 @@ struct hash<::yk::recursive_wrapper<T, Allocator>>  // NOLINT(cert-dcl58-cpp)
 } // std
 
 
-namespace yk {
+namespace iris {
 
 template<class T, class Allocator>
     requires core::is_hash_enabled_v<T>
@@ -241,6 +241,6 @@ template<class T, class Allocator>
     return std::hash<recursive_wrapper<T, Allocator>>{}(obj);
 }
 
-} // yk
+} // iris
 
 #endif

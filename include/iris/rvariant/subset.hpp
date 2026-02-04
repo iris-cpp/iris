@@ -3,13 +3,13 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <yk/rvariant/detail/rvariant_fwd.hpp>
-#include <yk/rvariant/variant_helper.hpp>
-#include <yk/core/type_traits.hpp>
+#include <iris/rvariant/detail/rvariant_fwd.hpp>
+#include <iris/rvariant/variant_helper.hpp>
+#include <iris/core/type_traits.hpp>
 
 #include <type_traits>
 
-namespace yk {
+namespace iris {
 
 namespace detail {
 
@@ -68,6 +68,6 @@ concept equivalent_to = subset_of<W, V> && subset_of<V, W>;
 
 } // rvariant_set
 
-} // yk
+} // iris
 
 #endif

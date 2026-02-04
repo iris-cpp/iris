@@ -5,9 +5,9 @@
 
 // Utilities related to [rvariant.pack]
 
-#include <yk/core/type_traits.hpp>
+#include <iris/core/type_traits.hpp>
 
-namespace yk {
+namespace iris {
 
 namespace detail {
 
@@ -63,6 +63,6 @@ struct compact_alternative : detail::unwrap_one_pack<detail::pack_union_t<TT, A,
 template<template<class...> class TT, class A, class B>
 using compact_alternative_t = typename compact_alternative<TT, A, B>::type;
 
-} // yk
+} // iris
 
 #endif
