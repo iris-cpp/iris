@@ -185,7 +185,7 @@ struct deleted_MA : cond_CA<Base, Ts...>
 };
 
 template<class Base, class... Ts>
-using cond_trivial = std::conditional_t<
+using cond_trivial_smf = std::conditional_t<
     std::conjunction_v<
         std::is_trivially_destructible<Ts>...,
         std::is_trivially_move_constructible<Ts>...,
@@ -201,7 +201,7 @@ using cond_trivial = std::conditional_t<
 
 } // detail::cond_trivial_detail
 
-using detail::cond_trivial_detail::cond_trivial;
+using detail::cond_trivial_detail::cond_trivial_smf;
 
 } // iris::core
 

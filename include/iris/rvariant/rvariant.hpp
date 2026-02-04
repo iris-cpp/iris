@@ -474,7 +474,7 @@ using rvariant_destructor_base_t = std::conditional_t<
 >;
 
 template<class... Ts>
-using rvariant_base_t = core::cond_trivial<rvariant_destructor_base_t<Ts...>, Ts...>;
+using rvariant_base_t = core::cond_trivial_smf<rvariant_destructor_base_t<Ts...>, Ts...>;
 
 template<class... Ts>
 [[nodiscard]] constexpr rvariant<Ts...> make_valueless() noexcept
