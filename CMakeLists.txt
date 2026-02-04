@@ -67,6 +67,10 @@ set_target_properties(iris PROPERTIES CXX_EXTENSIONS OFF)
 set(IRIS_CXX_VERSION_BEFORE_LATEST 23)
 set(IRIS_CXX_VERSION_LATEST 26)
 
+if(DEFINED CMAKE_CXX_STANDARD AND CMAKE_CXX_STANDARD LESS ${IRIS_CXX_VERSION_BEFORE_LATEST})
+    message(FATAL_ERROR "Too old C++ version `${CMAKE_CXX_STANDARD}`; the minimal version supported by Iris is `${IRIS_CXX_VERSION_BEFORE_LATEST}`.")
+endif()
+
 if(MSVC)
     if(CMAKE_CXX_STANDARD EQUAL ${IRIS_CXX_VERSION_BEFORE_LATEST})
         set(CMAKE_CXX${IRIS_CXX_VERSION_BEFORE_LATEST}_STANDARD_COMPILE_OPTION /std:c++${IRIS_CXX_VERSION_BEFORE_LATEST}preview)
@@ -83,8 +87,11 @@ if(MSVC)
     endif()
 
 else() # Non-MSVC
-    # target_compile_features(_iris_cxx_common INTERFACE cxx_std_${IRIS_CXX_VERSION_BEFORE_LATEST})
-    target_compile_features(_iris_cxx_common INTERFACE cxx_std_${IRIS_CXX_VERSION_LATEST})
+    if(DEFINED CMAKE_CXX_STANDARD)
+        target_compile_features(_iris_cxx_common INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
+    else()
+        target_compile_features(_iris_cxx_common INTERFACE cxx_std_${IRIS_CXX_VERSION_LATEST})
+    endif()
 endif()
 
 unset(IRIS_CXX_VERSION_BEFORE_LATEST)
