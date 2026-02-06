@@ -23,8 +23,7 @@ struct type_list
     static constexpr std::size_t size = sizeof...(Ts);
 };
 
-template<auto> using nvoid_t = void;
-
+template<auto> using cvoid_t = void;
 
 namespace detail {
 
@@ -35,7 +34,7 @@ template<std::size_t... Voids>
 struct do_pack_indexing<std::index_sequence<Voids...>>
 {
     template<class T>
-    static T select(nvoid_t<Voids>*..., std::type_identity<T>*, ...);
+    static T select(cvoid_t<Voids>*..., std::type_identity<T>*, ...);
 };
 
 template<class Voids>
