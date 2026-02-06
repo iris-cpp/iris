@@ -1,11 +1,11 @@
-﻿#ifndef IRIS_CORE_COND_TRIVIAL_HPP
-#define IRIS_CORE_COND_TRIVIAL_HPP
+﻿#ifndef IRIS_COND_TRIVIAL_HPP
+#define IRIS_COND_TRIVIAL_HPP
 
 // SPDX-License-Identifier: MIT
 
 #include <type_traits>
 
-namespace iris::core {
+namespace iris {
 
 // Old-school helper utility for enabling trivial special
 // functions conditionally. Note that even when C++20's
@@ -203,6 +203,6 @@ using cond_trivial_smf = std::conditional_t<
 
 using detail::cond_trivial_detail::cond_trivial_smf;
 
-} // iris::core
+} // iris
 
 #endif

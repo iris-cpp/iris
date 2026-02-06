@@ -11,11 +11,10 @@
 #include <iris/rvariant/variant_helper.hpp>
 #include <iris/rvariant/subset.hpp>
 
-#include <iris/core/cond_trivial_smf.hpp>
-
 #include <iris/hash/FNV_hash.hpp>
 
 #include <iris/compare.hpp>
+#include <iris/cond_trivial_smf.hpp>
 #include <iris/type_traits.hpp>
 #include <iris/hash.hpp>
 
@@ -475,7 +474,7 @@ using rvariant_destructor_base_t = std::conditional_t<
 >;
 
 template<class... Ts>
-using rvariant_base_t = core::cond_trivial_smf<rvariant_destructor_base_t<Ts...>, Ts...>;
+using rvariant_base_t = cond_trivial_smf<rvariant_destructor_base_t<Ts...>, Ts...>;
 
 template<class... Ts>
 [[nodiscard]] constexpr rvariant<Ts...> make_valueless() noexcept
