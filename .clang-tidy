@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: MIT
+---
+Checks: '
+  *,
+  -abseil-*,
+  -altera-*,
+  -android-*,
+  -darwin-*,
+  -fuchsia-*,
+  -google-*,
+  -objc-*,
+  -zircon-*,
+  -linuxkernel-*,
+  -llvmlibc-*,
+  -hicpp-uppercase-literal-suffix,
+  -modernize-use-nodiscard,
+  -modernize-use-trailing-return-type,
+  -cppcoreguidelines-special-member-functions,
+  -clang-diagnostic-inconsistent-missing-destructor-override,
+  -clang-diagnostic-switch-enum,
+  -llvm-header-guard,
+  -llvm-namespace-comment,
+  -llvm-prefer-static-over-anonymous-namespace,
+  -readability-identifier-length,
+  -readability-use-concise-preprocessor-directives
+'
+
+CheckOptions:
+  - key: performance-move-const-arg.CheckTriviallyCopyableMove
+    value: false
