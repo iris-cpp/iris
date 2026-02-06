@@ -12,7 +12,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace iris {
+namespace iris::req {
 
 namespace detail {
 
@@ -26,8 +26,6 @@ template<class T>
 concept boolean_testable = detail::boolean_testable_impl<T> && requires(T&& t) {
     { !std::forward<T>(t) } -> detail::boolean_testable_impl;
 };
-
-namespace req {
 
 // https://eel.is/c++draft/utility.arg.requirements#tab:cpp17.equalitycomparable
 template<class T>
@@ -140,8 +138,6 @@ struct Cpp17Hash_impl<std::hash<Key>> : std::true_type
 template<class H>
 concept Cpp17Hash = detail::Cpp17Hash_impl<H>::value;
 
-} // req
-
-} // iris
+} // iris::req
 
 #endif

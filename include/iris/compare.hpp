@@ -47,8 +47,8 @@ inline constexpr bool synth_three_way_noexcept =
 constexpr auto synth_three_way = []<class T, class U>(T const& t, U const& u) noexcept(synth_three_way_noexcept<T, U>)
     -> synth_three_way_result_t<T, U>
     requires requires {
-        { t < u } -> boolean_testable;
-        { u < t } -> boolean_testable;
+        { t < u } -> req::boolean_testable;
+        { u < t } -> req::boolean_testable;
     }
 {
     if constexpr (std::three_way_comparable_with<T, U>) {
