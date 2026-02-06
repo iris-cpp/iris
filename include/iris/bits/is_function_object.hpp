@@ -14,10 +14,8 @@ constexpr bool is_function_object_v = is_function_object<F, Args...>::value;
 
 template<class F, class... Args>
     requires
-        (std::is_pointer_v<F> && std::is_function_v<std::remove_pointer_t<F>>) ||
-        (std::is_class_v<F> && requires(F f) {
-            { f(std::declval<Args>()...) };
-        })
+        (std::is_pointer_v<F> && std::is_function_v<std::remove_pointer_t<F>> && requires(F f) { (*f)(std::declval<Args>()...); }) ||
+        (std::is_class_v<F> && requires(F f) { f(std::declval<Args>()...); })
 struct is_function_object<F, Args...> : std::true_type {};
 
 }  // iris
