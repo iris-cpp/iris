@@ -41,7 +41,7 @@ struct variant_index_selector<VariantSize>
 };
 
 template<std::size_t VariantSize>
-using variant_index_t = typename variant_index_selector<VariantSize>::type;
+using variant_index_t = variant_index_selector<VariantSize>::type;
 
 // Intentionally defined in the `detail` to avoid confusion with `std::variant_npos`.
 // Equals to std::variant_npos by definition
@@ -84,14 +84,14 @@ unwrap_recursive(T&& o IRIS_LIFETIMEBOUND) noexcept
 
 template<class T> struct unwrap_recursive { using type = T; };
 template<class T, class Allocator> struct unwrap_recursive<recursive_wrapper<T, Allocator>> { using type = T; };
-template<class T> using unwrap_recursive_t = typename unwrap_recursive<T>::type;
+template<class T> using unwrap_recursive_t = unwrap_recursive<T>::type;
 
 
 template<std::size_t I, class Variant>
 struct variant_alternative;
 
 template<std::size_t I, class Variant>
-using variant_alternative_t = typename variant_alternative<I, Variant>::type;
+using variant_alternative_t = variant_alternative<I, Variant>::type;
 
 template<std::size_t I, class Variant>
 struct variant_alternative<I, Variant const> : std::add_const<variant_alternative_t<I, Variant>> {};

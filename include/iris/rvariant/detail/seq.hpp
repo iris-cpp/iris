@@ -24,7 +24,7 @@ struct seq_rebind_impl<TT<Ts...>, F>
 };
 
 template<class S, template<auto...> class F>
-using seq_rebind = typename seq_rebind_impl<S, F>::type;
+using seq_rebind = seq_rebind_impl<S, F>::type;
 
 template<class... Ss>
 struct seq_concat_impl;
@@ -42,7 +42,7 @@ struct seq_concat_impl<type_list<Ts...>, type_list<Us...>, Rest...>
 {};
 
 template<class... Ss>
-using seq_concat = typename seq_concat_impl<Ss...>::type;
+using seq_concat = seq_concat_impl<Ss...>::type;
 
 template<class S, class T>
 struct seq_push_back_impl;
@@ -55,7 +55,7 @@ struct seq_push_back_impl<TT<Ts...>, T>
 };
 
 template<class S, class T>
-using seq_push_back = typename seq_push_back_impl<S, T>::type;
+using seq_push_back = seq_push_back_impl<S, T>::type;
 
 template<class T, class U>
 struct seq_assign_impl;
@@ -68,7 +68,7 @@ struct seq_assign_impl<TT<Ts...>, UU<Us...>>
 };
 
 template<class T, class U>
-using seq_assign = typename seq_assign_impl<T, U>::type;
+using seq_assign = seq_assign_impl<T, U>::type;
 
 template<template<auto...> class F, class S, class... Rest>
 struct seq_cartesian_product_impl;
@@ -112,7 +112,7 @@ struct seq_cartesian_product_entry<F, std::integer_sequence<T, As...>, Rest...>
 };
 
 template<template<auto...> class F, class... Ss>
-using seq_cartesian_product = typename seq_cartesian_product_entry<F, Ss...>::type;
+using seq_cartesian_product = seq_cartesian_product_entry<F, Ss...>::type;
 
 } // detail
 

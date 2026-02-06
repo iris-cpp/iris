@@ -540,7 +540,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
     constexpr rvariant& operator=(T&& t)
         noexcept(detail::variant_nothrow_assignable<typename aggregate_initialize_resolution<T, Ts...>::type, T>::value)
     {
-        using Tj = typename aggregate_initialize_resolution<T, Ts...>::type; // either plain type or wrapped with recursive_wrapper
+        using Tj = aggregate_initialize_resolution<T, Ts...>::type; // either plain type or wrapped with recursive_wrapper
         constexpr std::size_t j = aggregate_initialize_resolution<T, Ts...>::index;
         static_assert(j != std::variant_npos);
 
@@ -596,7 +596,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         {
             if constexpr (j != std::variant_npos) {
                 using maybe_wrapped = detail::select_maybe_wrapped<unwrap_recursive_t<Uj>, Ts...>;
-                using VT = typename maybe_wrapped::type;
+                using VT = maybe_wrapped::type;
                 static_assert(std::is_same_v<unwrap_recursive_t<VT>, unwrap_recursive_t<Uj>>);
                 base_type::template construct_on_valueless<maybe_wrapped::index>(detail::forward_maybe_wrapped<VT>(uj));
             }
@@ -618,7 +618,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         {
             if constexpr (j != std::variant_npos) {
                 using maybe_wrapped = detail::select_maybe_wrapped<unwrap_recursive_t<Uj>, Ts...>;
-                using VT = typename maybe_wrapped::type;
+                using VT = maybe_wrapped::type;
                 static_assert(std::is_same_v<unwrap_recursive_t<VT>, unwrap_recursive_t<Uj>>);
                 static_assert(std::is_rvalue_reference_v<Uj&&>);
                 base_type::template construct_on_valueless<maybe_wrapped::index>(detail::forward_maybe_wrapped<VT>(std::move(uj))); // NOLINT(bugprone-move-forwarding-reference)
@@ -646,7 +646,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
             } else {
                 using maybe_wrapped = detail::select_maybe_wrapped<unwrap_recursive_t<Uj>, Ts...>;
-                using VT = typename maybe_wrapped::type;
+                using VT = maybe_wrapped::type;
                 static_assert(std::is_same_v<unwrap_recursive_t<VT>, unwrap_recursive_t<Uj>>);
 
                 this->raw_visit([this, &uj]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti& ti)
@@ -690,7 +690,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
             } else {
                 using maybe_wrapped = detail::select_maybe_wrapped<unwrap_recursive_t<Uj>, Ts...>;
-                using VT = typename maybe_wrapped::type;
+                using VT = maybe_wrapped::type;
                 static_assert(std::is_same_v<unwrap_recursive_t<VT>, unwrap_recursive_t<Uj>>);
 
                 this->raw_visit([this, &uj]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti& ti)

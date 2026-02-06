@@ -31,7 +31,7 @@ struct synth_three_way_result_impl<T, U>
 } // detail
 
 template<class T, class U = T>
-using synth_three_way_result_t = typename detail::synth_three_way_result_impl<T, U>::type;
+using synth_three_way_result_t = detail::synth_three_way_result_impl<T, U>::type;
 
 template<class T, class U = T>
 inline constexpr bool synth_three_way_noexcept =

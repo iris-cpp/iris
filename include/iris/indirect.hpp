@@ -22,8 +22,8 @@ template<class Alloc>
 class scoped_allocation
 {
 public:
-    using pointer = typename std::allocator_traits<Alloc>::pointer;
-    using const_pointer = typename std::allocator_traits<Alloc>::const_pointer;
+    using pointer = std::allocator_traits<Alloc>::pointer;
+    using const_pointer = std::allocator_traits<Alloc>::const_pointer;
 
 
     template<class... Args>
@@ -69,8 +69,8 @@ class indirect
 public:
     using value_type = T;
     using allocator_type = Allocator;
-    using pointer = typename std::allocator_traits<Allocator>::pointer;
-    using const_pointer = typename std::allocator_traits<Allocator>::const_pointer;
+    using pointer = std::allocator_traits<Allocator>::pointer;
+    using const_pointer = std::allocator_traits<Allocator>::const_pointer;
 
     constexpr explicit indirect() requires std::is_default_constructible_v<Allocator>
         : ptr_(make_obj())

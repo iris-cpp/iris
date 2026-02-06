@@ -134,7 +134,7 @@ using make_variadic_union_t = variadic_union<std::conjunction_v<std::is_triviall
 template<class T, class... Ts>
 struct variadic_union<true, T, Ts...>
 {
-    static_assert(true == std::conjunction_v<std::is_trivially_destructible<T>, std::is_trivially_destructible<Ts>...>);
+    static_assert(std::conjunction_v<std::is_trivially_destructible<T>, std::is_trivially_destructible<Ts>...>);
 
     static constexpr std::size_t size = sizeof...(Ts) + 1;
     static constexpr bool never_valueless = is_never_valueless_v<T, Ts...>;
@@ -186,7 +186,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 template<class T, class... Ts>
 struct variadic_union<false, T, Ts...>
 {
-    static_assert(false == std::conjunction_v<std::is_trivially_destructible<T>, std::is_trivially_destructible<Ts>...>);
+    static_assert(!std::conjunction_v<std::is_trivially_destructible<T>, std::is_trivially_destructible<Ts>...>);
 
     static constexpr std::size_t size = sizeof...(Ts) + 1;
     static constexpr bool never_valueless = is_never_valueless_v<T, Ts...>;
@@ -242,7 +242,7 @@ struct forward_storage_t_impl
 };
 
 template<class Variant>
-using forward_storage_t = typename forward_storage_t_impl<Variant>::type;
+using forward_storage_t = forward_storage_t_impl<Variant>::type;
 
 template<class Variant>
 [[nodiscard]] IRIS_FORCEINLINE constexpr forward_storage_t<Variant>&&

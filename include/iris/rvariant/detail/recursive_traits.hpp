@@ -39,7 +39,7 @@ struct select_maybe_wrapped : select_maybe_wrapped_impl<false, 0, U, Ts...>
 };
 
 template<class U, class... Ts>
-using select_maybe_wrapped_t = typename select_maybe_wrapped<U, Ts...>::type;
+using select_maybe_wrapped_t = select_maybe_wrapped<U, Ts...>::type;
 
 template<class U, class... Ts>
 constexpr std::size_t select_maybe_wrapped_index = select_maybe_wrapped<U, Ts...>::index;

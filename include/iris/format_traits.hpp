@@ -67,7 +67,7 @@ struct select_char_t_impl<CharLike...>
 } // detail
 
 template<class... CharLike>
-using select_char_t = typename detail::select_char_t_impl<CharLike...>::type;
+using select_char_t = detail::select_char_t_impl<CharLike...>::type;
 
 } // iris
 

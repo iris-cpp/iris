@@ -54,7 +54,7 @@ template<std::size_t I, class T>
 struct at_c;
 
 template<std::size_t I, class T>
-using at_c_t = typename at_c<I, T>::type;
+using at_c_t = at_c<I, T>::type;
 
 #if __cpp_pack_indexing >= 202311L // has native pack indexing
 # if defined(__clang__)
@@ -89,7 +89,7 @@ struct pack_indexing
 };
 
 template<std::size_t I, class... Ts>
-using pack_indexing_t = typename pack_indexing<I, Ts...>::type;
+using pack_indexing_t = pack_indexing<I, Ts...>::type;
 
 # define IRIS_CORE_PACK_INDEXING(I, Ts_ellipsis) ::iris::pack_indexing_t<I, Ts_ellipsis>
 
@@ -277,7 +277,7 @@ struct aggregate_initialize_resolution<
     std::void_t<decltype(aggregate_initialize_fun_for<Ts...>{}(std::declval<T>(), std::declval<T>()))>, T, Ts...
 > {
     using tag = decltype(aggregate_initialize_fun_for<Ts...>{}(std::declval<T>(), std::declval<T>()));
-    using type = typename tag::type;
+    using type = tag::type;
     static constexpr std::size_t index = tag::index;
 };
 

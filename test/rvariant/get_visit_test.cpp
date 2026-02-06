@@ -38,7 +38,7 @@ struct many_V_impl<Size, std::index_sequence<Is...>>
 };
 
 template<std::size_t Size>
-using many_V_t = typename many_V_impl<Size>::type;
+using many_V_t = many_V_impl<Size>::type;
 
 } // anonymous
 
