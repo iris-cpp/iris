@@ -1,5 +1,5 @@
-#ifndef IRIS_CORE_LIBRARY_HPP
-#define IRIS_CORE_LIBRARY_HPP
+#ifndef IRIS_COMPARE_HPP
+#define IRIS_COMPARE_HPP
 
 // SPDX-License-Identifier: MIT
 
