@@ -1,5 +1,5 @@
-﻿#ifndef IRIS_HASH_HPP
-#define IRIS_HASH_HPP
+﻿#ifndef IRIS_HASH_UTIL_HPP
+#define IRIS_HASH_UTIL_HPP
 
 // SPDX-License-Identifier: MIT
 
