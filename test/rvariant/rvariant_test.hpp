@@ -3,18 +3,21 @@
 
 // SPDX-License-Identifier: MIT
 
-#include "iris/rvariant/rvariant.hpp"
-#include "iris/format_traits.hpp"
+#include "iris/rvariant/rvariant.hpp"  // IWYU pragma: export
+#include "iris/format_traits.hpp"  // IWYU pragma: export
 
-#include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>  // IWYU pragma: export
 
 #include <iosfwd>
 #include <string>
 #include <compare>
 #include <functional>
-#include <exception>
+#include <stdexcept>
+#include <type_traits>
 #include <utility>
 #include <format>
+
+#include <cstddef>
 
 #define IRIS_REQUIRE_STATIC_NOTHROW(...) \
     STATIC_REQUIRE(noexcept(__VA_ARGS__)); \

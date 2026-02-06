@@ -5,8 +5,8 @@
 
 #include <iris/config.hpp>
 
-#include <iris/bits/is_function_object.hpp>
-#include <iris/bits/specialization_of.hpp>
+#include <iris/bits/is_function_object.hpp>  // IWYU pragma: export
+#include <iris/bits/specialization_of.hpp>  // IWYU pragma: export
 
 #include <iris/requirements.hpp>
 

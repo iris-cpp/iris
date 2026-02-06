@@ -2,25 +2,24 @@
 
 #include "rvariant_test.hpp"
 
-#include "iris/rvariant/recursive_wrapper.hpp"
-#include "iris/rvariant/rvariant.hpp"
-#include "iris/rvariant/pack.hpp"
+#include "iris/rvariant.hpp"
 
+#include "iris/compare.hpp"
 #include "iris/hash.hpp"
-#include "iris/indirect.hpp"
 #include "iris/type_traits.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
+#include <array>
+#include <bit>
+#include <concepts>
+#include <exception>
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
-#include <algorithm>
-#include <ranges>
-#include <bit>
-#include <array>
-#include <print>
 
 #include <cstddef>
 

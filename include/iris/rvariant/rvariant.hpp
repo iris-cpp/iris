@@ -8,7 +8,7 @@
 #include <iris/rvariant/detail/variant_storage.hpp>
 #include <iris/rvariant/detail/visit.hpp>
 #include <iris/rvariant/detail/recursive_traits.hpp>
-#include <iris/rvariant/variant_helper.hpp>
+#include <iris/rvariant/variant_helper.hpp>  // IWYU pragma: export
 #include <iris/rvariant/subset.hpp>
 
 #include <iris/hash/FNV_hash.hpp>

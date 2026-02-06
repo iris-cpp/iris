@@ -5,6 +5,10 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <concepts>
+#include <utility>
+#include <type_traits>
+
 namespace unit_test {
 
 TEST_CASE("pack_indexing")
