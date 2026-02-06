@@ -143,45 +143,45 @@ struct NodeArray;
 
 using Node = iris::rvariant<int, iris::recursive_wrapper<NodeArray>>;
 
-struct NodeArray
+struct NodeArray : std::vector<Node>
 {
-    std::vector<Node> vec;
-
-    bool operator==(NodeArray const& other) const
-    {
-        return vec == other.vec;
-    }
-
-    bool operator!=(NodeArray const& other) const
-    {
-        return vec != other.vec;
-    }
-
-    bool operator<(NodeArray const& other) const
-    {
-        return vec < other.vec;
-    }
-
-    bool operator>(NodeArray const& other) const
-    {
-        return vec > other.vec;
-    }
-
-    bool operator<=(NodeArray const& other) const
-    {
-        return vec <= other.vec;
-    }
-
-    bool operator>=(NodeArray const& other) const
-    {
-        return vec >= other.vec;
-    }
-
-    auto operator<=>(NodeArray const& other) const
-    {
-        return vec <=> other.vec;
-    }
+    using std::vector<Node>::vector;
 };
+
+bool operator==(NodeArray const& a, NodeArray const& b)
+{
+    return static_cast<std::vector<Node> const&>(a) == static_cast<std::vector<Node> const&>(b);
+}
+
+bool operator!=(NodeArray const& a, NodeArray const& b)
+{
+    return static_cast<std::vector<Node> const&>(a) != static_cast<std::vector<Node> const&>(b);
+}
+
+bool operator<(NodeArray const& a, NodeArray const& b)
+{
+    return static_cast<std::vector<Node> const&>(a) < static_cast<std::vector<Node> const&>(b);
+}
+
+bool operator>(NodeArray const& a, NodeArray const& b)
+{
+    return static_cast<std::vector<Node> const&>(a) > static_cast<std::vector<Node> const&>(b);
+}
+
+bool operator<=(NodeArray const& a, NodeArray const& b)
+{
+    return static_cast<std::vector<Node> const&>(a) <= static_cast<std::vector<Node> const&>(b);
+}
+
+bool operator>=(NodeArray const& a, NodeArray const& b)
+{
+    return static_cast<std::vector<Node> const&>(a) >= static_cast<std::vector<Node> const&>(b);
+}
+
+auto operator<=>(NodeArray const& a, NodeArray const& b)
+{
+    return static_cast<std::vector<Node> const&>(a) <=> static_cast<std::vector<Node> const&>(b);
+}
 
 } // anonymous
 
