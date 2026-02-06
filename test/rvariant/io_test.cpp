@@ -37,7 +37,7 @@ struct NonStreamable {};
 
 } // anonymous global
 
-#include "iris/core/io.hpp" // this finds `operator<<` in the global ns
+#include "iris/requirements.hpp" // this finds `operator<<` in the global ns
 
 #include "rvariant_test.hpp"
 
@@ -108,8 +108,8 @@ TEST_CASE("rvariant.io, simple")
         CHECK(oss.str() == "42");
     }
     {
-        STATIC_REQUIRE(iris::core::ADL_ostreamable_v<S>);
-        STATIC_REQUIRE(iris::core::ADL_ostreamable_v<iris::rvariant<S>>);
+        STATIC_REQUIRE(iris::req::ADL_ostreamable_v<S>);
+        STATIC_REQUIRE(iris::req::ADL_ostreamable_v<iris::rvariant<S>>);
         iris::rvariant<S> v{S{"foo"}};
         std::ostringstream oss;
         oss << v;
@@ -117,15 +117,15 @@ TEST_CASE("rvariant.io, simple")
     }
     {
         struct NonExistent;
-        STATIC_REQUIRE(!iris::core::ADL_ostreamable_v<NonExistent>);
+        STATIC_REQUIRE(!iris::req::ADL_ostreamable_v<NonExistent>);
         struct NonExistent {};
-        STATIC_REQUIRE(!iris::core::ADL_ostreamable_v<iris::rvariant<NonExistent>>);
+        STATIC_REQUIRE(!iris::req::ADL_ostreamable_v<iris::rvariant<NonExistent>>);
     }
     {
         // ReSharper disable once CppStaticAssertFailure
-        STATIC_REQUIRE(!iris::core::ADL_ostreamable_v<NonStreamable_ns::NonStreamable>);
+        STATIC_REQUIRE(!iris::req::ADL_ostreamable_v<NonStreamable_ns::NonStreamable>);
         // ReSharper disable once CppStaticAssertFailure
-        STATIC_REQUIRE(!iris::core::ADL_ostreamable_v<iris::rvariant<NonStreamable_ns::NonStreamable>>);
+        STATIC_REQUIRE(!iris::req::ADL_ostreamable_v<iris::rvariant<NonStreamable_ns::NonStreamable>>);
 
         std::ostringstream oss;
         NonStreamable_ns::NonStreamable const non_streamable;

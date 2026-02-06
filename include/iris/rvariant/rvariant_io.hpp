@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: MIT
 
 #include <iris/rvariant/rvariant.hpp>
-#include <iris/core/io.hpp>
 #include <iris/format_traits.hpp>
+#include <iris/requirements.hpp>
 
 #include <format>
 // ReSharper disable once CppUnusedIncludeDirective
@@ -40,7 +40,7 @@ namespace detail {
 // Behaves mostly like *formatted output function* (https://eel.is/c++draft/ostream.formatted.reqmts),
 // except that `std::bad_variant_access` will always be propagated.
 template<class... Ts>
-    requires std::conjunction_v<core::ADL_ostreamable<unwrap_recursive_t<Ts>>...>
+    requires std::conjunction_v<req::ADL_ostreamable<unwrap_recursive_t<Ts>>...>
 std::ostream& operator<<(std::ostream& os, rvariant<Ts...> const& v)
 {
     std::ostream::sentry sentry(os);

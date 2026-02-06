@@ -8,6 +8,7 @@
 #include <iris/bits/specialization_of.hpp>
 
 #include <concepts>
+#include <iosfwd>
 #include <type_traits>
 #include <utility>
 
@@ -138,6 +139,32 @@ struct Cpp17Hash_impl<std::hash<Key>> : std::true_type
 
 template<class H>
 concept Cpp17Hash = detail::Cpp17Hash_impl<H>::value;
+
+namespace detail {
+
+namespace ADL_ostreamable_poison_pill {
+
+template<class T>
+void operator<<(std::ostream& os, T const&) = delete;
+
+template<class T>
+struct ADL_ostreamable_impl : std::false_type {};
+
+template<class T>
+    requires requires(std::ostream& os, T const& val) {
+        { os << val } -> std::same_as<std::ostream&>;
+    }
+struct ADL_ostreamable_impl<T> : std::true_type {};
+
+} // ADL_ostreamable_poison_pill
+
+} // detail
+
+template<class T>
+struct ADL_ostreamable : detail::ADL_ostreamable_poison_pill::ADL_ostreamable_impl<T> {};
+
+template<class T>
+constexpr bool ADL_ostreamable_v = ADL_ostreamable<T>::value;
 
 } // req
 
