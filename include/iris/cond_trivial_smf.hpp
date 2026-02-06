@@ -1,5 +1,5 @@
-﻿#ifndef IRIS_COND_TRIVIAL_HPP
-#define IRIS_COND_TRIVIAL_HPP
+﻿#ifndef IRIS_COND_TRIVIAL_SMF_HPP
+#define IRIS_COND_TRIVIAL_SMF_HPP
 
 // SPDX-License-Identifier: MIT
 
