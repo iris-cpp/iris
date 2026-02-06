@@ -20,7 +20,7 @@ add_executable(
 )
 
 if(MSVC)
-    target_sources(iris_rvariant_test PRIVATE cpp.hint)
+    target_sources(iris_rvariant_test PRIVATE ../cpp.hint)
 endif()
 
 target_sources(
