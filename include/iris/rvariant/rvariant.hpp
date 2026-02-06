@@ -490,7 +490,7 @@ template<class... Ts>
 class rvariant : private detail::rvariant_base_t<Ts...>
 {
     static_assert(std::conjunction_v<detail::check_recursive_wrapper_duplicate<Ts, Ts...>...>);
-    static_assert((core::Cpp17Destructible<Ts> && ...), "All types shall meet the Cpp17Destructible requirements ([variant.variant.general]).");
+    static_assert((req::Cpp17Destructible<Ts> && ...), "All types shall meet the Cpp17Destructible requirements ([variant.variant.general]).");
     static_assert(sizeof...(Ts) > 0, "A variant with no template arguments shall not be instantiated ([variant.variant.general]).");
 
     using unwrapped_types = type_list<unwrap_recursive_t<Ts>...>;

@@ -1,7 +1,7 @@
 ﻿// SPDX-License-Identifier: MIT
 
 #include <iris/type_traits.hpp>
-#include <iris/core/requirements.hpp>
+#include <iris/requirements.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -51,57 +51,57 @@ TEST_CASE("find_index", "[core]")
 
 TEST_CASE("Cpp17EqualityComparable", "[core]")
 {
-    STATIC_REQUIRE(iris::core::Cpp17EqualityComparable<int>);
+    STATIC_REQUIRE(iris::req::Cpp17EqualityComparable<int>);
     {
         struct S
         {
             bool operator==(S const&) const { return true; }
         };
-        STATIC_REQUIRE(iris::core::Cpp17EqualityComparable<S>);
+        STATIC_REQUIRE(iris::req::Cpp17EqualityComparable<S>);
     }
     {
         struct S
         {
             bool operator==(S const&) const = delete;
         };
-        STATIC_REQUIRE(!iris::core::Cpp17EqualityComparable<S>);
+        STATIC_REQUIRE(!iris::req::Cpp17EqualityComparable<S>);
     }
 }
 
 TEST_CASE("Cpp17LessThanComparable", "[core]")
 {
-    STATIC_REQUIRE(iris::core::Cpp17LessThanComparable<int>);
+    STATIC_REQUIRE(iris::req::Cpp17LessThanComparable<int>);
     {
         struct S
         {
             bool operator<(S const&) const { return false; }
         };
-        STATIC_REQUIRE(iris::core::Cpp17LessThanComparable<S>);
+        STATIC_REQUIRE(iris::req::Cpp17LessThanComparable<S>);
     }
     {
         struct S
         {
             bool operator<(S const&) const = delete;
         };
-        STATIC_REQUIRE(!iris::core::Cpp17LessThanComparable<S>);
+        STATIC_REQUIRE(!iris::req::Cpp17LessThanComparable<S>);
     }
 }
 
 TEST_CASE("Cpp17DefaultConstructible", "[core]")
 {
-    STATIC_REQUIRE(iris::core::Cpp17DefaultConstructible<int>);
+    STATIC_REQUIRE(iris::req::Cpp17DefaultConstructible<int>);
     {
         using T = int const;
         STATIC_REQUIRE(std::is_default_constructible_v<T>);
         // ReSharper disable once CppStaticAssertFailure
         STATIC_REQUIRE(!std::default_initializable<T>);
         // ReSharper disable once CppStaticAssertFailure
-        STATIC_REQUIRE(!iris::core::Cpp17DefaultConstructible<T>);
+        STATIC_REQUIRE(!iris::req::Cpp17DefaultConstructible<T>);
     }
     {
         using T = int const[10];
         STATIC_REQUIRE(std::is_default_constructible_v<T>);
-        STATIC_REQUIRE(!iris::core::Cpp17DefaultConstructible<T>);
+        STATIC_REQUIRE(!iris::req::Cpp17DefaultConstructible<T>);
     }
     {
         struct S
@@ -109,23 +109,23 @@ TEST_CASE("Cpp17DefaultConstructible", "[core]")
             S() = delete;
         };
         STATIC_REQUIRE(!std::is_default_constructible_v<S>);
-        STATIC_REQUIRE(!iris::core::Cpp17DefaultConstructible<S>);
+        STATIC_REQUIRE(!iris::req::Cpp17DefaultConstructible<S>);
     }
 }
 
 TEST_CASE("Cpp17MoveConstructible", "[core]")
 {
-    STATIC_REQUIRE(iris::core::Cpp17MoveConstructible<int>);
+    STATIC_REQUIRE(iris::req::Cpp17MoveConstructible<int>);
     {
         using T = int const;
         STATIC_REQUIRE(std::is_move_constructible_v<T>);
-        STATIC_REQUIRE(iris::core::Cpp17MoveConstructible<T>);
+        STATIC_REQUIRE(iris::req::Cpp17MoveConstructible<T>);
     }
     {
         using T = int const[10];
         STATIC_REQUIRE(!std::is_move_constructible_v<T>);
         STATIC_REQUIRE(!std::move_constructible<T>);
-        STATIC_REQUIRE(!iris::core::Cpp17MoveConstructible<T>);
+        STATIC_REQUIRE(!iris::req::Cpp17MoveConstructible<T>);
     }
     {
         struct S
@@ -133,7 +133,7 @@ TEST_CASE("Cpp17MoveConstructible", "[core]")
             S(S&&) = delete;
         };
         STATIC_REQUIRE(!std::is_move_constructible_v<S>);
-        STATIC_REQUIRE(!iris::core::Cpp17MoveConstructible<S>);
+        STATIC_REQUIRE(!iris::req::Cpp17MoveConstructible<S>);
     }
     {
         struct S
@@ -142,22 +142,22 @@ TEST_CASE("Cpp17MoveConstructible", "[core]")
         };
         STATIC_REQUIRE(std::is_move_constructible_v<S>);
         STATIC_REQUIRE(!std::move_constructible<S>);
-        STATIC_REQUIRE(!iris::core::Cpp17MoveConstructible<S>);
+        STATIC_REQUIRE(!iris::req::Cpp17MoveConstructible<S>);
     }
 }
 
 TEST_CASE("Cpp17CopyConstructible", "[core]")
 {
-    STATIC_REQUIRE(iris::core::Cpp17CopyConstructible<int>);
+    STATIC_REQUIRE(iris::req::Cpp17CopyConstructible<int>);
     {
         using T = int const;
         STATIC_REQUIRE(std::is_copy_constructible_v<T>);
-        STATIC_REQUIRE(iris::core::Cpp17CopyConstructible<T>);
+        STATIC_REQUIRE(iris::req::Cpp17CopyConstructible<T>);
     }
     {
         using T = int const[10];
         STATIC_REQUIRE(!std::is_copy_constructible_v<T>);
-        STATIC_REQUIRE(!iris::core::Cpp17CopyConstructible<T>);
+        STATIC_REQUIRE(!iris::req::Cpp17CopyConstructible<T>);
     }
     {
         struct S
@@ -165,7 +165,7 @@ TEST_CASE("Cpp17CopyConstructible", "[core]")
             int const t[10];  // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
         };
         STATIC_REQUIRE(std::is_copy_constructible_v<S>);
-        STATIC_REQUIRE(iris::core::Cpp17CopyConstructible<S>);
+        STATIC_REQUIRE(iris::req::Cpp17CopyConstructible<S>);
     }
     {
         struct S
@@ -174,7 +174,7 @@ TEST_CASE("Cpp17CopyConstructible", "[core]")
             S(S const&) = delete;
         };
         STATIC_REQUIRE(!std::is_copy_constructible_v<S>);
-        STATIC_REQUIRE(!iris::core::Cpp17CopyConstructible<S>);
+        STATIC_REQUIRE(!iris::req::Cpp17CopyConstructible<S>);
     }
     {
         struct S
@@ -183,7 +183,7 @@ TEST_CASE("Cpp17CopyConstructible", "[core]")
             S(S const&) = default;
         };
         STATIC_REQUIRE(std::is_copy_constructible_v<S>);
-        STATIC_REQUIRE(!iris::core::Cpp17CopyConstructible<S>);
+        STATIC_REQUIRE(!iris::req::Cpp17CopyConstructible<S>);
     }
     {
         struct S
@@ -191,7 +191,7 @@ TEST_CASE("Cpp17CopyConstructible", "[core]")
             explicit S(S const&) {}  // NOLINT(modernize-use-equals-default)
         };
         STATIC_REQUIRE(std::is_copy_constructible_v<S>);
-        STATIC_REQUIRE(!iris::core::Cpp17CopyConstructible<S>);
+        STATIC_REQUIRE(!iris::req::Cpp17CopyConstructible<S>);
     }
     {
         struct S
@@ -201,7 +201,7 @@ TEST_CASE("Cpp17CopyConstructible", "[core]")
             S(S const&&) noexcept {}
         };
         STATIC_REQUIRE(std::is_copy_constructible_v<S>);
-        STATIC_REQUIRE(!iris::core::Cpp17CopyConstructible<S>);
+        STATIC_REQUIRE(!iris::req::Cpp17CopyConstructible<S>);
     }
     {
         struct S
@@ -211,7 +211,7 @@ TEST_CASE("Cpp17CopyConstructible", "[core]")
             S(S const&&) noexcept {}
         };
         STATIC_REQUIRE(!std::is_copy_constructible_v<S>);
-        STATIC_REQUIRE(!iris::core::Cpp17CopyConstructible<S>);
+        STATIC_REQUIRE(!iris::req::Cpp17CopyConstructible<S>);
     }
     {
         struct S
@@ -221,24 +221,24 @@ TEST_CASE("Cpp17CopyConstructible", "[core]")
             S(S const&&) = delete;
         };
         STATIC_REQUIRE(std::is_copy_constructible_v<S>);
-        STATIC_REQUIRE(!iris::core::Cpp17CopyConstructible<S>);
+        STATIC_REQUIRE(!iris::req::Cpp17CopyConstructible<S>);
     }
 }
 
 TEST_CASE("Cpp17MoveAssignable", "[core]")
 {
-    STATIC_REQUIRE(iris::core::Cpp17MoveAssignable<int>);
+    STATIC_REQUIRE(iris::req::Cpp17MoveAssignable<int>);
     {
         using T = int const;
         STATIC_REQUIRE(!std::is_move_assignable_v<T>);
         STATIC_REQUIRE(!std::assignable_from<T&, T&&>);
-        STATIC_REQUIRE(!iris::core::Cpp17MoveAssignable<T>);
+        STATIC_REQUIRE(!iris::req::Cpp17MoveAssignable<T>);
     }
     {
         using T = int const [10];
         STATIC_REQUIRE(!std::is_move_assignable_v<T>);
         STATIC_REQUIRE(!std::assignable_from<T&, T&&>);
-        STATIC_REQUIRE(!iris::core::Cpp17MoveAssignable<T>);
+        STATIC_REQUIRE(!iris::req::Cpp17MoveAssignable<T>);
     }
     {
         struct S
@@ -247,24 +247,24 @@ TEST_CASE("Cpp17MoveAssignable", "[core]")
         };
         STATIC_REQUIRE(!std::is_move_assignable_v<S>);
         STATIC_REQUIRE(!std::assignable_from<S&, S&&>);
-        STATIC_REQUIRE(!iris::core::Cpp17MoveAssignable<S>);
+        STATIC_REQUIRE(!iris::req::Cpp17MoveAssignable<S>);
     }
 }
 
 TEST_CASE("Cpp17CopyAssignable", "[core]")
 {
-    STATIC_REQUIRE(iris::core::Cpp17CopyAssignable<int>);
+    STATIC_REQUIRE(iris::req::Cpp17CopyAssignable<int>);
     {
         using T = int const;
         STATIC_REQUIRE(!std::is_copy_assignable_v<T>);
         STATIC_REQUIRE(!std::assignable_from<T&, T const&>);
-        STATIC_REQUIRE(!iris::core::Cpp17CopyAssignable<T>);
+        STATIC_REQUIRE(!iris::req::Cpp17CopyAssignable<T>);
     }
     {
         using T = int const [10];
         STATIC_REQUIRE(!std::is_copy_assignable_v<T>);
         STATIC_REQUIRE(!std::assignable_from<T&, T const&>);
-        STATIC_REQUIRE(!iris::core::Cpp17CopyAssignable<T>);
+        STATIC_REQUIRE(!iris::req::Cpp17CopyAssignable<T>);
     }
     {
         struct S
@@ -273,7 +273,7 @@ TEST_CASE("Cpp17CopyAssignable", "[core]")
         };
         STATIC_REQUIRE(!std::is_copy_assignable_v<S>);
         STATIC_REQUIRE(!std::assignable_from<S&, S const&>);
-        STATIC_REQUIRE(!iris::core::Cpp17CopyAssignable<S>);
+        STATIC_REQUIRE(!iris::req::Cpp17CopyAssignable<S>);
     }
     {
         struct S
@@ -283,7 +283,7 @@ TEST_CASE("Cpp17CopyAssignable", "[core]")
             S& operator=(S const&&) noexcept { return *this; }  // NOLINT(misc-unconventional-assign-operator)
         };
         STATIC_REQUIRE(std::is_copy_assignable_v<S>);
-        STATIC_REQUIRE(!iris::core::Cpp17CopyAssignable<S>);
+        STATIC_REQUIRE(!iris::req::Cpp17CopyAssignable<S>);
     }
     {
         struct S
@@ -293,7 +293,7 @@ TEST_CASE("Cpp17CopyAssignable", "[core]")
             S& operator=(S const&&) noexcept { return *this; }  // NOLINT(misc-unconventional-assign-operator)
         };
         STATIC_REQUIRE(!std::is_copy_assignable_v<S>);
-        STATIC_REQUIRE(!iris::core::Cpp17CopyAssignable<S>);
+        STATIC_REQUIRE(!iris::req::Cpp17CopyAssignable<S>);
     }
     {
         struct S
@@ -303,7 +303,7 @@ TEST_CASE("Cpp17CopyAssignable", "[core]")
             S& operator=(S const&&) = delete;
         };
         STATIC_REQUIRE(std::is_copy_assignable_v<S>);
-        STATIC_REQUIRE(!iris::core::Cpp17CopyAssignable<S>);
+        STATIC_REQUIRE(!iris::req::Cpp17CopyAssignable<S>);
     }
     {
         struct S
@@ -312,20 +312,20 @@ TEST_CASE("Cpp17CopyAssignable", "[core]")
             S& operator=(S&&) = delete;
         };
         STATIC_REQUIRE(std::is_copy_assignable_v<S>);
-        STATIC_REQUIRE(!iris::core::Cpp17CopyAssignable<S>);
+        STATIC_REQUIRE(!iris::req::Cpp17CopyAssignable<S>);
     }
 }
 
 TEST_CASE("Cpp17Destructible", "[core]")
 {
-    STATIC_REQUIRE(iris::core::Cpp17Destructible<int>);
+    STATIC_REQUIRE(iris::req::Cpp17Destructible<int>);
     {
         struct S
         {
             ~S() {}  // NOLINT(modernize-use-equals-default)
         };
         STATIC_REQUIRE(std::is_nothrow_destructible_v<S>);
-        STATIC_REQUIRE(iris::core::Cpp17Destructible<S>);
+        STATIC_REQUIRE(iris::req::Cpp17Destructible<S>);
     }
     {
         struct S
@@ -333,7 +333,7 @@ TEST_CASE("Cpp17Destructible", "[core]")
             ~S() noexcept(true) {}  // NOLINT(modernize-use-equals-default)
         };
         STATIC_REQUIRE(std::is_nothrow_destructible_v<S>);
-        STATIC_REQUIRE(iris::core::Cpp17Destructible<S>);
+        STATIC_REQUIRE(iris::req::Cpp17Destructible<S>);
     }
     {
         struct S
@@ -342,7 +342,7 @@ TEST_CASE("Cpp17Destructible", "[core]")
         };
         STATIC_REQUIRE(std::is_destructible_v<S>);
         STATIC_REQUIRE(!std::is_nothrow_destructible_v<S>);
-        STATIC_REQUIRE(iris::core::Cpp17Destructible<S>); // noexcept(false) should still satisfy this, as long as the exception is not propagated
+        STATIC_REQUIRE(iris::req::Cpp17Destructible<S>); // noexcept(false) should still satisfy this, as long as the exception is not propagated
 
         // Cpp17Destructible is NOT the same as std::destructible
         STATIC_REQUIRE(!std::destructible<S>); // noexcept(false) is not satisfied
@@ -351,10 +351,10 @@ TEST_CASE("Cpp17Destructible", "[core]")
         // https://eel.is/c++draft/utility.arg.requirements#tab:cpp17.destructible-row-3-column-1-note-3
         // > Array types and non-object types are not Cpp17Destructible.
 
-        STATIC_REQUIRE(!iris::core::Cpp17Destructible<int[]>);
-        STATIC_REQUIRE(!iris::core::Cpp17Destructible<int[1]>);
-        STATIC_REQUIRE(!iris::core::Cpp17Destructible<void>);
-        STATIC_REQUIRE(!iris::core::Cpp17Destructible<int&>);
+        STATIC_REQUIRE(!iris::req::Cpp17Destructible<int[]>);
+        STATIC_REQUIRE(!iris::req::Cpp17Destructible<int[1]>);
+        STATIC_REQUIRE(!iris::req::Cpp17Destructible<void>);
+        STATIC_REQUIRE(!iris::req::Cpp17Destructible<int&>);
 
         // Cpp17Destructible is NOT the same as std::destructible
         STATIC_REQUIRE(!std::destructible<int[]>);
@@ -391,14 +391,14 @@ struct Ss
 
 TEST_CASE("Cpp17Swappable", "[core]")
 {
-    STATIC_REQUIRE(iris::core::Cpp17Swappable<int>);
+    STATIC_REQUIRE(iris::req::Cpp17Swappable<int>);
     {
         STATIC_REQUIRE(!std::is_swappable_v<S&>);
-        STATIC_REQUIRE(!iris::core::Cpp17Swappable<S>);
+        STATIC_REQUIRE(!iris::req::Cpp17Swappable<S>);
     }
     {
         STATIC_REQUIRE(std::is_swappable_v<Ss&>);
-        STATIC_REQUIRE(iris::core::Cpp17Swappable<Ss>);
+        STATIC_REQUIRE(iris::req::Cpp17Swappable<Ss>);
 
         Ss a, b;
         using std::swap;

@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: MIT
 
 #include <iris/core/hash_fwd.hpp>
-#include <iris/core/requirements.hpp>
 
+#include <iris/requirements.hpp>
 #include <iris/type_traits.hpp>
 
 #include <type_traits>
@@ -36,7 +36,7 @@ template<class Key>
         is_function_object_v<std::hash<Key>, Key const> &&
         is_function_object_v<std::hash<Key> const, Key> &&
         is_function_object_v<std::hash<Key> const, Key const> &&
-        Cpp17CopyConstructible<std::hash<Key>> && Cpp17Destructible<std::hash<Key>> &&
+        req::Cpp17CopyConstructible<std::hash<Key>> && req::Cpp17Destructible<std::hash<Key>> &&
         requires {
             { std::declval<std::hash<Key>      >()(std::declval<Cpp17Hash_convertible_to_Key<Key>      >()) } -> std::same_as<std::size_t>;
             { std::declval<std::hash<Key>      >()(std::declval<Cpp17Hash_convertible_to_Key<Key> const>()) } -> std::same_as<std::size_t>;
@@ -80,9 +80,9 @@ template<class Key>
     requires
         requires { typename std::hash<Key>; } &&
         Cpp17Hash<std::hash<Key>> &&
-        Cpp17DefaultConstructible<std::hash<Key>> &&
-        Cpp17CopyAssignable<std::hash<Key>> &&
-        Cpp17Swappable<std::hash<Key>>
+        req::Cpp17DefaultConstructible<std::hash<Key>> &&
+        req::Cpp17CopyAssignable<std::hash<Key>> &&
+        req::Cpp17Swappable<std::hash<Key>>
 struct is_hash_enabled<Key> : std::true_type
 {
     static_assert(!is_ttp_specialization_of_v<Key, std::hash>);

@@ -1,5 +1,5 @@
-﻿#ifndef IRIS_CORE_REQUIREMENTS_HPP
-#define IRIS_CORE_REQUIREMENTS_HPP
+﻿#ifndef IRIS_REQUIREMENTS_HPP
+#define IRIS_REQUIREMENTS_HPP
 
 // SPDX-License-Identifier: MIT
 
@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace iris::core {
+namespace iris {
 
 namespace detail {
 
@@ -21,6 +21,8 @@ template<class T>
 concept boolean_testable = detail::boolean_testable_impl<T> && requires(T&& t) {
     { !std::forward<T>(t) } -> detail::boolean_testable_impl;
 };
+
+namespace req {
 
 // https://eel.is/c++draft/utility.arg.requirements#tab:cpp17.equalitycomparable
 template<class T>
@@ -90,6 +92,8 @@ concept Cpp17Destructible = (!std::is_array_v<T>) && std::is_object_v<T> && requ
 template<class X>
 concept Cpp17Swappable = std::is_swappable_v<X&>;
 
-} // iris::core
+} // req
+
+} // iris
 
 #endif
