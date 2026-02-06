@@ -143,43 +143,43 @@ struct NodeArray;
 
 using Node = iris::rvariant<int, iris::recursive_wrapper<NodeArray>>;
 
-struct NodeArray : std::vector<Node>
+struct NodeArray
 {
-    using std::vector<Node>::vector;
+    std::vector<Node> vec;
 
     bool operator==(NodeArray const& other) const
     {
-        return static_cast<std::vector<Node> const&>(*this) == static_cast<std::vector<Node> const&>(other);
+        return vec == other.vec;
     }
 
     bool operator!=(NodeArray const& other) const
     {
-        return static_cast<std::vector<Node> const&>(*this) != static_cast<std::vector<Node> const&>(other);
+        return vec != other.vec;
     }
 
     bool operator<(NodeArray const& other) const
     {
-        return static_cast<std::vector<Node> const&>(*this) < static_cast<std::vector<Node> const&>(other);
+        return vec < other.vec;
     }
 
     bool operator>(NodeArray const& other) const
     {
-        return static_cast<std::vector<Node> const&>(*this) > static_cast<std::vector<Node> const&>(other);
+        return vec > other.vec;
     }
 
     bool operator<=(NodeArray const& other) const
     {
-        return static_cast<std::vector<Node> const&>(*this) <= static_cast<std::vector<Node> const&>(other);
+        return vec <= other.vec;
     }
 
     bool operator>=(NodeArray const& other) const
     {
-        return static_cast<std::vector<Node> const&>(*this) >= static_cast<std::vector<Node> const&>(other);
+        return vec >= other.vec;
     }
 
     auto operator<=>(NodeArray const& other) const
     {
-        return static_cast<std::vector<Node> const&>(*this) <=> static_cast<std::vector<Node> const&>(other);
+        return vec <=> other.vec;
     }
 };
 
