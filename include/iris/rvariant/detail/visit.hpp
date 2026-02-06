@@ -4,10 +4,10 @@
 // SPDX-License-Identifier: MIT
 
 #include <iris/rvariant/detail/rvariant_fwd.hpp>
+#include <iris/rvariant/detail/seq.hpp>
 #include <iris/rvariant/detail/variant_storage.hpp>
 #include <iris/rvariant/variant_helper.hpp>
 
-#include <iris/core/seq.hpp>
 #include <iris/type_traits.hpp>
 
 #include <variant> // std::bad_variant_access
@@ -565,7 +565,7 @@ private:
 
 
 template<class... Variants>
-using make_OverloadSeq = core::seq_cartesian_product<
+using make_OverloadSeq = detail::seq_cartesian_product<
     std::index_sequence,
     std::make_index_sequence<
         detail::valueless_bias<detail::as_variant_t<Variants>>(
