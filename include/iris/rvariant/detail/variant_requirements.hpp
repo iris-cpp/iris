@@ -7,9 +7,6 @@
 
 #include <iris/type_traits.hpp>
 
-#include <iris/type_traits.hpp>
-
-
 namespace iris::detail {
 
 template<class T, class U>

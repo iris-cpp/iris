@@ -483,7 +483,7 @@ struct visit_dispatch<-1>
             return multi_visitor<at_c_t<(n), OverloadSeq>>::template apply<R, Visitor, Storage...>( \
                 static_cast<Visitor&&>(vis), static_cast<Storage&&>(storage)... \
             ); \
-        } else std::unreachable(); [[fallthrough]]
+        } else { std::unreachable(); } [[fallthrough]]
 
 #define IRIS_VISIT_DISPATCH_DEF(strategy) \
     template<> \

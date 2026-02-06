@@ -7,8 +7,8 @@
 #include <iris/rvariant/variant_helper.hpp>
 
 #include <functional>
-#include <utility>
 #include <type_traits>
+#include <utility>
 
 #include <cassert>
 
