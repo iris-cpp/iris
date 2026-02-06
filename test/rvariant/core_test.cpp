@@ -7,7 +7,7 @@
 
 namespace unit_test {
 
-TEST_CASE("pack_indexing", "[core]")
+TEST_CASE("pack_indexing")
 {
     STATIC_REQUIRE(std::is_same_v<iris::pack_indexing_t<0, int>, int>);
     STATIC_REQUIRE(std::is_same_v<iris::pack_indexing_t<0, int, float>, int>);
@@ -27,19 +27,19 @@ TEST_CASE("pack_indexing", "[core]")
     STATIC_REQUIRE(std::is_same_v<iris::at_c_t<1, iris::type_list<int, float>>, float>);
 }
 
-TEST_CASE("exactly_once", "[core]")
+TEST_CASE("exactly_once")
 {
     STATIC_REQUIRE(iris::exactly_once_v<int, iris::type_list<int, float>>);
     STATIC_REQUIRE_FALSE(iris::exactly_once_v<int, iris::type_list<int, int>>);
 }
 
-TEST_CASE("is_in", "[core]")
+TEST_CASE("is_in")
 {
     STATIC_REQUIRE(iris::is_in_v<int, int, float>);
     STATIC_REQUIRE_FALSE(iris::is_in_v<int, float>);
 }
 
-TEST_CASE("find_index", "[core]")
+TEST_CASE("find_index")
 {
     STATIC_REQUIRE(iris::find_index_v<int,    iris::type_list<int, float, double>> == 0);
     STATIC_REQUIRE(iris::find_index_v<float,  iris::type_list<int, float, double>> == 1);
@@ -49,7 +49,7 @@ TEST_CASE("find_index", "[core]")
     STATIC_REQUIRE(iris::find_index_v<int, iris::type_list<int, int, double>> == 0);
 }
 
-TEST_CASE("Cpp17EqualityComparable", "[core]")
+TEST_CASE("Cpp17EqualityComparable")
 {
     STATIC_REQUIRE(iris::req::Cpp17EqualityComparable<int>);
     {
@@ -68,7 +68,7 @@ TEST_CASE("Cpp17EqualityComparable", "[core]")
     }
 }
 
-TEST_CASE("Cpp17LessThanComparable", "[core]")
+TEST_CASE("Cpp17LessThanComparable")
 {
     STATIC_REQUIRE(iris::req::Cpp17LessThanComparable<int>);
     {
@@ -87,7 +87,7 @@ TEST_CASE("Cpp17LessThanComparable", "[core]")
     }
 }
 
-TEST_CASE("Cpp17DefaultConstructible", "[core]")
+TEST_CASE("Cpp17DefaultConstructible")
 {
     STATIC_REQUIRE(iris::req::Cpp17DefaultConstructible<int>);
     {
@@ -113,7 +113,7 @@ TEST_CASE("Cpp17DefaultConstructible", "[core]")
     }
 }
 
-TEST_CASE("Cpp17MoveConstructible", "[core]")
+TEST_CASE("Cpp17MoveConstructible")
 {
     STATIC_REQUIRE(iris::req::Cpp17MoveConstructible<int>);
     {
@@ -146,7 +146,7 @@ TEST_CASE("Cpp17MoveConstructible", "[core]")
     }
 }
 
-TEST_CASE("Cpp17CopyConstructible", "[core]")
+TEST_CASE("Cpp17CopyConstructible")
 {
     STATIC_REQUIRE(iris::req::Cpp17CopyConstructible<int>);
     {
@@ -225,7 +225,7 @@ TEST_CASE("Cpp17CopyConstructible", "[core]")
     }
 }
 
-TEST_CASE("Cpp17MoveAssignable", "[core]")
+TEST_CASE("Cpp17MoveAssignable")
 {
     STATIC_REQUIRE(iris::req::Cpp17MoveAssignable<int>);
     {
@@ -251,7 +251,7 @@ TEST_CASE("Cpp17MoveAssignable", "[core]")
     }
 }
 
-TEST_CASE("Cpp17CopyAssignable", "[core]")
+TEST_CASE("Cpp17CopyAssignable")
 {
     STATIC_REQUIRE(iris::req::Cpp17CopyAssignable<int>);
     {
@@ -316,7 +316,7 @@ TEST_CASE("Cpp17CopyAssignable", "[core]")
     }
 }
 
-TEST_CASE("Cpp17Destructible", "[core]")
+TEST_CASE("Cpp17Destructible")
 {
     STATIC_REQUIRE(iris::req::Cpp17Destructible<int>);
     {
@@ -389,7 +389,7 @@ struct Ss
 
 } // anonymous
 
-TEST_CASE("Cpp17Swappable", "[core]")
+TEST_CASE("Cpp17Swappable")
 {
     STATIC_REQUIRE(iris::req::Cpp17Swappable<int>);
     {
