@@ -1,9 +1,10 @@
-﻿#ifndef IRIS_HASH_UTIL_HPP
-#define IRIS_HASH_UTIL_HPP
+﻿#ifndef IRIS_HASH_HPP
+#define IRIS_HASH_HPP
 
 // SPDX-License-Identifier: MIT
 
-#include <iris/hash.hpp>
+#include <iris/requirements.hpp>
+#include <iris/type_traits.hpp>
 
 #include <functional>
 #include <bit>

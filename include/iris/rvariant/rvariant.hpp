@@ -16,7 +16,6 @@
 #include <iris/compare.hpp>
 #include <iris/type_traits.hpp>
 #include <iris/hash.hpp>
-#include <iris/hash_util.hpp>
 
 #include <functional>
 #include <initializer_list>
