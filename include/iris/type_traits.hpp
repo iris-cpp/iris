@@ -23,7 +23,7 @@ struct type_list
     static constexpr std::size_t size = sizeof...(Ts);
 };
 
-template<auto> using cvoid_t = void;
+template<auto...> using cvoid_t = void;
 
 namespace detail {
 
