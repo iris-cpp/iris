@@ -550,7 +550,7 @@ private:
             return flat_index::calc_single_stride<Ns_i>(
                 std::index_sequence<i_rest...>{},
                 std::index_sequence<biased_Ns...>{},
-                stride * npack_indexing_v<Ns_i_max - i, biased_Ns...>
+                stride * cpack_indexing_v<Ns_i_max - i, biased_Ns...>
             );
         }
     }

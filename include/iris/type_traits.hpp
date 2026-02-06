@@ -38,10 +38,10 @@ struct do_pack_indexing<std::index_sequence<Voids...>>
 };
 
 template<class Voids>
-struct do_npack_indexing;
+struct do_cpack_indexing;
 
 template<std::size_t... Voids>
-struct do_npack_indexing<std::index_sequence<Voids...>>
+struct do_cpack_indexing<std::index_sequence<Voids...>>
 {
     template<class T, T N>
     static std::integral_constant<T, N> select(cvoid_t<Voids>*..., std::integral_constant<T, N>*, ...);
@@ -66,8 +66,8 @@ using at_c_t = typename at_c<I, T>::type;
 
 template<std::size_t I, class... Ts> struct pack_indexing { using type = Ts...[I]; };
 template<std::size_t I, class... Ts> using pack_indexing_t = Ts...[I];
-template<std::size_t I, auto... Ns> struct npack_indexing { static constexpr auto value = Ns...[I]; };
-template<std::size_t I, auto... Ns> constexpr auto npack_indexing_v = Ns...[I];
+template<std::size_t I, auto... Ns> struct cpack_indexing { static constexpr auto value = Ns...[I]; };
+template<std::size_t I, auto... Ns> constexpr auto cpack_indexing_v = Ns...[I];
 
 template<std::size_t I, template<class...> class TT, class... Ts>
 struct at_c<I, TT<Ts...>>
@@ -95,16 +95,16 @@ using pack_indexing_t = typename pack_indexing<I, Ts...>::type;
 
 
 template<std::size_t I, auto... Ns>
-struct npack_indexing
+struct cpack_indexing
 {
     static_assert(I < sizeof...(Ns));
-    static constexpr auto value = decltype(detail::do_npack_indexing<std::make_index_sequence<I>>::select(
+    static constexpr auto value = decltype(detail::do_cpack_indexing<std::make_index_sequence<I>>::select(
         static_cast<std::integral_constant<decltype(Ns), Ns>*>(nullptr)...
     ))::value;
 };
 
 template<std::size_t I, auto... Ns>
-constexpr auto npack_indexing_v = npack_indexing<I, Ns...>::value;
+constexpr auto cpack_indexing_v = cpack_indexing<I, Ns...>::value;
 
 
 template<std::size_t I, template<class...> class TT, class... Ts>
