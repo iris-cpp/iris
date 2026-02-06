@@ -1,6 +1,7 @@
 #ifndef IRIS_HASH_FNV_HASH_HPP
 #define IRIS_HASH_FNV_HASH_HPP
 
+#include <bit>
 #include <memory>
 
 #include <cstddef>
