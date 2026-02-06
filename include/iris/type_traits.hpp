@@ -5,33 +5,17 @@
 
 #include <iris/config.hpp>
 
+#include <iris/bits/is_function_object.hpp>
+#include <iris/bits/specialization_of.hpp>
+
+#include <iris/requirements.hpp>
+
 #include <type_traits>
 #include <utility>
 
 #include <cstddef>
 
 namespace iris {
-
-// https://eel.is/c++draft/temp#param-2
-
-template<class T, template<class...> class TT>
-struct is_ttp_specialization_of : std::false_type {};
-
-template<template<class...> class TT, class... Ts>
-struct is_ttp_specialization_of<TT<Ts...>, TT> : std::true_type {};
-
-template<class T, template<class...> class TT>
-inline constexpr bool is_ttp_specialization_of_v = is_ttp_specialization_of<T, TT>::value;
-
-
-template<class T, template<auto...> class TT>
-struct is_ctp_specialization_of : std::false_type {};
-
-template<template<auto...> class TT, auto... Cs>
-struct is_ctp_specialization_of<TT<Cs...>, TT> : std::true_type {};
-
-template<class T, template<auto...> class TT>
-inline constexpr bool is_ctp_specialization_of_v = is_ctp_specialization_of<T, TT>::value;
 
 template<class... Ts>
 struct type_list
@@ -312,21 +296,72 @@ struct aggregate_initialize_resolution<
 template<class T, class... Ts>
 struct aggregate_initialize_resolution : detail::aggregate_initialize_resolution<void, T, Ts...> {};
 
+// "disabled" version, https://eel.is/c++draft/unord.hash#4
+template<class Key>
+struct is_hash_enabled : std::false_type
+{
+    static_assert(!is_ttp_specialization_of_v<Key, std::hash>);
+    static_assert(requires { typename std::hash<Key>; }, "Specialization of `hash` should exist; https://eel.is/c++draft/unord.hash#note-2");
 
-// https://eel.is/c++draft/function.objects.general
-template<class F, class... Args>
-struct is_function_object : std::false_type {};
+private:
+    using H = std::hash<Key>;
+    static_assert(!std::is_default_constructible_v<H>);
+    static_assert(!std::is_copy_constructible_v<H>);
+    static_assert(!std::is_move_constructible_v<H>);
+    static_assert(!std::is_copy_assignable_v<H>);
+    static_assert(!std::is_move_assignable_v<H>);
+    static_assert(!is_function_object_v<H, Key>);
+    static_assert(!is_function_object_v<H, Key const>);
+    static_assert(!is_function_object_v<H const, Key>);
+    static_assert(!is_function_object_v<H const, Key const>);
+};
 
-template<class F, class... Args>
-constexpr bool is_function_object_v = is_function_object<F, Args...>::value;
-
-template<class F, class... Args>
+// "enabled" version, https://eel.is/c++draft/unord.hash#5
+template<class Key>
     requires
-        (std::is_pointer_v<F> && std::is_function_v<std::remove_pointer_t<F>>) ||
-        (std::is_class_v<F> && requires(F f) {
-            { f(std::declval<Args>()...) };
-        })
-struct is_function_object<F, Args...> : std::true_type {};
+        requires { typename std::hash<Key>; } &&
+        req::Cpp17Hash<std::hash<Key>> &&
+        req::Cpp17DefaultConstructible<std::hash<Key>> &&
+        req::Cpp17CopyAssignable<std::hash<Key>> &&
+        req::Cpp17Swappable<std::hash<Key>>
+struct is_hash_enabled<Key> : std::true_type
+{
+    static_assert(!is_ttp_specialization_of_v<Key, std::hash>);
+};
+
+template<class Key>
+constexpr bool is_hash_enabled_v = is_hash_enabled<Key>::value;
+
+
+template<class T, class Enabled = void>
+struct is_nothrow_hashable : std::false_type
+{
+    static_assert(
+        !std::is_const_v<T> && !std::is_volatile_v<T> && !std::is_reference_v<T>,
+        "Although the standard has no restriction on hashing potentially "
+        "cv-qualified and/or reference types, we intentionally disallow "
+        "them in our metafunction to prevent error-prone instantiations."
+    );
+
+    static_assert(is_hash_enabled_v<T>, "is_nothrow_hashable must be used only after proper overload resolution in SFINAE-friendly context");
+};
+
+template<class T>
+struct is_nothrow_hashable<T, std::void_t<decltype(std::hash<T>{}(std::declval<T const&>()))>>
+    : std::bool_constant<noexcept(std::hash<T>{}(std::declval<T const&>()))>
+{
+    static_assert(
+        !std::is_const_v<T> && !std::is_volatile_v<T> && !std::is_reference_v<T>,
+        "Although the standard has no restriction on hashing potentially "
+        "cv-qualified and/or reference types, we intentionally disallow "
+        "them in our metafunction to prevent error-prone instantiations."
+    );
+
+    static_assert(is_hash_enabled_v<T>, "is_nothrow_hashable must be used only after proper overload resolution in SFINAE-friendly context");
+};
+
+template<class T>
+constexpr bool is_nothrow_hashable_v = is_nothrow_hashable<T>::value;
 
 } // iris
 

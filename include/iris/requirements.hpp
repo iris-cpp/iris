@@ -3,6 +3,10 @@
 
 // SPDX-License-Identifier: MIT
 
+#include <iris/hash_fwd.hpp>
+#include <iris/bits/is_function_object.hpp>
+#include <iris/bits/specialization_of.hpp>
+
 #include <concepts>
 #include <type_traits>
 #include <utility>
@@ -91,6 +95,49 @@ concept Cpp17Destructible = (!std::is_array_v<T>) && std::is_object_v<T> && requ
 // https://eel.is/c++draft/swappable.requirements#5
 template<class X>
 concept Cpp17Swappable = std::is_swappable_v<X&>;
+
+namespace detail {
+
+template<class Key>
+struct Cpp17Hash_convertible_to_Key
+{
+    // ReSharper disable once CppFunctionIsNotImplemented
+    operator Key();
+    // ReSharper disable once CppFunctionIsNotImplemented
+    operator Key const() const;
+};
+
+// https://eel.is/c++draft/hash.requirements
+template<class H>
+struct Cpp17Hash_impl : std::false_type
+{
+    static_assert(is_ttp_specialization_of_v<H, std::hash>);
+};
+
+template<class Key>
+    requires
+        is_function_object_v<std::hash<Key>, Key> &&
+        is_function_object_v<std::hash<Key>, Key const> &&
+        is_function_object_v<std::hash<Key> const, Key> &&
+        is_function_object_v<std::hash<Key> const, Key const> &&
+        req::Cpp17CopyConstructible<std::hash<Key>> && req::Cpp17Destructible<std::hash<Key>> &&
+        requires {
+            { std::declval<std::hash<Key>      >()(std::declval<Cpp17Hash_convertible_to_Key<Key>      >()) } -> std::same_as<std::size_t>;
+            { std::declval<std::hash<Key>      >()(std::declval<Cpp17Hash_convertible_to_Key<Key> const>()) } -> std::same_as<std::size_t>;
+            { std::declval<std::hash<Key> const>()(std::declval<Cpp17Hash_convertible_to_Key<Key>      >()) } -> std::same_as<std::size_t>;
+            { std::declval<std::hash<Key> const>()(std::declval<Cpp17Hash_convertible_to_Key<Key> const>()) } -> std::same_as<std::size_t>;
+            { std::declval<std::hash<Key>      >()(std::declval<Key&>()) } -> std::same_as<std::size_t>;
+            { std::declval<std::hash<Key> const>()(std::declval<Key&>()) } -> std::same_as<std::size_t>;
+        }
+struct Cpp17Hash_impl<std::hash<Key>> : std::true_type
+{
+    static_assert(!std::is_const_v<Key> && !std::is_reference_v<Key>);
+};
+
+} // detail
+
+template<class H>
+concept Cpp17Hash = detail::Cpp17Hash_impl<H>::value;
 
 } // req
 
