@@ -435,12 +435,8 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 @media amzn-kf8{#header,#content,#footnotes,#footer{padding:0}}
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-<!--
-  Copyright 2025 Nana Sakisaka
-  Distributed under the Boost Software License, Version 1.0.
-  https://www.boost.org/LICENSE_1_0.txt
--->
-<link rel="license" href="https://www.boost.org/LICENSE_1_0.txt" title="Boost Software License, Version 1.0">
+<!-- SPDX-License-Identifier: MIT -->
+<link rel="license" href="https://github.com/iris-cpp/iris/blob/main/LICENSE" title="MIT License">
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css">
 <style>
@@ -647,15 +643,6 @@ li p:has(+ .ulist) {
 #toc.toc2 #toctitle {
   font-size: 1.375em;
 }
-
-.benchmark > .content {
-  overflow-x: auto;
-}
-
-.benchmark > .content > iframe {
-  width: 666px;
-  height: 400px;
-}
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
@@ -856,7 +843,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 </head>
 <body class="book toc2 toc-left">
 <div id="header">
-<h1>rvariant<a href="https://github.com/yaito3014/rvariant" target="_blank" rel="noopener"><span class="image"><img src="https://img.shields.io/badge/GitHub-rvariant-purple?logo=github" alt="GitHub"></span></a></h1>
+<h1>rvariant<a href="https://github.com/iris-cpp/iris" target="_blank" rel="noopener"><span class="image"><img src="https://img.shields.io/badge/GitHub-iris-purple?logo=github" alt="GitHub"></span></a></h1>
 <div class="details">
 <span id="author" class="author">Yaito Kakeyama</span><br>
 <span id="author2" class="author">Nana Sakisaka</span><br>
@@ -876,9 +863,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
 <li><a href="#why-is-recursive-wrapper-needed-1">Why is recursive_wrapper needed?</a></li>
 <li><a href="#why-is-recursive-wrapper-needed-2">Why can&#8217;t I just use std::unique_ptr instead of recursive_wrapper?</a></li>
 <li><a href="#why-is-rvariant-not-a-wrapper-of-std">Why can&#8217;t rvariant be a thin wrapper around std::variant?</a></li>
-<li><a href="#why-is-rvariant-proposed-to-boost-1">Why is rvariant being proposed to Boost?</a></li>
-<li><a href="#why-is-rvariant-proposed-to-boost-2">Why can&#8217;t rvariant be submitted directly to the C++ Standards Committee?</a></li>
-<li><a href="#recursive-variants-in-general">Are recursive variants useful in general-purpose code?</a></li>
 </ul>
 </li>
 <li><a href="#feature-cheat-sheet">Feature Cheat Sheet</a>
@@ -932,7 +916,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 </li>
 <li><a href="#additional-information">Additional Information</a>
 <ul class="sectlevel1">
-<li><a href="#benchmark">Benchmark</a></li>
+<li><a href="#visitation-technique">Visitation Technique in Depth</a></li>
 <li><a href="#about">About the Authors</a></li>
 <li><a href="#license">License</a></li>
 </ul>
@@ -944,7 +928,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p><code>rvariant</code> is a variant library that supports recursive types. It is API-compatible with <code>std::variant</code> and includes Boost-style interfaces that act as proxies to the standard-compatible API.</p>
+<p><code>rvariant</code> is a standard-compatible variant library that supports recursive types.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -961,18 +945,6 @@ expr.visit(temp_ns::overloaded{
     [](BinaryExpr const&amp;) { /* ... */ },
 });</code></pre>
 </div>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-This library is intended for future submission to the Boost Libraries. Until then, the namespace is documented as <code>temp_ns</code> to indicate that the name is not yet stable. The current implementation temporarily uses the namespace <code>iris</code>, which originates from the prototype codebase.
-</td>
-</tr>
-</table>
 </div>
 <h3 id="supported-environments" class="discrete">Supported Environments</h3>
 <div class="ulist">
@@ -1019,7 +991,7 @@ This library is intended for future submission to the Boost Libraries. Until the
 <p><strong>Provide a modern, efficient, and battle-tested recursive variant library</strong> to enable developers to avoid using Boost.Variant in new applications.</p>
 </li>
 <li>
-<p><strong>Replace existing usages of Boost.Variant</strong> in established frameworks, especially Boost.Spirit.X3.</p>
+<p><strong>Replace existing usages of Boost.Variant</strong> in established frameworks.</p>
 </li>
 <li>
 <p><strong>Explore potential directions for future standardization,</strong> while gaining implementation experience with the modernized design.</p>
@@ -1142,36 +1114,6 @@ This library is intended for future submission to the Boost Libraries. Until the
 </div>
 <div class="paragraph">
 <p>For this purpose, the documentation of <code>rvariant</code> is presented in a diff-based format that mirrors <code>std::variant</code>, with key characteristics marked with <span class="underline">underlines</span>.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="why-is-rvariant-proposed-to-boost-1"><a class="anchor" href="#why-is-rvariant-proposed-to-boost-1"></a>Why is rvariant being proposed to Boost?</h3>
-<div class="paragraph">
-<p>One of the co-authors of <code>rvariant</code>, Nana Sakisaka, has been using Boost.Spirit for over 15 years and was endorsed as its maintainer in May 2025. <strong>Modernizing recursive variant support</strong> is a fundamental part of upgrading the Boost.Spirit.X3 codebase, and has become a main focus of ongoing maintenance efforts.</p>
-</div>
-<div class="paragraph">
-<p>Although Boost.Spirit.X3 has a <a href="https://www.boost.org/doc/libs/1_88_0/libs/spirit/doc/x3/html/spirit_x3/tutorials/rexpr.html">somewhat updated counterpart</a>, it was never designed around a formal specification and still retains <a href="https://github.com/boostorg/spirit/blob/328d940c372367a8d76a48ed956e870b56738ce9/include/boost/spirit/home/x3/support/ast/variant.hpp#L131">legacy implementation details</a> from earlier stages of development.</p>
-</div>
-<div class="paragraph">
-<p>As such, the initial version of <code>rvariant</code> was developed as an internal replacement within Boost.Spirit, as a subcomponent with no external exposure. However, before a PR was even submitted, it became clear that the design had potential value beyond Spirit. This prompted a complete redesign into a standalone superset of <code>std::variant</code>, followed by preparation for formal Boost review.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="why-is-rvariant-proposed-to-boost-2"><a class="anchor" href="#why-is-rvariant-proposed-to-boost-2"></a>Why can&#8217;t rvariant be submitted directly to the C++ Standards Committee?</h3>
-<div class="paragraph">
-<p>Historically, <strong>the concept of recursive variants in C&#43;&#43; has been closely tied to <a href="https://www.boost.org/doc/libs/1_88_0/doc/html/variant/tutorial.html#variant.tutorial.recursive">Boost.Variant</a> and <a href="https://www.boost.org/doc/libs/1_88_0/libs/spirit/doc/html/spirit/qi/tutorials/mini_xml___asts_.html#spirit.qi.tutorials.mini_xml___asts_.the_structures">Boost.Spirit.Qi</a></strong>. It has been investigated, implemented, and used across Boost Libraries and by end users for <em>decades</em>. For this reason, we believe it&#8217;s best to first gather feedback from the Boost community.</p>
-</div>
-<div class="paragraph">
-<p>Moreover, we expect the working group to seek implementation experience, which inevitably involves the current state of Boost.Variant and related components. Submitting <code>rvariant</code> independently would likely result in making the process unnecessarily time-consuming.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="recursive-variants-in-general"><a class="anchor" href="#recursive-variants-in-general"></a>Are recursive variants useful in general-purpose code?</h3>
-<div class="paragraph">
-<p>Boost.Spirit is just one example of a parser combinator library. In practice, <em>any application that constructs statically typed recursive data structures</em> can benefit from a recursive variant class. Furthermore, with the arrival of C&#43;&#43;26 reflection, such data structures are likely to become even more common.</p>
-</div>
-<div class="paragraph">
-<p>A proper solution to these challenges requires a fully featured library, not just a value-semantic wrapper that happens to work for minimal use cases. We hope this work can serve as a foundation for broader discussion about recursive variants in Boost and beyond.</p>
 </div>
 </div>
 </div>
@@ -3045,102 +2987,8 @@ struct <em>is-specialization-of</em>;      // <span class="exposition-only">expo
 </div>
 <h1 id="additional-information" class="sect0"><a class="anchor" href="#additional-information"></a>Additional Information</h1>
 <div class="sect1">
-<h2 id="benchmark"><a class="anchor" href="#benchmark"></a>Benchmark</h2>
+<h2 id="visitation-technique"><a class="anchor" href="#visitation-technique"></a>Visitation Technique in Depth</h2>
 <div class="sectionbody">
-<div class="paragraph">
-<p>The benchmark application <a href="https://github.com/yaito3014/rvariant/blob/f4d08f16cf8001abe384d7857247a7c8eb539098/test/benchmark.cpp" target="_blank" rel="noopener">(source code)</a> measures the performance of <code>rvariant</code> construction and access using randomly generated inputs.</p>
-</div>
-<div class="paragraph">
-<p>It uses <code>std::mt19937</code> for random number generation and constructs <code>rvariant</code> instances directly within a <code>std::vector</code>. For the <code>std::string</code> benchmarks, we simply pass the stringized random numbers.</p>
-</div>
-<div class="paragraph">
-<p>The alternative index is distributed randomly during the construction, making sure that the access to internal <code>union</code> is not overly optimized by the compiler.</p>
-</div>
-<h4 id="benchmark-environment" class="discrete">Benchmark Environment</h4>
-<div class="ulist">
-<ul>
-<li>
-<p><strong>Date</strong>: 2025/8/9</p>
-</li>
-<li>
-<p><strong>CPU:</strong> Intel Core i9-14900KF</p>
-</li>
-<li>
-<p><strong>RAM:</strong> Crucial Pro 48GB DDR5-5600 x 4</p>
-</li>
-</ul>
-</div>
-<h3 id="gcc" class="discrete">GCC</h3>
-<div class="openblock benchmark">
-<div class="content">
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=804955990&amp;format=interactive"></iframe>
-</div>
-</div>
-<div class="openblock benchmark">
-<div class="content">
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=621295946&amp;format=interactive"></iframe>
-</div>
-</div>
-<div class="openblock benchmark">
-<div class="content">
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=88715623&amp;format=interactive"></iframe>
-</div>
-</div>
-<div class="openblock benchmark">
-<div class="content">
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=278187472&amp;format=interactive"></iframe>
-</div>
-</div>
-<h3 id="clang" class="discrete">Clang</h3>
-<div class="openblock benchmark">
-<div class="content">
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=679075429&amp;format=interactive"></iframe>
-</div>
-</div>
-<div class="openblock benchmark">
-<div class="content">
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=1601224301&amp;format=interactive"></iframe>
-</div>
-</div>
-<div class="openblock benchmark">
-<div class="content">
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=283810185&amp;format=interactive"></iframe>
-</div>
-</div>
-<div class="openblock benchmark">
-<div class="content">
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=144195081&amp;format=interactive"></iframe>
-</div>
-</div>
-<h3 id="msvc" class="discrete">MSVC</h3>
-<div class="openblock benchmark">
-<div class="content">
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=1168105336&amp;format=interactive"></iframe>
-</div>
-</div>
-<div class="openblock benchmark">
-<div class="content">
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=1271822110&amp;format=interactive"></iframe>
-</div>
-</div>
-<div class="openblock benchmark">
-<div class="content">
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=873983110&amp;format=interactive"></iframe>
-</div>
-</div>
-<div class="openblock benchmark">
-<div class="content">
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=1452444822&amp;format=interactive"></iframe>
-</div>
-</div>
-<h3 id="benchmark-analysis" class="discrete">Benchmark Analysis</h3>
-<div class="paragraph">
-<p>The graphs show that the cost of read-only access is remarkably small compared to the time spent on construction.</p>
-</div>
-<div class="paragraph">
-<p>Read operations on a variant complete in constant time, as runtime dispatch is limited by the small, fixed number of alternatives. Benchmarks show <code>std::variant</code> and <code>rvariant</code> perform similarly, with read times unaffected by whether there are 3 or 16 alternatives and not scaling with <code>N</code>.</p>
-</div>
-<h4 id="visitation-technique-in-depth" class="discrete">Visitation Technique in Depth</h4>
 <div class="paragraph">
 <p>Some readers might assume that table-based visitation is the ideal approach, implying that visitations have <em>constant</em> time complexity.</p>
 </div>
@@ -3179,7 +3027,7 @@ vtable[v.index()](vis, v.storage()); // O(1), of course</code></pre>
 <h2 id="license"><a class="anchor" href="#license"></a>License</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>This library is distributed under the <a href="https://www.boost.org/LICENSE_1_0.txt">Boost Software License, Version 1.0</a>.</p>
+<p>This library is distributed under the <a href="https://github.com/iris-cpp/iris/blob/main/LICENSE">MIT License</a>.</p>
 </div>
 </div>
 </div>

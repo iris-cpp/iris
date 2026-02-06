@@ -1,14 +1,9 @@
-////
-Copyright 2025 Nana Sakisaka
-Copyright 2025 Yaito Kakeyama
-Distributed under the Boost Software License, Version 1.0.
-https://www.boost.org/LICENSE_1_0.txt
-////
+// SPDX-License-Identifier: MIT
 
-= rvariantlink:https://github.com/yaito3014/rvariant[image:https://img.shields.io/badge/GitHub-rvariant-purple?logo=github[GitHub], window="_blank"]
+= rvariantlink:https://github.com/iris-cpp/iris[image:https://img.shields.io/badge/GitHub-iris-purple?logo=github[GitHub], window="_blank"]
 Yaito Kakeyama; Nana Sakisaka
-:license-url: https://www.boost.org/LICENSE_1_0.txt
-:license-title: Boost Software License, Version 1.0
+:license-url: https://github.com/iris-cpp/iris/blob/main/LICENSE
+:license-title: MIT License
 :docinfo: shared
 :doctype: book
 :icons: font
@@ -34,7 +29,7 @@ Yaito Kakeyama; Nana Sakisaka
 :subset_of: <<rvariant.flex,rvariant_set::subset_of>>
 :equivalent_to: <<rvariant.flex,rvariant_set::equivalent_to>>
 
-`rvariant` is a variant library that supports recursive types. It is API-compatible with `std::variant` and includes Boost-style interfaces that act as proxies to the standard-compatible API.
+`rvariant` is a standard-compatible variant library that supports recursive types.
 
 [,cpp,subs="+macros,+attributes"]
 ----
@@ -51,9 +46,6 @@ expr.visit(temp_ns::overloaded{
     [](BinaryExpr const&) { /* ... */ },
 });
 ----
-
-[NOTE]
-This library is intended for future submission to the Boost Libraries. Until then, the namespace is documented as `temp_ns` to indicate that the name is not yet stable. The current implementation temporarily uses the namespace `iris`, which originates from the prototype codebase.
 
 [discrete]
 === Supported Environments
@@ -80,7 +72,7 @@ Until 2025, no one had managed to introduce a modern alternative to either Boost
 === Project Goals
 1. *Provide a modern, efficient, and battle-tested recursive variant library* to enable developers to avoid using Boost.Variant in new applications.
 
-2. *Replace existing usages of Boost.Variant* in established frameworks, especially Boost.Spirit.X3.
+2. *Replace existing usages of Boost.Variant* in established frameworks.
 
 3. *Explore potential directions for future standardization,* while gaining implementation experience with the modernized design.
 
@@ -174,33 +166,6 @@ In other words, the commonly seen advice like _"use std::unique_ptr if you want 
 If `rvariant` is specified correctly, it has the potential to become the *only variant library in the C++ standard* capable of handling _both_ recursive and non-recursive types transparently. However, if it is designed merely as a thin wrapper around `std::variant` (e.g., inheritance or composition), such a specification could never be standardized.
 
 For this purpose, the documentation of `rvariant` is presented in a diff-based format that mirrors `std::variant`, with key characteristics marked with [.underline]#underlines#.
-
-
-[[why-is-rvariant-proposed-to-boost-1]]
-### Why is rvariant being proposed to Boost?
-
-One of the co-authors of `rvariant`, Nana Sakisaka, has been using Boost.Spirit for over 15 years and was endorsed as its maintainer in May 2025. *Modernizing recursive variant support* is a fundamental part of upgrading the Boost.Spirit.X3 codebase, and has become a main focus of ongoing maintenance efforts.
-
-Although Boost.Spirit.X3 has a https://www.boost.org/doc/libs/{boost-version}/libs/spirit/doc/x3/html/spirit_x3/tutorials/rexpr.html[somewhat updated counterpart], it was never designed around a formal specification and still retains https://github.com/boostorg/spirit/blob/328d940c372367a8d76a48ed956e870b56738ce9/include/boost/spirit/home/x3/support/ast/variant.hpp#L131[legacy implementation details] from earlier stages of development.
-
-As such, the initial version of `rvariant` was developed as an internal replacement within Boost.Spirit, as a subcomponent with no external exposure. However, before a PR was even submitted, it became clear that the design had potential value beyond Spirit. This prompted a complete redesign into a standalone superset of `std::variant`, followed by preparation for formal Boost review.
-
-
-[[why-is-rvariant-proposed-to-boost-2]]
-### Why can't rvariant be submitted directly to the C++ Standards Committee?
-
-Historically, *the concept of recursive variants in {cpp} has been closely tied to https://www.boost.org/doc/libs/{boost-version}/doc/html/variant/tutorial.html#variant.tutorial.recursive[Boost.Variant] and link:pass:attributes[https://www.boost.org/doc/libs/{boost-version}/libs/spirit/doc/html/spirit/qi/tutorials/mini_xml___asts_.html#spirit.qi.tutorials.mini_xml___asts_.the_structures][Boost.Spirit.Qi]*. It has been investigated, implemented, and used across Boost Libraries and by end users for _decades_. For this reason, we believe it's best to first gather feedback from the Boost community.
-
-Moreover, we expect the working group to seek implementation experience, which inevitably involves the current state of Boost.Variant and related components. Submitting `rvariant` independently would likely result in making the process unnecessarily time-consuming.
-
-
-[[recursive-variants-in-general]]
-### Are recursive variants useful in general-purpose code?
-
-Boost.Spirit is just one example of a parser combinator library. In practice, _any application that constructs statically typed recursive data structures_ can benefit from a recursive variant class. Furthermore, with the arrival of {cpp}26 reflection, such data structures are likely to become even more common.
-
-A proper solution to these challenges requires a fully featured library, not just a value-semantic wrapper that happens to work for minimal use cases. We hope this work can serve as a foundation for broader discussion about recursive variants in Boost and beyond.
-
 
 = Feature Cheat Sheet
 
@@ -1590,122 +1555,8 @@ NOTE: `_is-specialization-of_` requires {cpp}26 reflection for a straightforward
 
 = Additional Information
 
-[[benchmark]]
-== Benchmark
-The benchmark application link:https://github.com/yaito3014/rvariant/blob/f4d08f16cf8001abe384d7857247a7c8eb539098/test/benchmark.cpp[(source code),window="_blank"] measures the performance of `rvariant` construction and access using randomly generated inputs.
-
-It uses `std::mt19937` for random number generation and constructs `rvariant` instances directly within a `std::vector`. For the `std::string` benchmarks, we simply pass the stringized random numbers.
-
-The alternative index is distributed randomly during the construction, making sure that the access to internal `union` is not overly optimized by the compiler.
-
-[discrete]
-==== Benchmark Environment
-
-- *Date*: 2025/8/9
-- *CPU:* Intel Core i9-14900KF
-- *RAM:* Crucial Pro 48GB DDR5-5600 x 4
-
-[discrete]
-=== GCC
-
-[.benchmark]
---
-++++
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=804955990&amp;format=interactive"></iframe>
-++++
---
-
-[.benchmark]
---
-++++
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=621295946&amp;format=interactive"></iframe>
-++++
---
-
-[.benchmark]
---
-++++
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=88715623&amp;format=interactive"></iframe>
-++++
---
-
-[.benchmark]
---
-++++
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=278187472&amp;format=interactive"></iframe>
-++++
---
-
-[discrete]
-=== Clang
-
-[.benchmark]
---
-++++
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=679075429&amp;format=interactive"></iframe>
-++++
---
-
-[.benchmark]
---
-++++
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=1601224301&amp;format=interactive"></iframe>
-++++
---
-
-[.benchmark]
---
-++++
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=283810185&amp;format=interactive"></iframe>
-++++
---
-
-[.benchmark]
---
-++++
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=144195081&amp;format=interactive"></iframe>
-++++
---
-
-[discrete]
-=== MSVC
-
-[.benchmark]
---
-++++
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=1168105336&amp;format=interactive"></iframe>
-++++
---
-
-[.benchmark]
---
-++++
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=1271822110&amp;format=interactive"></iframe>
-++++
---
-
-[.benchmark]
---
-++++
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=873983110&amp;format=interactive"></iframe>
-++++
---
-
-[.benchmark]
---
-++++
-<iframe seamless frameborder="0" scrolling="no" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQXYU9sO-RE4qKr80DUCgMye9GVX7uM6JjTRKbyXZo4U84nOiI0aOnrs1aynPsa5eSP8trZ8o_ivKdx/pubchart?oid=1452444822&amp;format=interactive"></iframe>
-++++
---
-
-[discrete]
-=== Benchmark Analysis
-The graphs show that the cost of read-only access is remarkably small compared to the time spent on construction.
-
-Read operations on a variant complete in constant time, as runtime dispatch is limited by the small, fixed number of alternatives. Benchmarks show `std::variant` and `rvariant` perform similarly, with read times unaffected by whether there are 3 or 16 alternatives and not scaling with `N`.
-
-[discrete]
-==== Visitation Technique in Depth
+[[visitation-technique]]
+== Visitation Technique in Depth
 Some readers might assume that table-based visitation is the ideal approach, implying that visitations have _constant_ time complexity.
 
 [,cpp,subs="+macros,+attributes"]
@@ -1734,4 +1585,4 @@ Nana Sakisaka has taken on an active maintainer role in Boost.Spirit since May 2
 
 [[license]]
 == License
-This library is distributed under the https://www.boost.org/LICENSE_1_0.txt[Boost Software License, Version 1.0].
+This library is distributed under the https://github.com/iris-cpp/iris/blob/main/LICENSE[MIT License].
