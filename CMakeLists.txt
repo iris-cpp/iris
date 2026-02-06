@@ -45,8 +45,8 @@ if(MSVC)
     target_sources(
         iris
         PRIVATE
-            # "${PROJECT_SOURCE_DIR}/cpp.hint" # TODO
-            # "${PROJECT_SOURCE_DIR}/iris.natvis" # TODO
+            "${PROJECT_SOURCE_DIR}/cpp.hint"
+            "${PROJECT_SOURCE_DIR}/iris.natvis"
     )
 
     target_link_libraries(iris PUBLIC _iris_cxx_common)

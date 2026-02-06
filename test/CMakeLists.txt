@@ -64,13 +64,13 @@ function(iris_define_test test_name)
 
     if(MSVC)
         # Prevent "Warning: Conflicting <Type> entries detected" error
-        # set_source_files_properties(
-        #     "${PROJECT_SOURCE_DIR}/iris.natvis"
-        #     TARGET_DIRECTORY ${test_name}_test
-        #     PROPERTIES VS_SETTINGS "ExcludedFromBuild=true"
-        # )
+        set_source_files_properties(
+            "${PROJECT_SOURCE_DIR}/iris.natvis"
+            TARGET_DIRECTORY ${test_name}_test
+            PROPERTIES VS_SETTINGS "ExcludedFromBuild=true"
+        )
 
-        # target_sources(${test_name}_test PRIVATE cpp.hint)
+        target_sources(${test_name}_test PRIVATE cpp.hint)
     endif()
 
     target_link_libraries(${test_name}_test PRIVATE Iris::Iris iris_cxx_test)
