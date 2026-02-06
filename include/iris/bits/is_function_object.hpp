@@ -1,6 +1,8 @@
 #ifndef IRIS_BITS_IS_FUNCTION_OBJECT
 #define IRIS_BITS_IS_FUNCTION_OBJECT
 
+// SPDX-License-Identifier: MIT
+
 #include <type_traits>
 
 namespace iris {

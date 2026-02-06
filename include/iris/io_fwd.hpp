@@ -1,6 +1,8 @@
 #ifndef IRIS_IO_FWD_HPP
 #define IRIS_IO_FWD_HPP
 
+// SPDX-License-Identifier: MIT
+
 #include <concepts>
 #include <iosfwd>
 #include <type_traits>
