@@ -3,8 +3,6 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <iris/hash/FNV_hash.hpp>
-
 #include <iris/requirements.hpp>
 #include <iris/type_traits.hpp>
 

@@ -13,6 +13,8 @@
 
 #include <iris/core/cond_trivial_smf.hpp>
 
+#include <iris/hash/FNV_hash.hpp>
+
 #include <iris/compare.hpp>
 #include <iris/type_traits.hpp>
 #include <iris/hash.hpp>
