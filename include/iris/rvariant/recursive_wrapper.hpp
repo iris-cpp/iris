@@ -214,11 +214,11 @@ constexpr auto operator<=>(recursive_wrapper<T, A> const& lhs, U const& rhs) noe
 namespace std {
 
 template<class T, class Allocator>
-    requires ::iris::core::is_hash_enabled_v<T>
+    requires ::iris::is_hash_enabled_v<T>
 struct hash<::iris::recursive_wrapper<T, Allocator>>  // NOLINT(cert-dcl58-cpp)
 {
     [[nodiscard]] static size_t operator()(::iris::recursive_wrapper<T, Allocator> const& obj)
-        noexcept(::iris::core::is_nothrow_hashable_v<T>)
+        noexcept(::iris::is_nothrow_hashable_v<T>)
     {
         if (obj.valueless_after_move()) [[unlikely]] {
             return 0xbaddeadbeefuz;
@@ -234,9 +234,9 @@ struct hash<::iris::recursive_wrapper<T, Allocator>>  // NOLINT(cert-dcl58-cpp)
 namespace iris {
 
 template<class T, class Allocator>
-    requires core::is_hash_enabled_v<T>
+    requires is_hash_enabled_v<T>
 [[nodiscard]] std::size_t hash_value(recursive_wrapper<T, Allocator> const& obj)
-    noexcept(core::is_nothrow_hashable_v<T>)
+    noexcept(is_nothrow_hashable_v<T>)
 {
     return std::hash<recursive_wrapper<T, Allocator>>{}(obj);
 }

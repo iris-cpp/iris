@@ -122,7 +122,7 @@ template<>
 template<class T>
 [[nodiscard]] constexpr std::size_t hash_combine(std::size_t const seed, T const& v) noexcept
 {
-    static_assert(core::is_hash_enabled_v<T>);
+    static_assert(is_hash_enabled_v<T>);
     return detail::hash_mix<sizeof(std::size_t)>(
         seed + 0x9e3779b97f4a7c55uz + std::hash<T>{}(v)
     );

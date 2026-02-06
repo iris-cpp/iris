@@ -1403,16 +1403,16 @@ namespace std {
 
 // https://eel.is/c++draft/variant.hash
 template<class... Ts>
-    requires std::conjunction_v<::iris::core::is_hash_enabled<std::remove_const_t<Ts>>...>
+    requires std::conjunction_v<::iris::is_hash_enabled<std::remove_const_t<Ts>>...>
 struct hash<::iris::rvariant<Ts...>>  // NOLINT(cert-dcl58-cpp)
 {
     [[nodiscard]] static /* constexpr */ std::size_t operator()(::iris::rvariant<Ts...> const& v)
-        noexcept(std::conjunction_v<::iris::core::is_nothrow_hashable<std::remove_const_t<Ts>>...>)
+        noexcept(std::conjunction_v<::iris::is_nothrow_hashable<std::remove_const_t<Ts>>...>)
     {
         return ::iris::detail::raw_visit(v, []<std::size_t i, class T>(std::in_place_index_t<i>, T const& t) static
             noexcept(std::disjunction_v<
                 std::bool_constant<i == std::variant_npos>,
-                ::iris::core::is_nothrow_hashable<T>
+                ::iris::is_nothrow_hashable<T>
             >)
         {
             if constexpr (i == std::variant_npos) {
@@ -1480,9 +1480,9 @@ struct hash<::iris::rvariant<Ts...>>  // NOLINT(cert-dcl58-cpp)
 namespace iris {
 
 template<class... Ts>
-    requires std::conjunction_v<core::is_hash_enabled<std::remove_const_t<Ts>>...>
+    requires std::conjunction_v<is_hash_enabled<std::remove_const_t<Ts>>...>
 [[nodiscard]] std::size_t hash_value(rvariant<Ts...> const& v)
-    noexcept(std::conjunction_v<core::is_nothrow_hashable<std::remove_const_t<Ts>>...>)
+    noexcept(std::conjunction_v<is_nothrow_hashable<std::remove_const_t<Ts>>...>)
 {
     return std::hash<rvariant<Ts...>>{}(v);
 }

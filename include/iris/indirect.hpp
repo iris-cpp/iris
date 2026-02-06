@@ -431,11 +431,11 @@ constexpr auto operator<=>(indirect<T, Allocator> const& lhs, U const& rhs)
 namespace std {
 
 template<class T, class Allocator>
-    requires ::iris::core::is_hash_enabled_v<T>
+    requires ::iris::is_hash_enabled_v<T>
 struct hash<::iris::indirect<T, Allocator>>
 {
     [[nodiscard]] static size_t operator()(::iris::indirect<T, Allocator> const& obj)
-        noexcept(::iris::core::is_nothrow_hashable_v<T>)
+        noexcept(::iris::is_nothrow_hashable_v<T>)
     {
         if (obj.valueless_after_move()) [[unlikely]] {
             return 0xbaddeadbeefuz;
@@ -451,9 +451,9 @@ struct hash<::iris::indirect<T, Allocator>>
 namespace iris {
 
 template<class T, class Allocator>
-    requires core::is_hash_enabled_v<T>
+    requires is_hash_enabled_v<T>
 [[nodiscard]] std::size_t hash_value(indirect<T, Allocator> const& obj)
-    noexcept(core::is_nothrow_hashable_v<T>)
+    noexcept(is_nothrow_hashable_v<T>)
 {
     return std::hash<indirect<T, Allocator>>{}(obj);
 }

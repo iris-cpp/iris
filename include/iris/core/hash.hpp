@@ -10,7 +10,9 @@
 
 #include <type_traits>
 
-namespace iris::core {
+namespace iris {
+
+namespace req {
 
 namespace detail {
 
@@ -55,6 +57,8 @@ struct Cpp17Hash_impl<std::hash<Key>> : std::true_type
 template<class H>
 concept Cpp17Hash = detail::Cpp17Hash_impl<H>::value;
 
+}  // req
+
 // "disabled" version, https://eel.is/c++draft/unord.hash#4
 template<class Key>
 struct is_hash_enabled : std::false_type
@@ -79,7 +83,7 @@ private:
 template<class Key>
     requires
         requires { typename std::hash<Key>; } &&
-        Cpp17Hash<std::hash<Key>> &&
+        req::Cpp17Hash<std::hash<Key>> &&
         req::Cpp17DefaultConstructible<std::hash<Key>> &&
         req::Cpp17CopyAssignable<std::hash<Key>> &&
         req::Cpp17Swappable<std::hash<Key>>
@@ -122,6 +126,6 @@ struct is_nothrow_hashable<T, std::void_t<decltype(std::hash<T>{}(std::declval<T
 template<class T>
 constexpr bool is_nothrow_hashable_v = is_nothrow_hashable<T>::value;
 
-}  // iris::core
+}  // iris
 
-#endif // IRIS_CORE_HASH_HPP
+#endif
