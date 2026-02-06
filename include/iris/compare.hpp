@@ -14,18 +14,7 @@ namespace iris {
 // Utilities defined in [library]
 // https://eel.is/c++draft/library
 
-template<class T, class U = T>
-inline constexpr bool synth_three_way_noexcept =
-    std::conditional_t<
-        std::three_way_comparable_with<T, U>,
-        std::is_nothrow_invocable<std::compare_three_way, T const&, U const&>,
-        std::conjunction<
-            std::is_nothrow_invocable<std::less<>, T const&, U const&>,
-            std::is_nothrow_invocable<std::less<>, U const&, T const&>
-        >
-    >::value;
-
-constexpr auto synth_three_way = []<class T, class U>(T const& t, U const& u) noexcept(synth_three_way_noexcept<T, U>)
+constexpr auto synth_three_way = []<class T, class U>(T const& t, U const& u)
     requires requires {
         { t < u } -> req::boolean_testable;
         { u < t } -> req::boolean_testable;

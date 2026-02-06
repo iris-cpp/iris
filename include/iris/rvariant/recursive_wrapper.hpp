@@ -178,7 +178,7 @@ constexpr bool operator==(recursive_wrapper<T, TA> const& lhs, recursive_wrapper
 }
 
 template<class T, class TA, class U, class UA>
-constexpr auto operator<=>(recursive_wrapper<T, TA> const& lhs, recursive_wrapper<U, UA> const& rhs) noexcept(synth_three_way_noexcept<T, U>)
+constexpr auto operator<=>(recursive_wrapper<T, TA> const& lhs, recursive_wrapper<U, UA> const& rhs)
     -> synth_three_way_result_t<T, U>
 {
     if (lhs.valueless_after_move() || rhs.valueless_after_move()) [[unlikely]] {
@@ -203,7 +203,6 @@ namespace detail {
 
 template<class T, class A, class U>
 constexpr auto three_way_compare_impl(recursive_wrapper<T, A> const& lhs, U const& rhs)
-    noexcept(synth_three_way_noexcept<T, U>)
     -> synth_three_way_result_t<T, U>
 {
     if (lhs.valueless_after_move()) [[unlikely]] {
@@ -217,7 +216,6 @@ constexpr auto three_way_compare_impl(recursive_wrapper<T, A> const& lhs, U cons
 
 template<class T, class A, class U>
 constexpr auto operator<=>(recursive_wrapper<T, A> const& lhs, U const& rhs)
-    noexcept(synth_three_way_noexcept<T, U>)
     // no explicit return type
 {
     return detail::three_way_compare_impl(lhs, rhs);

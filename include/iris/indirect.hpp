@@ -402,7 +402,7 @@ constexpr bool operator==(indirect<T, Allocator> const& lhs, indirect<U, AA> con
 
 template<class T, class Allocator, class U, class AA>
 constexpr auto operator<=>(indirect<T, Allocator> const& lhs, indirect<U, AA> const& rhs)
-    noexcept(synth_three_way_noexcept<T, U>) -> synth_three_way_result_t<T, U>
+    -> synth_three_way_result_t<T, U>
 {
     if (lhs.valueless_after_move() || rhs.valueless_after_move()) [[unlikely]] {
         return !lhs.valueless_after_move() <=> !rhs.valueless_after_move();
@@ -427,7 +427,6 @@ namespace detail {
 
 template<class T, class A, class U>
 constexpr auto three_way_compare_impl(indirect<T, A> const& lhs, U const& rhs)
-    noexcept(synth_three_way_noexcept<T, U>)
     -> synth_three_way_result_t<T, U>
 {
     if (lhs.valueless_after_move()) [[unlikely]] {
@@ -441,7 +440,6 @@ constexpr auto three_way_compare_impl(indirect<T, A> const& lhs, U const& rhs)
 
 template<class T, class A, class U>
 constexpr auto operator<=>(indirect<T, A> const& lhs, U const& rhs)
-    noexcept(synth_three_way_noexcept<T, U>)
     // no explicit return type
 {
     return detail::three_way_compare_impl(lhs, rhs);
