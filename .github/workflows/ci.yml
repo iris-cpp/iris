@@ -169,6 +169,7 @@ jobs:
             -DCMAKE_CXX_FLAGS="${{ matrix.compiler.cxxflags }}" \
             -DCMAKE_CXX_STANDARD=${{ matrix.cpp_version.number }} \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type.name }} \
+            -DIRIS_CI=ON \
             -S .
 
       - name: Build Tests

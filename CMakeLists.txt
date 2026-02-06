@@ -152,6 +152,10 @@ target_sources(iris PRIVATE FILE_SET HEADERS TYPE HEADERS FILES ${IRIS_HEADERS})
 source_group(TREE ${PROJECT_SOURCE_DIR}/include/iris PREFIX iris FILES ${IRIS_HEADERS})
 target_include_directories(iris INTERFACE ${PROJECT_SOURCE_DIR}/include)
 
+option(IRIS_CI "Enables intensive testing for CI" OFF)
+if(IRIS_CI)
+    target_compile_definitions(iris INTERFACE IRIS_CI=1)
+endif()
 
 # -----------------------------------------------------------------
 # Test
