@@ -4,7 +4,9 @@
 // SPDX-License-Identifier: MIT
 
 #include <iris/rvariant/rvariant.hpp>
+
 #include <iris/format_traits.hpp>
+#include <iris/io_fwd.hpp>
 #include <iris/requirements.hpp>
 
 #include <format>

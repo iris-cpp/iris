@@ -37,7 +37,7 @@ struct NonStreamable {};
 
 } // anonymous global
 
-#include "iris/requirements.hpp" // this finds `operator<<` in the global ns
+#include "iris/io_fwd.hpp" // this finds `operator<<` in the global ns
 
 #include "rvariant_test.hpp"
 
