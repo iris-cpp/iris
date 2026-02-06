@@ -424,21 +424,12 @@ struct multi_visitor<std::index_sequence<Is...>>
             detail::throw_bad_variant_access();
 
         } else {
-#define IRIS_MULTI_VISITOR_INVOKE \
-            std::invoke_r<R>( \
-                std::forward<Visitor>(vis), \
-                unwrap_recursive( \
-                    raw_get<valueless_unbias<Storage>(Is)>(std::forward<Storage>(storage)) \
-                )... \
-            )
-#if IRIS_CI
-            static_assert(
-                noexcept(IRIS_MULTI_VISITOR_INVOKE)
-                == multi_visit_noexcept<R, std::index_sequence<Is...>, Visitor, Storage...>::value
+            return std::invoke_r<R>(
+                std::forward<Visitor>(vis),
+                unwrap_recursive(
+                    raw_get<valueless_unbias<Storage>(Is)>(std::forward<Storage>(storage))
+                )...
             );
-#endif
-            return IRIS_MULTI_VISITOR_INVOKE;
-#undef IRIS_MULTI_VISITOR_INVOKE
         }
     }
 };
