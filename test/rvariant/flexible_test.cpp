@@ -4,7 +4,9 @@
 
 #include "iris/rvariant.hpp"
 
-#include <catch2/catch_test_macros.hpp>
+#include <type_traits>
+#include <utility>
+#include <variant>
 
 namespace unit_test {
 

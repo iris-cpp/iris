@@ -5,6 +5,6 @@
 
 #include <iris/config.hpp>
 
-#include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>  // IWYU pragma: export
 
 #endif
