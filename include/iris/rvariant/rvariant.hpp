@@ -1211,6 +1211,87 @@ template<class T, class... Ts>
     requires is_ttp_specialization_of_v<T, recursive_wrapper>
 constexpr T const&& get(rvariant<Ts...> const&&) = delete;
 
+// -------------------------------------------------
+
+template<std::size_t I, class... Ts>
+[[nodiscard]] constexpr variant_alternative_t<I, rvariant<Ts...>>&
+unsafe_get(rvariant<Ts...>& v IRIS_LIFETIMEBOUND) noexcept
+{
+    static_assert(I < sizeof...(Ts));
+    return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&>(v)));
+}
+
+template<std::size_t I, class... Ts>
+[[nodiscard]] constexpr variant_alternative_t<I, rvariant<Ts...>>&&
+unsafe_get(rvariant<Ts...>&& v IRIS_LIFETIMEBOUND) noexcept  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+{
+    static_assert(I < sizeof...(Ts));
+    return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&&>(v)));
+}
+
+template<std::size_t I, class... Ts>
+[[nodiscard]] constexpr variant_alternative_t<I, rvariant<Ts...>> const&
+unsafe_get(rvariant<Ts...> const& v IRIS_LIFETIMEBOUND) noexcept
+{
+    static_assert(I < sizeof...(Ts));
+    return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&>(v)));
+}
+
+template<std::size_t I, class... Ts>
+[[nodiscard]] constexpr variant_alternative_t<I, rvariant<Ts...>> const&&
+unsafe_get(rvariant<Ts...> const&& v IRIS_LIFETIMEBOUND) noexcept
+{
+    return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&&>(v)));
+}
+
+template<class T, class... Ts>
+[[nodiscard]] constexpr T&
+unsafe_get(rvariant<Ts...>& v IRIS_LIFETIMEBOUND) noexcept
+{
+    constexpr std::size_t I = detail::exactly_once_index_v<T, rvariant<Ts...>>;
+    return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&>(v)));
+}
+
+template<class T, class... Ts>
+[[nodiscard]] constexpr T&&
+unsafe_get(rvariant<Ts...>&& v IRIS_LIFETIMEBOUND) noexcept  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+{
+    constexpr std::size_t I = detail::exactly_once_index_v<T, rvariant<Ts...>>;
+    return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&&>(v)));
+}
+
+template<class T, class... Ts>
+[[nodiscard]] constexpr T const&
+unsafe_get(rvariant<Ts...> const& v IRIS_LIFETIMEBOUND) noexcept
+{
+    constexpr std::size_t I = detail::exactly_once_index_v<T, rvariant<Ts...>>;
+    return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&>(v)));
+}
+
+template<class T, class... Ts>
+[[nodiscard]] constexpr T const&&
+unsafe_get(rvariant<Ts...> const&& v IRIS_LIFETIMEBOUND) noexcept
+{
+    constexpr std::size_t I = detail::exactly_once_index_v<T, rvariant<Ts...>>;
+    return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&&>(v)));
+}
+
+template<class T, class... Ts>
+    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+constexpr T& unsafe_get(rvariant<Ts...>&) = delete;
+
+template<class T, class... Ts>
+    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+constexpr T&& unsafe_get(rvariant<Ts...>&&) = delete;
+
+template<class T, class... Ts>
+    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+constexpr T const& unsafe_get(rvariant<Ts...> const&) = delete;
+
+template<class T, class... Ts>
+    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+constexpr T const&& unsafe_get(rvariant<Ts...> const&&) = delete;
+
 // ---------------------------------------------
 
 template<std::size_t I, class... Ts>
