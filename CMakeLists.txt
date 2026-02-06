@@ -124,8 +124,10 @@ if(MSVC)
         INTERFACE
             # $<$<CONFIG:Debug,RelWithDebInfo>:/INCREMENTAL:NO> # TODO
     )
-
 else()
+    if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
+        target_compile_options(_iris_cxx_common INTERFACE -fno-builtin-std-forward_like)
+    endif()
     target_compile_options(
         _iris_cxx_common
         INTERFACE
