@@ -23,12 +23,6 @@ struct type_list
     static constexpr std::size_t size = sizeof...(Ts);
 };
 
-template<class T, class> struct pack_identity { using type = T; };
-template<class T, class> using pack_identity_t = T;
-
-template<class T, auto> struct npack_identity { using type = T; };
-template<class T, auto> using npack_identity_t = T;
-
 template<auto> using nvoid_t = void;
 
 
@@ -51,7 +45,7 @@ template<std::size_t... Voids>
 struct do_npack_indexing<std::index_sequence<Voids...>>
 {
     template<class T, T N>
-    static std::integral_constant<T, N> select(nvoid_t<Voids>*..., std::integral_constant<T, N>*, ...);
+    static std::integral_constant<T, N> select(cvoid_t<Voids>*..., std::integral_constant<T, N>*, ...);
 };
 
 } // detail
