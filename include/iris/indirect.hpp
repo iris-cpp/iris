@@ -422,15 +422,29 @@ constexpr bool operator==(indirect<T, Allocator> const& lhs, U const& rhs)
     }
 }
 
-template<class T, class Allocator, class U> requires (!is_ttp_specialization_of_v<U, indirect>)
-constexpr auto operator<=>(indirect<T, Allocator> const& lhs, U const& rhs)
-    noexcept(synth_three_way_noexcept<T, U>) -> synth_three_way_result_t<T, U>
+
+namespace detail {
+
+template<class T, class A, class U>
+constexpr auto three_way_compare_impl(indirect<T, A> const& lhs, U const& rhs)
+    noexcept(synth_three_way_noexcept<T, U>)
+    -> synth_three_way_result_t<T, U>
 {
     if (lhs.valueless_after_move()) [[unlikely]] {
         return std::strong_ordering::less;
     } else [[likely]] {
         return synth_three_way(*lhs, rhs);
     }
+}
+
+} // detail
+
+template<class T, class A, class U>
+constexpr auto operator<=>(indirect<T, A> const& lhs, U const& rhs)
+    noexcept(synth_three_way_noexcept<T, U>)
+    // no explicit return type
+{
+    return detail::three_way_compare_impl(lhs, rhs);
 }
 
 }  // iris

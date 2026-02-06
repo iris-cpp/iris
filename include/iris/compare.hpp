@@ -22,7 +22,7 @@ struct synth_three_way_result_impl
     using type = std::weak_ordering;
 };
 
-template<class T, class U> requires std::three_way_comparable<T, U>
+template<class T, class U> requires std::three_way_comparable_with<T, U>
 struct synth_three_way_result_impl<T, U>
 {
     using type = std::invoke_result_t<std::compare_three_way, T const&, U const&>;
