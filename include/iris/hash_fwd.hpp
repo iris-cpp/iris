@@ -1,0 +1,18 @@
+#ifndef IRIS_HASH_FWD_HPP
+#define IRIS_HASH_FWD_HPP
+
+// SPDX-License-Identifier: MIT
+
+#include <version>
+
+#if __cplusplus <= 202302L || \
+    (defined(_MSVC_STL_UPDATE) && _MSVC_STL_UPDATE < 202504L) || \
+    (defined(__GLIBCXX__) && __GLIBCXX__ < 20241201) || \
+    (defined(_LIBCPP_STD_VER) && _LIBCPP_STD_VER < 26)
+
+# include <typeindex> // pre-C++26
+#else
+# include <utility> // C++26 and later
+#endif
+
+#endif

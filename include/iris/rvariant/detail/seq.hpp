@@ -1,0 +1,121 @@
+﻿#ifndef IRIS_RVARIANT_DETAIL_SEQ_HPP
+#define IRIS_RVARIANT_DETAIL_SEQ_HPP
+
+// SPDX-License-Identifier: MIT
+
+#include <type_traits>
+#include <utility>
+
+namespace iris {
+
+template<class... Ts>
+struct type_list;
+
+namespace detail {
+
+template<class S, template<auto...> class F>
+struct seq_rebind_impl;
+
+// rebind<type_list<std::integral_constant<std::size_t, 0>>, std::index_sequence>
+template<template<class...> class TT, class... Ts, template<auto...> class F>
+struct seq_rebind_impl<TT<Ts...>, F>
+{
+    using type = F<Ts::value...>;
+};
+
+template<class S, template<auto...> class F>
+using seq_rebind = seq_rebind_impl<S, F>::type;
+
+template<class... Ss>
+struct seq_concat_impl;
+
+template<class... Ts>
+struct seq_concat_impl<type_list<Ts...>>
+{
+    using type = type_list<Ts...>;
+};
+
+// concat<type_list<...>, type_list<...>>
+template<class... Ts, class... Us, class... Rest>
+struct seq_concat_impl<type_list<Ts...>, type_list<Us...>, Rest...>
+    : seq_concat_impl<type_list<Ts..., Us...>, Rest...>
+{};
+
+template<class... Ss>
+using seq_concat = seq_concat_impl<Ss...>::type;
+
+template<class S, class T>
+struct seq_push_back_impl;
+
+// push_back<type_list<>, std::integral_constant<std::size_t, 0>>
+template<class T, template<class...> class TT, class... Ts>
+struct seq_push_back_impl<TT<Ts...>, T>
+{
+    using type = TT<Ts..., T>;
+};
+
+template<class S, class T>
+using seq_push_back = seq_push_back_impl<S, T>::type;
+
+template<class T, class U>
+struct seq_assign_impl;
+
+// assign<type_list<>, type_list<...>>
+template<template<class...> class TT, class... Ts, template<class...> class UU, class... Us>
+struct seq_assign_impl<TT<Ts...>, UU<Us...>>
+{
+    using type = TT<Us...>;
+};
+
+template<class T, class U>
+using seq_assign = seq_assign_impl<T, U>::type;
+
+template<template<auto...> class F, class S, class... Rest>
+struct seq_cartesian_product_impl;
+
+// impl2<std::index_sequence, type_list<std::integral_constant<std::size_t, 0>>
+template<template<auto...> class F, class S>
+struct seq_cartesian_product_impl<F, S>
+{
+    using type = type_list<seq_rebind<S, F>>;
+};
+
+// impl2<std::index_sequence, type_list<>, std::index_sequence<0>>
+template<template<auto...> class F, class S, class T, auto... As, class... Rest>
+struct seq_cartesian_product_impl<F, S, std::integer_sequence<T, As...>, Rest...>
+{
+    using type = seq_concat<
+        typename seq_cartesian_product_impl<
+            F,
+            seq_push_back<S, std::integral_constant<T, As>>,
+            Rest...
+        >::type...
+    >;
+};
+
+template<template<auto...> class F, class... Ss>
+struct seq_cartesian_product_entry;
+
+// impl<std::index_sequence, std::index_sequence<0>>
+template<template<auto...> class F, class T, auto... As, class... Rest>
+struct seq_cartesian_product_entry<F, std::integer_sequence<T, As...>, Rest...>
+{
+    using type = seq_assign<
+        type_list<>,
+        typename seq_cartesian_product_impl<
+            F,
+            type_list<>,
+            std::integer_sequence<T, As...>,
+            Rest...
+        >::type
+    >;
+};
+
+template<template<auto...> class F, class... Ss>
+using seq_cartesian_product = seq_cartesian_product_entry<F, Ss...>::type;
+
+} // detail
+
+} // iris
+
+#endif

@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: MIT
+
+// Hint files help the Visual Studio IDE interpret Visual C++ identifiers
+// such as names of functions and macros.
+// For more information see https://go.microsoft.com/fwlink/?linkid=865984
+
+#define TEST_CASE
+#define REQUIRE
+#define STATIC_REQUIRE
+#define CHECK
+#define STATIC_CHECK
+
+#define IRIS_REQUIRE_STATIC_NOTHROW

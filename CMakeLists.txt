@@ -45,8 +45,8 @@ if(MSVC)
     target_sources(
         iris
         PRIVATE
-            # "${PROJECT_SOURCE_DIR}/cpp.hint" # TODO
-            # "${PROJECT_SOURCE_DIR}/iris.natvis" # TODO
+            "${PROJECT_SOURCE_DIR}/cpp.hint"
+            "${PROJECT_SOURCE_DIR}/iris.natvis"
     )
 
     target_link_libraries(iris PUBLIC _iris_cxx_common)
@@ -152,6 +152,10 @@ target_sources(iris PRIVATE FILE_SET HEADERS TYPE HEADERS FILES ${IRIS_HEADERS})
 source_group(TREE ${PROJECT_SOURCE_DIR}/include/iris PREFIX iris FILES ${IRIS_HEADERS})
 target_include_directories(iris INTERFACE ${PROJECT_SOURCE_DIR}/include)
 
+option(IRIS_CI "Enables intensive testing for CI" OFF)
+if(IRIS_CI)
+    target_compile_definitions(iris INTERFACE IRIS_CI=1)
+endif()
 
 # -----------------------------------------------------------------
 # Test
