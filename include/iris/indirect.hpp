@@ -3,7 +3,7 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <iris/core/library.hpp>
+#include <iris/compare.hpp>
 #include <iris/type_traits.hpp>
 #include <iris/core/hash.hpp>
 
@@ -394,12 +394,12 @@ constexpr bool operator==(indirect<T, Allocator> const& lhs, indirect<U, AA> con
 
 template<class T, class Allocator, class U, class AA>
 constexpr auto operator<=>(indirect<T, Allocator> const& lhs, indirect<U, AA> const& rhs)
-    noexcept(core::synth_three_way_noexcept<T, U>) -> core::synth_three_way_result_t<T, U>
+    noexcept(synth_three_way_noexcept<T, U>) -> synth_three_way_result_t<T, U>
 {
     if (lhs.valueless_after_move() || rhs.valueless_after_move()) [[unlikely]] {
         return !lhs.valueless_after_move() <=> !rhs.valueless_after_move();
     } else [[likely]] {
-        return core::synth_three_way(*lhs, *rhs);
+        return synth_three_way(*lhs, *rhs);
     }
 }
 
@@ -416,12 +416,12 @@ constexpr bool operator==(indirect<T, Allocator> const& lhs, U const& rhs)
 
 template<class T, class Allocator, class U> requires (!is_ttp_specialization_of_v<U, indirect>)
 constexpr auto operator<=>(indirect<T, Allocator> const& lhs, U const& rhs)
-    noexcept(core::synth_three_way_noexcept<T, U>) -> core::synth_three_way_result_t<T, U>
+    noexcept(synth_three_way_noexcept<T, U>) -> synth_three_way_result_t<T, U>
 {
     if (lhs.valueless_after_move()) [[unlikely]] {
         return std::strong_ordering::less;
     } else [[likely]] {
-        return core::synth_three_way(*lhs, rhs);
+        return synth_three_way(*lhs, rhs);
     }
 }
 

@@ -9,9 +9,10 @@
 #include <functional>
 #include <type_traits>
 
+namespace iris {
+
 // Utilities defined in [library]
 // https://eel.is/c++draft/library
-namespace iris::core {
 
 namespace detail {
 
@@ -59,6 +60,7 @@ constexpr auto synth_three_way = []<class T, class U>(T const& t, U const& u) no
     }
 };
 
+namespace cmp {
 
 template<class Compare, class T>
 struct relop_bool_expr : std::false_type {};
@@ -92,6 +94,8 @@ template<class T>
     requires requires(T const& t) { { t >= t } -> std::convertible_to<bool>; }
 struct relop_bool_expr<std::greater_equal<>, T> : std::true_type {};
 
-}  // iris::core
+}  // cmp
+
+}  // iris
 
 #endif

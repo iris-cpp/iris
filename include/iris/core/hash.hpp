@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: MIT
 
 #include <iris/core/hash_fwd.hpp>
+#include <iris/core/requirements.hpp>
 
 #include <iris/type_traits.hpp>
 

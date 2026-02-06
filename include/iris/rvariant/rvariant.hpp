@@ -11,10 +11,10 @@
 #include <iris/rvariant/variant_helper.hpp>
 #include <iris/rvariant/subset.hpp>
 
-#include <iris/core/library.hpp>
 #include <iris/core/cond_trivial_smf.hpp>
 #include <iris/core/hash.hpp>
 
+#include <iris/compare.hpp>
 #include <iris/type_traits.hpp>
 #include <iris/hash.hpp>
 
@@ -1040,32 +1040,32 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     friend struct detail::relops_visitor;
 
     template<class... Ts_>
-        requires std::conjunction_v<core::relop_bool_expr<std::equal_to<>, Ts_>...>
+        requires std::conjunction_v<cmp::relop_bool_expr<std::equal_to<>, Ts_>...>
     friend constexpr bool operator==(rvariant<Ts_...> const&, rvariant<Ts_...> const&)
         noexcept(std::conjunction_v<std::is_nothrow_invocable_r<bool, std::equal_to<>, Ts_ const&, Ts_ const&>...>);
 
     template<class... Ts_>
-        requires std::conjunction_v<core::relop_bool_expr<std::not_equal_to<>, Ts_>...>
+        requires std::conjunction_v<cmp::relop_bool_expr<std::not_equal_to<>, Ts_>...>
     friend constexpr bool operator!=(rvariant<Ts_...> const&, rvariant<Ts_...> const&)
         noexcept(std::conjunction_v<std::is_nothrow_invocable_r<bool, std::not_equal_to<>, Ts_ const&, Ts_ const&>...>);
 
     template<class... Ts_>
-        requires std::conjunction_v<core::relop_bool_expr<std::less<>, Ts_>...>
+        requires std::conjunction_v<cmp::relop_bool_expr<std::less<>, Ts_>...>
     friend constexpr bool operator<(rvariant<Ts_...> const&, rvariant<Ts_...> const&)
         noexcept(std::conjunction_v<std::is_nothrow_invocable_r<bool, std::less<>, Ts_ const&, Ts_ const&>...>);
 
     template<class... Ts_>
-        requires std::conjunction_v<core::relop_bool_expr<std::greater<>, Ts_>...>
+        requires std::conjunction_v<cmp::relop_bool_expr<std::greater<>, Ts_>...>
     friend constexpr bool operator>(rvariant<Ts_...> const&, rvariant<Ts_...> const&)
         noexcept(std::conjunction_v<std::is_nothrow_invocable_r<bool, std::greater<>, Ts_ const&, Ts_ const&>...>);
 
     template<class... Ts_>
-        requires std::conjunction_v<core::relop_bool_expr<std::less_equal<>, Ts_>...>
+        requires std::conjunction_v<cmp::relop_bool_expr<std::less_equal<>, Ts_>...>
     friend constexpr bool operator<=(rvariant<Ts_...> const&, rvariant<Ts_...> const&)
         noexcept(std::conjunction_v<std::is_nothrow_invocable_r<bool, std::less_equal<>, Ts_ const&, Ts_ const&>...>);
 
     template<class... Ts_>
-        requires std::conjunction_v<core::relop_bool_expr<std::greater_equal<>, Ts_>...>
+        requires std::conjunction_v<cmp::relop_bool_expr<std::greater_equal<>, Ts_>...>
     friend constexpr bool operator>=(rvariant<Ts_...> const&, rvariant<Ts_...> const&)
         noexcept(std::conjunction_v<std::is_nothrow_invocable_r<bool, std::greater_equal<>, Ts_ const&, Ts_ const&>...>);
 
@@ -1287,7 +1287,7 @@ struct relops_visitor
 
 
 template<class... Ts>
-    requires std::conjunction_v<core::relop_bool_expr<std::equal_to<>, Ts>...>
+    requires std::conjunction_v<cmp::relop_bool_expr<std::equal_to<>, Ts>...>
 [[nodiscard]] constexpr bool operator==(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
     noexcept(std::conjunction_v<std::is_nothrow_invocable_r<bool, std::equal_to<>, Ts const&, Ts const&>...>)
 {
@@ -1297,7 +1297,7 @@ template<class... Ts>
 }
 
 template<class... Ts>
-    requires std::conjunction_v<core::relop_bool_expr<std::not_equal_to<>, Ts>...>
+    requires std::conjunction_v<cmp::relop_bool_expr<std::not_equal_to<>, Ts>...>
 [[nodiscard]] constexpr bool operator!=(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
     noexcept(std::conjunction_v<std::is_nothrow_invocable_r<bool, std::not_equal_to<>, Ts const&, Ts const&>...>)
 {
@@ -1307,7 +1307,7 @@ template<class... Ts>
 }
 
 template<class... Ts>
-    requires std::conjunction_v<core::relop_bool_expr<std::less<>, Ts>...>
+    requires std::conjunction_v<cmp::relop_bool_expr<std::less<>, Ts>...>
 [[nodiscard]] constexpr bool operator<(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
     noexcept(std::conjunction_v<std::is_nothrow_invocable_r<bool, std::less<>, Ts const&, Ts const&>...>)
 {
@@ -1347,7 +1347,7 @@ template<class... Ts>
 }
 
 template<class... Ts>
-    requires std::conjunction_v<core::relop_bool_expr<std::greater<>, Ts>...>
+    requires std::conjunction_v<cmp::relop_bool_expr<std::greater<>, Ts>...>
 [[nodiscard]] constexpr bool operator>(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
     noexcept(std::conjunction_v<std::is_nothrow_invocable_r<bool, std::greater<>, Ts const&, Ts const&>...>)
 {
@@ -1358,7 +1358,7 @@ template<class... Ts>
 }
 
 template<class... Ts>
-    requires std::conjunction_v<core::relop_bool_expr<std::less_equal<>, Ts>...>
+    requires std::conjunction_v<cmp::relop_bool_expr<std::less_equal<>, Ts>...>
 [[nodiscard]] constexpr bool operator<=(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
     noexcept(std::conjunction_v<std::is_nothrow_invocable_r<bool, std::less_equal<>, Ts const&, Ts const&>...>)
 {
@@ -1369,7 +1369,7 @@ template<class... Ts>
 }
 
 template<class... Ts>
-    requires std::conjunction_v<core::relop_bool_expr<std::greater_equal<>, Ts>...>
+    requires std::conjunction_v<cmp::relop_bool_expr<std::greater_equal<>, Ts>...>
 [[nodiscard]] constexpr bool operator>=(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
     noexcept(std::conjunction_v<std::is_nothrow_invocable_r<bool, std::greater_equal<>, Ts const&, Ts const&>...>)
 {

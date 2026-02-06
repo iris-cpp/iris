@@ -1688,7 +1688,7 @@ TEST_CASE("relational operators")
     {
         REQUIRE_NOTHROW(noneq_three_way_thrower{} < noneq_three_way_thrower{});
         STATIC_REQUIRE(!std::is_invocable_r_v<bool, std::equal_to<>, noneq_three_way_thrower const&, noneq_three_way_thrower const&>);
-        STATIC_REQUIRE(!iris::core::relop_bool_expr_v<std::equal_to<>, noneq_three_way_thrower>);
+        STATIC_REQUIRE(!iris::cmp::relop_bool_expr_v<std::equal_to<>, noneq_three_way_thrower>);
         REQUIRE_THROWS_AS(noneq_three_way_thrower{} <=> noneq_three_way_thrower{}, noneq_three_way_thrower::exception);
 
         // std::variant on GCC/Clang/MSVC all fails to evaluate these.
@@ -1697,7 +1697,7 @@ TEST_CASE("relational operators")
             using V = iris::rvariant<noneq_three_way_thrower>;
             CHECK_NOTHROW(V{} < V{});
             STATIC_REQUIRE(!std::is_invocable_r_v<bool, std::equal_to<>, V const&, V const&>);
-            STATIC_CHECK(!iris::core::relop_bool_expr_v<std::equal_to<>, V>);
+            STATIC_CHECK(!iris::cmp::relop_bool_expr_v<std::equal_to<>, V>);
         }
     }
 
@@ -1706,14 +1706,14 @@ TEST_CASE("relational operators")
 
     {
         STATIC_REQUIRE(std::is_invocable_r_v<bool, std::equal_to<>, eq_three_way_thrower const&, eq_three_way_thrower const&>);
-        STATIC_REQUIRE(iris::core::relop_bool_expr_v<std::equal_to<>, eq_three_way_thrower>);
+        STATIC_REQUIRE(iris::cmp::relop_bool_expr_v<std::equal_to<>, eq_three_way_thrower>);
         REQUIRE_NOTHROW(eq_three_way_thrower{} < eq_three_way_thrower{});
         REQUIRE_THROWS_AS(eq_three_way_thrower{} <=> eq_three_way_thrower{}, eq_three_way_thrower::exception);
 
         {
             using V = iris::rvariant<eq_three_way_thrower>;
             STATIC_REQUIRE(std::is_invocable_r_v<bool, std::equal_to<>, V const&, V const&>);
-            STATIC_CHECK(iris::core::relop_bool_expr_v<std::equal_to<>, V>);
+            STATIC_CHECK(iris::cmp::relop_bool_expr_v<std::equal_to<>, V>);
             CHECK_NOTHROW(V{} == V{});
             CHECK_NOTHROW(V{} != V{});
             CHECK_NOTHROW(V{} <  V{}); // make sure <=> is not selected
