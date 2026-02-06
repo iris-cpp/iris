@@ -151,6 +151,42 @@ TEST_CASE("get", "[wrapper]")
         REQUIRE(iris::get<int>(std::move(var)) == 42);
     }
 }
+
+TEST_CASE("unsafe_get")
+{
+    {
+        iris::rvariant<int, float> var = 42;
+        REQUIRE(iris::unsafe_get<0>(std::as_const(var)) == 42);
+        REQUIRE(iris::unsafe_get<0>(var) == 42);
+        REQUIRE(iris::unsafe_get<0>(std::move(std::as_const(var))) == 42);
+        REQUIRE(iris::unsafe_get<0>(std::move(var)) == 42);
+    }
+    {
+        iris::rvariant<int, float> var = 42;
+        REQUIRE(iris::unsafe_get<int>(std::as_const(var)) == 42);
+        REQUIRE(iris::unsafe_get<int>(var) == 42);
+        REQUIRE(iris::unsafe_get<int>(std::move(std::as_const(var))) == 42);
+        REQUIRE(iris::unsafe_get<int>(std::move(var)) == 42);
+    }
+}
+
+TEST_CASE("unsafe_get", "[wrapper]")
+{
+    {
+        iris::rvariant<iris::recursive_wrapper<int>, float> var = 42;
+        REQUIRE(iris::unsafe_get<0>(std::as_const(var)) == 42);
+        REQUIRE(iris::unsafe_get<0>(var) == 42);
+        REQUIRE(iris::unsafe_get<0>(std::move(std::as_const(var))) == 42);
+        REQUIRE(iris::unsafe_get<0>(std::move(var)) == 42);
+    }
+    {
+        iris::rvariant<iris::recursive_wrapper<int>, float> var = 42;
+        REQUIRE(iris::unsafe_get<int>(std::as_const(var)) == 42);
+        REQUIRE(iris::unsafe_get<int>(var) == 42);
+        REQUIRE(iris::unsafe_get<int>(std::move(std::as_const(var))) == 42);
+        REQUIRE(iris::unsafe_get<int>(std::move(var)) == 42);
+    }
+}
 // NOLINTEND(performance-move-const-arg)
 
 TEST_CASE("get_if")
