@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: MIT
 
 #include <iris/compare.hpp>
+#include <iris/hash.hpp>
 #include <iris/type_traits.hpp>
-#include <iris/core/hash.hpp>
 
 #include <compare>
 #include <memory>

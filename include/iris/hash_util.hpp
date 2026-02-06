@@ -3,7 +3,7 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <iris/core/hash.hpp>
+#include <iris/hash.hpp>
 
 #include <functional>
 #include <bit>

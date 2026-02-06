@@ -12,11 +12,11 @@
 #include <iris/rvariant/subset.hpp>
 
 #include <iris/core/cond_trivial_smf.hpp>
-#include <iris/core/hash.hpp>
 
 #include <iris/compare.hpp>
 #include <iris/type_traits.hpp>
 #include <iris/hash.hpp>
+#include <iris/hash_util.hpp>
 
 #include <functional>
 #include <initializer_list>

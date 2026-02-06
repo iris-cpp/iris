@@ -3,9 +3,9 @@
 
 // SPDX-License-Identifier: MIT
 
+#include <iris/hash.hpp>
 #include <iris/indirect.hpp>
 #include <iris/type_traits.hpp>
-#include <iris/core/hash.hpp>
 
 #include <compare>
 #include <initializer_list>

@@ -2,14 +2,13 @@
 
 #include "rvariant_test.hpp"
 
-#include "iris/type_traits.hpp"
-#include "iris/core/hash.hpp"
-
 #include "iris/rvariant/recursive_wrapper.hpp"
 #include "iris/rvariant/rvariant.hpp"
 #include "iris/rvariant/pack.hpp"
 
+#include "iris/hash.hpp"
 #include "iris/indirect.hpp"
+#include "iris/type_traits.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
