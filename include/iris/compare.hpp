@@ -14,25 +14,6 @@ namespace iris {
 // Utilities defined in [library]
 // https://eel.is/c++draft/library
 
-namespace detail {
-
-template<class T, class U>
-struct synth_three_way_result_impl
-{
-    using type = std::weak_ordering;
-};
-
-template<class T, class U> requires std::three_way_comparable_with<T, U>
-struct synth_three_way_result_impl<T, U>
-{
-    using type = std::invoke_result_t<std::compare_three_way, T const&, U const&>;
-};
-
-} // detail
-
-template<class T, class U = T>
-using synth_three_way_result_t = detail::synth_three_way_result_impl<T, U>::type;
-
 template<class T, class U = T>
 inline constexpr bool synth_three_way_noexcept =
     std::conditional_t<
@@ -45,7 +26,6 @@ inline constexpr bool synth_three_way_noexcept =
     >::value;
 
 constexpr auto synth_three_way = []<class T, class U>(T const& t, U const& u) noexcept(synth_three_way_noexcept<T, U>)
-    -> synth_three_way_result_t<T, U>
     requires requires {
         { t < u } -> req::boolean_testable;
         { u < t } -> req::boolean_testable;
@@ -59,6 +39,10 @@ constexpr auto synth_three_way = []<class T, class U>(T const& t, U const& u) no
         return std::weak_ordering::equivalent;
     }
 };
+
+template<class T, class U = T>
+using synth_three_way_result_t = decltype(synth_three_way(std::declval<T&>(), std::declval<U&>()));
+
 
 namespace cmp {
 
