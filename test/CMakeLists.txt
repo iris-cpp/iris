@@ -1,20 +1,43 @@
 # SPDX-License-Identifier: MIT
 
-# For Iris-specific tests.
+# -----------------------------------------------------------------
+# Setup the basic targets
+
+# For internal common settings
+add_library(_iris_cxx_test_common INTERFACE)
+set_target_properties(_iris_cxx_test_common PROPERTIES CXX_EXTENSIONS OFF)
+target_link_libraries(_iris_cxx_test_common INTERFACE _iris_cxx_common)
+
+
+# For Iris-specific tests
 add_library(iris_cxx_test INTERFACE)
 set_target_properties(iris_cxx_test PROPERTIES CXX_EXTENSIONS OFF)
-target_link_libraries(iris_cxx_test INTERFACE _iris_cxx_common)
+target_link_libraries(iris_cxx_test INTERFACE _iris_cxx_test_common)
 
 # For external libraries. Excludes strict warning, etc.
 add_library(iris_cxx_test_external INTERFACE)
 set_target_properties(iris_cxx_test_external PROPERTIES CXX_EXTENSIONS OFF)
-target_link_libraries(iris_cxx_test_external INTERFACE _iris_cxx_common)
+target_link_libraries(iris_cxx_test_external INTERFACE _iris_cxx_test_common)
 
 if(MSVC)
+    target_compile_options(
+        _iris_cxx_test_common
+        INTERFACE
+            /wd5072 # ASan intentionally enabled on Release build
+            /fsanitize=address
+    )
+    target_link_options(
+        _iris_cxx_test_common
+        INTERFACE
+            /ignore:4302 # ASan intentionally enabled on Release build
+            /INCREMENTAL:NO # required for ASan
+    )
+
     target_compile_options(
         iris_cxx_test
         INTERFACE /W4 /analyze /analyze:external-
     )
+
     target_compile_options(
         iris_cxx_test_external
         INTERFACE /analyze-
@@ -22,13 +45,26 @@ if(MSVC)
 
 else() # non-MSVC
     target_compile_options(
+        _iris_cxx_test_common
+        INTERFACE
+            -fsanitize=undefined,address
+    )
+    target_link_options(
+        _iris_cxx_test_common
+        INTERFACE
+            -fsanitize=undefined,address
+    )
+
+    target_compile_options(
         iris_cxx_test
         INTERFACE
             -Wall -Wextra -pedantic
     )
 endif()
 
-# --------------------------------------------
+
+# -----------------------------------------------------------------
+# Catch2
 
 # https://github.com/catchorg/Catch2/blob/devel/docs/configuration.md
 set(CATCH_CONFIG_FAST_COMPILE ON)
@@ -52,7 +88,9 @@ target_link_libraries(Catch2WithMain PRIVATE iris_cxx_test_external)
 
 target_link_libraries(iris_cxx_test INTERFACE Catch2::Catch2WithMain)
 
-# --------------------------------------------
+
+# -----------------------------------------------------------------
+# Common CMake utilities for testing
 
 function(iris_define_test_headers test_name)
     target_sources(${test_name}_test PRIVATE FILE_SET HEADERS FILES ${ARGN})
@@ -92,7 +130,9 @@ function(iris_define_sub_tests prefix)
     endforeach()
 endfunction()
 
-# --------------------------------------------
+
+# -----------------------------------------------------------------
+# Iris tests
 
 if(PROJECT_IS_TOP_LEVEL)
     add_subdirectory(rvariant)
