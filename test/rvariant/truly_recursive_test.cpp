@@ -148,16 +148,6 @@ struct NodeArray : std::vector<Node>
     using std::vector<Node>::vector;
 };
 
-bool operator==(NodeArray const& a, NodeArray const& b);
-bool operator!=(NodeArray const& a, NodeArray const& b);
-bool operator<(NodeArray const& a, NodeArray const& b);
-bool operator>(NodeArray const& a, NodeArray const& b);
-bool operator<=(NodeArray const& a, NodeArray const& b);
-bool operator>=(NodeArray const& a, NodeArray const& b);
-std::strong_ordering operator<=>(NodeArray const& a, NodeArray const& b);
-
-static_assert(std::three_way_comparable<NodeArray>);
-
 bool operator==(NodeArray const& a, NodeArray const& b)
 {
     return static_cast<std::vector<Node> const&>(a) == static_cast<std::vector<Node> const&>(b);
@@ -188,10 +178,12 @@ bool operator>=(NodeArray const& a, NodeArray const& b)
     return static_cast<std::vector<Node> const&>(a) >= static_cast<std::vector<Node> const&>(b);
 }
 
-std::strong_ordering operator<=>(NodeArray const& a, NodeArray const& b)
+auto operator<=>(NodeArray const& a, NodeArray const& b)
 {
     return static_cast<std::vector<Node> const&>(a) <=> static_cast<std::vector<Node> const&>(b);
 }
+
+static_assert(std::three_way_comparable<NodeArray>);
 
 } // anonymous
 
