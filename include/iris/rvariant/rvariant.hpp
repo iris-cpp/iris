@@ -420,7 +420,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                 }
             });
         }
-        return detail::unwrap_recursive(detail::raw_get<I>(storage_));
+        return unwrap_recursive(detail::raw_get<I>(storage_));
     }
 IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
@@ -493,7 +493,7 @@ class rvariant : private detail::rvariant_base_t<Ts...>
     static_assert((req::Cpp17Destructible<Ts> && ...), "All types shall meet the Cpp17Destructible requirements ([variant.variant.general]).");
     static_assert(sizeof...(Ts) > 0, "A variant with no template arguments shall not be instantiated ([variant.variant.general]).");
 
-    using unwrapped_types = type_list<unwrap_recursive_t<Ts>...>;
+    using unwrapped_types = type_list<unwrap_recursive_type<Ts>...>;
 
     using base_type = detail::rvariant_base_t<Ts...>;
     friend struct detail::rvariant_base<Ts...>;
@@ -586,18 +586,18 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         requires
             (!std::is_same_v<rvariant<Us...>, rvariant>) &&
             rvariant_set::subset_of<rvariant<Us...>, rvariant> &&
-            (!std::disjunction_v<std::is_same<rvariant<Us...>, unwrap_recursive_t<Ts>>...>) &&
-            std::conjunction_v<std::is_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>
+            (!std::disjunction_v<std::is_same<rvariant<Us...>, unwrap_recursive_type<Ts>>...>) &&
+            std::conjunction_v<std::is_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_type<Us>, Ts...>, Us const&>...>
     constexpr rvariant(rvariant<Us...> const& w)
-        noexcept(std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>)
+        noexcept(std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_type<Us>, Ts...>, Us const&>...>)
     {
         w.raw_visit([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj const& uj)
-            noexcept(std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>)
+            noexcept(std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_type<Us>, Ts...>, Us const&>...>)
         {
             if constexpr (j != std::variant_npos) {
-                using maybe_wrapped = detail::select_maybe_wrapped<unwrap_recursive_t<Uj>, Ts...>;
+                using maybe_wrapped = detail::select_maybe_wrapped<unwrap_recursive_type<Uj>, Ts...>;
                 using VT = maybe_wrapped::type;
-                static_assert(std::is_same_v<unwrap_recursive_t<VT>, unwrap_recursive_t<Uj>>);
+                static_assert(std::is_same_v<unwrap_recursive_type<VT>, unwrap_recursive_type<Uj>>);
                 base_type::template construct_on_valueless<maybe_wrapped::index>(detail::forward_maybe_wrapped<VT>(uj));
             }
         });
@@ -608,18 +608,18 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         requires
             (!std::is_same_v<rvariant<Us...>, rvariant>) &&
             rvariant_set::subset_of<rvariant<Us...>, rvariant> &&
-            (!std::disjunction_v<std::is_same<rvariant<Us...>, unwrap_recursive_t<Ts>>...>) &&
-            std::conjunction_v<std::is_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>
+            (!std::disjunction_v<std::is_same<rvariant<Us...>, unwrap_recursive_type<Ts>>...>) &&
+            std::conjunction_v<std::is_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_type<Us>, Ts...>, Us&&>...>
     constexpr rvariant(rvariant<Us...>&& w)
-        noexcept(std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>)
+        noexcept(std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_type<Us>, Ts...>, Us&&>...>)
     {
         std::move(w).raw_visit([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj&& uj)
-            noexcept(std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>)
+            noexcept(std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_type<Us>, Ts...>, Us&&>...>)
         {
             if constexpr (j != std::variant_npos) {
-                using maybe_wrapped = detail::select_maybe_wrapped<unwrap_recursive_t<Uj>, Ts...>;
+                using maybe_wrapped = detail::select_maybe_wrapped<unwrap_recursive_type<Uj>, Ts...>;
                 using VT = maybe_wrapped::type;
-                static_assert(std::is_same_v<unwrap_recursive_t<VT>, unwrap_recursive_t<Uj>>);
+                static_assert(std::is_same_v<unwrap_recursive_type<VT>, unwrap_recursive_type<Uj>>);
                 static_assert(std::is_rvalue_reference_v<Uj&&>);
                 base_type::template construct_on_valueless<maybe_wrapped::index>(detail::forward_maybe_wrapped<VT>(std::move(uj))); // NOLINT(bugprone-move-forwarding-reference)
             }
@@ -633,30 +633,30 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         requires
             (!std::is_same_v<rvariant<Us...>, rvariant>) &&
             rvariant_set::subset_of<rvariant<Us...>, rvariant> &&
-            (!std::disjunction_v<std::is_same<rvariant<Us...>, unwrap_recursive_t<Ts>>...>) &&
-            std::conjunction_v<detail::variant_copy_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>
+            (!std::disjunction_v<std::is_same<rvariant<Us...>, unwrap_recursive_type<Ts>>...>) &&
+            std::conjunction_v<detail::variant_copy_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_type<Us>, Ts...>, Us const&>...>
     constexpr rvariant& operator=(rvariant<Us...> const& rhs)
-        noexcept(std::conjunction_v<detail::variant_nothrow_copy_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>)
+        noexcept(std::conjunction_v<detail::variant_nothrow_copy_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_type<Us>, Ts...>, Us const&>...>)
     {
         rhs.raw_visit([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj const& uj)
-            noexcept(std::conjunction_v<detail::variant_nothrow_copy_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>)
+            noexcept(std::conjunction_v<detail::variant_nothrow_copy_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_type<Us>, Ts...>, Us const&>...>)
         {
             if constexpr (j == std::variant_npos) {
                 this->visit_reset();
 
             } else {
-                using maybe_wrapped = detail::select_maybe_wrapped<unwrap_recursive_t<Uj>, Ts...>;
+                using maybe_wrapped = detail::select_maybe_wrapped<unwrap_recursive_type<Uj>, Ts...>;
                 using VT = maybe_wrapped::type;
-                static_assert(std::is_same_v<unwrap_recursive_t<VT>, unwrap_recursive_t<Uj>>);
+                static_assert(std::is_same_v<unwrap_recursive_type<VT>, unwrap_recursive_type<Uj>>);
 
                 this->raw_visit([this, &uj]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti& ti)
-                    noexcept(std::conjunction_v<detail::variant_nothrow_copy_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>)
+                    noexcept(std::conjunction_v<detail::variant_nothrow_copy_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_type<Us>, Ts...>, Us const&>...>)
                 {
                     constexpr std::size_t VTi = maybe_wrapped::index;
                     if constexpr (i == std::variant_npos) { // this is valueless, rhs holds value
                         base_type::template construct_on_valueless<VTi>(detail::forward_maybe_wrapped<VT>(uj));
 
-                    } else if constexpr (std::is_same_v<unwrap_recursive_t<Ti>, unwrap_recursive_t<Uj>>) {
+                    } else if constexpr (std::is_same_v<unwrap_recursive_type<Ti>, unwrap_recursive_type<Uj>>) {
                         ti = detail::forward_maybe_wrapped<Ti>(uj);
 
                     } else if constexpr (std::is_nothrow_constructible_v<VT, Uj const&> || !std::is_nothrow_move_constructible_v<VT>) {
@@ -677,31 +677,31 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         requires
             (!std::is_same_v<rvariant<Us...>, rvariant>) &&
             rvariant_set::subset_of<rvariant<Us...>, rvariant> &&
-            (!std::disjunction_v<std::is_same<rvariant<Us...>, unwrap_recursive_t<Ts>>...>) &&
-            std::conjunction_v<detail::variant_move_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>
+            (!std::disjunction_v<std::is_same<rvariant<Us...>, unwrap_recursive_type<Ts>>...>) &&
+            std::conjunction_v<detail::variant_move_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_type<Us>, Ts...>, Us&&>...>
     constexpr rvariant& operator=(rvariant<Us...>&& rhs)
-        noexcept(std::conjunction_v<detail::variant_nothrow_move_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>)
+        noexcept(std::conjunction_v<detail::variant_nothrow_move_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_type<Us>, Ts...>, Us&&>...>)
     {
         std::move(rhs).raw_visit([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj&& uj)
-            noexcept(std::conjunction_v<detail::variant_nothrow_move_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>)
+            noexcept(std::conjunction_v<detail::variant_nothrow_move_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_type<Us>, Ts...>, Us&&>...>)
         {
             if constexpr (j == std::variant_npos) {
                 this->visit_reset();
 
             } else {
-                using maybe_wrapped = detail::select_maybe_wrapped<unwrap_recursive_t<Uj>, Ts...>;
+                using maybe_wrapped = detail::select_maybe_wrapped<unwrap_recursive_type<Uj>, Ts...>;
                 using VT = maybe_wrapped::type;
-                static_assert(std::is_same_v<unwrap_recursive_t<VT>, unwrap_recursive_t<Uj>>);
+                static_assert(std::is_same_v<unwrap_recursive_type<VT>, unwrap_recursive_type<Uj>>);
 
                 this->raw_visit([this, &uj]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti& ti)
-                    noexcept(std::conjunction_v<detail::variant_nothrow_move_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>)
+                    noexcept(std::conjunction_v<detail::variant_nothrow_move_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_type<Us>, Ts...>, Us&&>...>)
                 {
                     static_assert(std::is_rvalue_reference_v<Uj&&>);
                     constexpr std::size_t VTi = maybe_wrapped::index;
                     if constexpr (i == std::variant_npos) { // this is valueless, rhs holds value
                         base_type::template construct_on_valueless<VTi>(detail::forward_maybe_wrapped<VT>(std::move(uj)));  // NOLINT(bugprone-move-forwarding-reference)
 
-                    } else if constexpr (std::is_same_v<unwrap_recursive_t<Ti>, unwrap_recursive_t<Uj>>) {
+                    } else if constexpr (std::is_same_v<unwrap_recursive_type<Ti>, unwrap_recursive_type<Uj>>) {
                         ti = detail::forward_maybe_wrapped<Ti>(std::move(uj)); // NOLINT(bugprone-move-forwarding-reference)
 
                     } else {
@@ -1113,7 +1113,7 @@ get(rvariant<Ts...>& v IRIS_LIFETIMEBOUND)
 {
     static_assert(I < sizeof...(Ts));
     if (v.index() == I) {
-        return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&>(v)));
+        return unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&>(v)));
     }
     detail::throw_bad_variant_access();
 }
@@ -1124,7 +1124,7 @@ get(rvariant<Ts...>&& v IRIS_LIFETIMEBOUND)  // NOLINT(cppcoreguidelines-rvalue-
 {
     static_assert(I < sizeof...(Ts));
     if (v.index() == I) {
-        return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&&>(v)));
+        return unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&&>(v)));
     }
     detail::throw_bad_variant_access();
 }
@@ -1135,7 +1135,7 @@ get(rvariant<Ts...> const& v IRIS_LIFETIMEBOUND)
 {
     static_assert(I < sizeof...(Ts));
     if (v.index() == I) {
-        return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&>(v)));
+        return unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&>(v)));
     }
     detail::throw_bad_variant_access();
 }
@@ -1146,7 +1146,7 @@ get(rvariant<Ts...> const&& v IRIS_LIFETIMEBOUND)
 {
     static_assert(I < sizeof...(Ts));
     if (v.index() == I) {
-        return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&&>(v)));
+        return unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&&>(v)));
     }
     detail::throw_bad_variant_access();
 }
@@ -1157,7 +1157,7 @@ get(rvariant<Ts...>& v IRIS_LIFETIMEBOUND)
 {
     constexpr std::size_t I = detail::exactly_once_index_v<T, rvariant<Ts...>>;
     if (v.index() == I) {
-        return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&>(v)));
+        return unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&>(v)));
     }
     detail::throw_bad_variant_access();
 }
@@ -1168,7 +1168,7 @@ get(rvariant<Ts...>&& v IRIS_LIFETIMEBOUND)  // NOLINT(cppcoreguidelines-rvalue-
 {
     constexpr std::size_t I = detail::exactly_once_index_v<T, rvariant<Ts...>>;
     if (v.index() == I) {
-        return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&&>(v)));
+        return unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&&>(v)));
     }
     detail::throw_bad_variant_access();
 }
@@ -1179,7 +1179,7 @@ get(rvariant<Ts...> const& v IRIS_LIFETIMEBOUND)
 {
     constexpr std::size_t I = detail::exactly_once_index_v<T, rvariant<Ts...>>;
     if (v.index() == I) {
-        return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&>(v)));
+        return unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&>(v)));
     }
     detail::throw_bad_variant_access();
 }
@@ -1190,7 +1190,7 @@ get(rvariant<Ts...> const&& v IRIS_LIFETIMEBOUND)
 {
     constexpr std::size_t I = detail::exactly_once_index_v<T, rvariant<Ts...>>;
     if (v.index() == I) {
-        return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&&>(v)));
+        return unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&&>(v)));
     }
     detail::throw_bad_variant_access();
 }
@@ -1218,7 +1218,7 @@ template<std::size_t I, class... Ts>
 unsafe_get(rvariant<Ts...>& v IRIS_LIFETIMEBOUND) noexcept
 {
     static_assert(I < sizeof...(Ts));
-    return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&>(v)));
+    return unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&>(v)));
 }
 
 template<std::size_t I, class... Ts>
@@ -1226,7 +1226,7 @@ template<std::size_t I, class... Ts>
 unsafe_get(rvariant<Ts...>&& v IRIS_LIFETIMEBOUND) noexcept  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
 {
     static_assert(I < sizeof...(Ts));
-    return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&&>(v)));
+    return unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&&>(v)));
 }
 
 template<std::size_t I, class... Ts>
@@ -1234,14 +1234,14 @@ template<std::size_t I, class... Ts>
 unsafe_get(rvariant<Ts...> const& v IRIS_LIFETIMEBOUND) noexcept
 {
     static_assert(I < sizeof...(Ts));
-    return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&>(v)));
+    return unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&>(v)));
 }
 
 template<std::size_t I, class... Ts>
 [[nodiscard]] constexpr variant_alternative_t<I, rvariant<Ts...>> const&&
 unsafe_get(rvariant<Ts...> const&& v IRIS_LIFETIMEBOUND) noexcept
 {
-    return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&&>(v)));
+    return unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&&>(v)));
 }
 
 template<class T, class... Ts>
@@ -1249,7 +1249,7 @@ template<class T, class... Ts>
 unsafe_get(rvariant<Ts...>& v IRIS_LIFETIMEBOUND) noexcept
 {
     constexpr std::size_t I = detail::exactly_once_index_v<T, rvariant<Ts...>>;
-    return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&>(v)));
+    return unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&>(v)));
 }
 
 template<class T, class... Ts>
@@ -1257,7 +1257,7 @@ template<class T, class... Ts>
 unsafe_get(rvariant<Ts...>&& v IRIS_LIFETIMEBOUND) noexcept  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
 {
     constexpr std::size_t I = detail::exactly_once_index_v<T, rvariant<Ts...>>;
-    return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&&>(v)));
+    return unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&&>(v)));
 }
 
 template<class T, class... Ts>
@@ -1265,7 +1265,7 @@ template<class T, class... Ts>
 unsafe_get(rvariant<Ts...> const& v IRIS_LIFETIMEBOUND) noexcept
 {
     constexpr std::size_t I = detail::exactly_once_index_v<T, rvariant<Ts...>>;
-    return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&>(v)));
+    return unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&>(v)));
 }
 
 template<class T, class... Ts>
@@ -1273,7 +1273,7 @@ template<class T, class... Ts>
 unsafe_get(rvariant<Ts...> const&& v IRIS_LIFETIMEBOUND) noexcept
 {
     constexpr std::size_t I = detail::exactly_once_index_v<T, rvariant<Ts...>>;
-    return detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&&>(v)));
+    return unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&&>(v)));
 }
 
 template<class T, class... Ts>
@@ -1300,7 +1300,7 @@ get_if(rvariant<Ts...>* v) noexcept
 {
     static_assert(I < sizeof...(Ts));
     return v && v->index() == I
-        ? std::addressof(detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&>(*v))))
+        ? std::addressof(unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...>&>(*v))))
         : nullptr;
 }
 
@@ -1310,7 +1310,7 @@ get_if(rvariant<Ts...> const* v) noexcept
 {
     static_assert(I < sizeof...(Ts));
     return v && v->index() == I
-        ? std::addressof(detail::unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&>(*v))))
+        ? std::addressof(unwrap_recursive(detail::raw_get<I>(detail::forward_storage<rvariant<Ts...> const&>(*v))))
         : nullptr;
 }
 

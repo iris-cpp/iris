@@ -1589,15 +1589,15 @@ TEST_CASE("recursive_wrapper") // not [recursive]
 
 TEST_CASE("unwrap_recursive") // not [recursive]
 {
-    STATIC_REQUIRE(std::is_same_v<decltype(iris::detail::unwrap_recursive(std::declval<int&>())), int&>);
-    STATIC_REQUIRE(std::is_same_v<decltype(iris::detail::unwrap_recursive(std::declval<int&&>())), int&&>);
-    STATIC_REQUIRE(std::is_same_v<decltype(iris::detail::unwrap_recursive(std::declval<int const&>())), int const&>);
-    STATIC_REQUIRE(std::is_same_v<decltype(iris::detail::unwrap_recursive(std::declval<int const&&>())), int const&&>);
+    STATIC_REQUIRE(std::is_same_v<decltype(iris::unwrap_recursive(std::declval<int&>())), int&>);
+    STATIC_REQUIRE(std::is_same_v<decltype(iris::unwrap_recursive(std::declval<int&&>())), int&&>);
+    STATIC_REQUIRE(std::is_same_v<decltype(iris::unwrap_recursive(std::declval<int const&>())), int const&>);
+    STATIC_REQUIRE(std::is_same_v<decltype(iris::unwrap_recursive(std::declval<int const&&>())), int const&&>);
 
-    STATIC_REQUIRE(std::is_same_v<decltype(iris::detail::unwrap_recursive(std::declval<iris::recursive_wrapper<int>&>())), int&>);
-    STATIC_REQUIRE(std::is_same_v<decltype(iris::detail::unwrap_recursive(std::declval<iris::recursive_wrapper<int>&&>())), int&&>);
-    STATIC_REQUIRE(std::is_same_v<decltype(iris::detail::unwrap_recursive(std::declval<iris::recursive_wrapper<int> const&>())), int const&>);
-    STATIC_REQUIRE(std::is_same_v<decltype(iris::detail::unwrap_recursive(std::declval<iris::recursive_wrapper<int> const&&>())), int const&&>);
+    STATIC_REQUIRE(std::is_same_v<decltype(iris::unwrap_recursive(std::declval<iris::recursive_wrapper<int>&>())), int&>);
+    STATIC_REQUIRE(std::is_same_v<decltype(iris::unwrap_recursive(std::declval<iris::recursive_wrapper<int>&&>())), int&&>);
+    STATIC_REQUIRE(std::is_same_v<decltype(iris::unwrap_recursive(std::declval<iris::recursive_wrapper<int> const&>())), int const&>);
+    STATIC_REQUIRE(std::is_same_v<decltype(iris::unwrap_recursive(std::declval<iris::recursive_wrapper<int> const&&>())), int const&&>);
 }
 
 TEST_CASE("maybe_wrapped") // not [recursive]

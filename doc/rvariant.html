@@ -904,7 +904,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 <li><a href="#rvariant.recursive.ctor">Constructors</a></li>
 </ul>
 </li>
-<li><a href="#rvariant.recursive.helper"><code>recursive_wrapper</code> helper classes <span class="slug">[rvariant.recursive.helper]</span></a></li>
+<li><a href="#rvariant.recursive.helper"><code>recursive_wrapper</code> helper utilities <span class="slug">[rvariant.recursive.helper]</span></a></li>
 <li><a href="#rvariant.pack">Pack manipulation and deduping <span class="slug">[rvariant.pack]</span></a></li>
 <li><a href="#rvariant.xo">Exposition-only utilities <span class="slug">[rvariant.xo]</span></a>
 <ul class="sectlevel2">
@@ -956,7 +956,7 @@ expr.visit(temp_ns::overloaded{
 <p>Clang 21-22 (libc++)</p>
 </li>
 <li>
-<p>MSVC (2022)</p>
+<p>MSVC 2022 and 2026</p>
 </li>
 <li>
 <p>C&#43;&#43;23 and C&#43;&#43;26</p>
@@ -1343,9 +1343,8 @@ template&lt;class T, class Allocator&gt;
   /* constexpr */ std::size_t hash_value(recursive_wrapper&lt;T, Allocator&gt; const&amp;);
 
 // <a href="#rvariant.recursive.helper">[rvariant.recursive.helper]</a>, <code>recursive_wrapper</code> helper classes
-template&lt;class T&gt; struct unwrap_recursive;
-template&lt;class T, class Allocator&gt; struct unwrap_recursive&lt;recursive_wrapper&lt;T, Allocator&gt;&gt;;
-template&lt;class T&gt; using unwrap_recursive_t = typename unwrap_recursive&lt;T&gt;::type;
+template&lt;class T&gt; using unwrap_recursive_type = <span class="see-below">see below</span>;
+template&lt;class T&gt; constexpr auto&amp;&amp; unwrap_recursive(T&amp;&amp; o) noexcept;
 
 // <a href="#rvariant.pack">[rvariant.pack]</a>, pack manipulation and deduping
 template&lt;template&lt;class...&gt; class TT, class A, class B&gt;
@@ -1508,7 +1507,7 @@ See also: spec of <a href="https://eel.is/c++draft/variant"><code>std::variant</
 <div class="ulist">
 <ul>
 <li>
-<p>Let <code>VT<sub><em>i</em></sub></code> denote <code><a href="#rvariant.recursive">recursive_wrapper</a>&lt;T<sub><em>i</em></sub>, A&gt;</code> (for any type <code>A</code>) if such a specialization occurs anywhere in <code>Ts...</code>; otherwise, let <code>VT<sub><em>i</em></sub></code> denote <code>T<sub><em>i</em></sub></code>. Let <code>U<sub><em>j</em></sub></code> denote the <em>j</em><sup>th</sup> type of the template parameter pack having the name <code>Us</code> on each flexibility-related functions. <span class="underline">The <em>corresponding alternative</em> for <code>rvariant</code> is the first type for which <code>std::is_same_v&lt;<a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;VT<sub><em>i</em></sub>&gt;, <a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;U<sub><em>j</em></sub>&gt;&gt;</code> is <code>true</code></span>.</p>
+<p>Let <code>VT<sub><em>i</em></sub></code> denote <code><a href="#rvariant.recursive">recursive_wrapper</a>&lt;T<sub><em>i</em></sub>, A&gt;</code> (for any type <code>A</code>) if such a specialization occurs anywhere in <code>Ts...</code>; otherwise, let <code>VT<sub><em>i</em></sub></code> denote <code>T<sub><em>i</em></sub></code>. Let <code>U<sub><em>j</em></sub></code> denote the <em>j</em><sup>th</sup> type of the template parameter pack having the name <code>Us</code> on each flexibility-related functions. <span class="underline">The <em>corresponding alternative</em> for <code>rvariant</code> is the first type for which <code>std::is_same_v&lt;<a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;VT<sub><em>i</em></sub>&gt;, <a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;U<sub><em>j</em></sub>&gt;&gt;</code> is <code>true</code></span>.</p>
 </li>
 </ul>
 </div>
@@ -1557,7 +1556,7 @@ Equivalent to the <code>std::variant</code> counterpart. <sup><a href="https://e
 <li>
 <p><span class="candidate">4)</span> <em>Generic constructor</em>. Equivalent to the <code>std::variant</code> counterpart, <sup><a href="https://eel.is/c++draft/variant.ctor">[spec]</a></sup> except:</p>
 <div class="paragraph">
-<p><strong><em>Postconditions:</em></strong> <code>holds_alternative<span class="underline">&lt;<a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;T<sub><em>j</em></sub>&gt;&gt;</span>(*this)</code> is <code>true</code>.</p>
+<p><strong><em>Postconditions:</em></strong> <code>holds_alternative<span class="underline">&lt;<a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;T<sub><em>j</em></sub>&gt;&gt;</span>(*this)</code> is <code>true</code>.</p>
 </div>
 </li>
 <li>
@@ -1573,7 +1572,7 @@ Equivalent to the <code>std::variant</code> counterpart. <sup><a href="https://e
 <div class="ulist none">
 <ul class="none">
 <li>
-<p>&#8201;&#8212;&#8201;There is exactly one occurrence of <code>T</code> in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;Ts&gt;...</code></span> and</p>
+<p>&#8201;&#8212;&#8201;There is exactly one occurrence of <code>T</code> in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;Ts&gt;...</code></span> and</p>
 </li>
 <li>
 <p>&#8201;&#8212;&#8201;<code>std::is_constructible_v&lt;<span class="underline">VT</span>, Args...&gt;</code> is <code>true</code>.</p>
@@ -1608,7 +1607,7 @@ Equivalent to the <code>std::variant</code> counterpart. <sup><a href="https://e
 <div class="ulist none">
 <ul class="none">
 <li>
-<p>&#8201;&#8212;&#8201;There is exactly one occurrence of <code>T</code> in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;Ts&gt;...</code></span> and</p>
+<p>&#8201;&#8212;&#8201;There is exactly one occurrence of <code>T</code> in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;Ts&gt;...</code></span> and</p>
 </li>
 <li>
 <p>&#8201;&#8212;&#8201;<code>std::is_constructible_v&lt;<span class="underline">VT</span>, std::initializer_list&lt;U&gt;&amp;, Args...&gt;</code> is <code>true</code>.</p>
@@ -1653,7 +1652,7 @@ Equivalent to the <code>std::variant</code> counterpart. <sup><a href="https://e
 <p>&#8201;&#8212;&#8201;<span class="underline"><code><a href="#rvariant.flex">rvariant_set::subset_of</a>&lt;rvariant&lt;Us...&gt;, rvariant&gt;</code> is <code>true</code>, and</span></p>
 </li>
 <li>
-<p>&#8201;&#8212;&#8201;<span class="underline"><code>std::disjunction_v&lt;std::is_same&lt;rvariant&lt;Us...&gt;, <a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;Ts&gt;&gt;...&gt;</code> is <code>false</code>, and</span></p>
+<p>&#8201;&#8212;&#8201;<span class="underline"><code>std::disjunction_v&lt;std::is_same&lt;rvariant&lt;Us...&gt;, <a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;Ts&gt;&gt;...&gt;</code> is <code>false</code>, and</span></p>
 </li>
 <li>
 <p>&#8201;&#8212;&#8201;<span class="underline"><code>std::is_constructible_v&lt;VT<sub><em>i</em></sub>, U<sub><em>j</em></sub> const&amp;&gt;</code> is <code>true</code> for all <em>j</em>.</span></p>
@@ -1698,7 +1697,7 @@ Equivalent to the <code>std::variant</code> counterpart. <sup><a href="https://e
 <p>&#8201;&#8212;&#8201;<code><a href="#rvariant.flex">rvariant_set::subset_of</a>&lt;rvariant&lt;Us...&gt;, rvariant&gt;</code> is <code>true</code>, and</p>
 </li>
 <li>
-<p>&#8201;&#8212;&#8201;<code>std::disjunction_v&lt;std::is_same&lt;rvariant&lt;Us...&gt;, <a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;Ts&gt;&gt;...&gt;</code> is <code>false</code>, and</p>
+<p>&#8201;&#8212;&#8201;<code>std::disjunction_v&lt;std::is_same&lt;rvariant&lt;Us...&gt;, <a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;Ts&gt;&gt;...&gt;</code> is <code>false</code>, and</p>
 </li>
 <li>
 <p>&#8201;&#8212;&#8201;<code>std::is_constructible_v&lt;VT<sub><em>i</em></sub>, <span class="underline">U<sub><em>j</em></sub>&amp;&amp;</span>&gt;</code> is <code>true</code> for all <em>j</em>.</p>
@@ -1776,7 +1775,7 @@ Equivalent to the <code>std::variant</code> counterpart. <sup><a href="https://e
 <li>
 <p><span class="candidate">3)</span> <em>Generic assignment operator</em>. Equivalent to the <code>std::variant</code> counterpart, <sup><a href="https://eel.is/c++draft/variant.assign">[spec]</a></sup> except:</p>
 <div class="paragraph">
-<p><strong><em>Postconditions:</em></strong> <code>holds_alternative<span class="underline">&lt;<a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;T<sub><em>j</em></sub>&gt;&gt;</span>(*this)</code> is <code>true</code>, with <code>T<sub><em>j</em></sub></code> selected by the imaginary function overload resolution described above.</p>
+<p><strong><em>Postconditions:</em></strong> <code>holds_alternative<span class="underline">&lt;<a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;T<sub><em>j</em></sub>&gt;&gt;</span>(*this)</code> is <code>true</code>, with <code>T<sub><em>j</em></sub></code> selected by the imaginary function overload resolution described above.</p>
 </div>
 </li>
 <li>
@@ -1798,7 +1797,7 @@ Equivalent to the <code>std::variant</code> counterpart. <sup><a href="https://e
 <p>&#8201;&#8212;&#8201;<span class="underline"><code><a href="#rvariant.flex">rvariant_set::subset_of</a>&lt;rvariant&lt;Us...&gt;, rvariant&gt;</code> is <code>true</code>, and</span></p>
 </li>
 <li>
-<p>&#8201;&#8212;&#8201;<span class="underline"><code>std::disjunction_v&lt;std::is_same&lt;rvariant&lt;Us...&gt;, <a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;Ts&gt;&gt;...&gt;</code> is <code>false</code>, and</span></p>
+<p>&#8201;&#8212;&#8201;<span class="underline"><code>std::disjunction_v&lt;std::is_same&lt;rvariant&lt;Us...&gt;, <a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;Ts&gt;&gt;...&gt;</code> is <code>false</code>, and</span></p>
 </li>
 <li>
 <p>&#8201;&#8212;&#8201;<span class="underline"><code>std::is_constructible_v&lt;VT<sub><em>i</em></sub>, U<sub><em>j</em></sub> const&amp;&gt; &amp;&amp; std::is_assignable_v&lt;VT<sub><em>i</em></sub>&amp;, U<sub><em>j</em></sub> const&amp;&gt;</code> is <code>true</code> for all <em>j</em>.</span></p>
@@ -1824,7 +1823,7 @@ Equivalent to the <code>std::variant</code> counterpart. <sup><a href="https://e
 <p>&#8201;&#8212;&#8201;Otherwise, if <code>rhs</code> holds a value but <code>*this</code> does not, initializes <code>rvariant</code> to hold <span class="underline"><code>VT<sub><em>i</em></sub></code> (with <em>i</em> being the index of the alternative corresponding to that of <code>rhs</code>)</span> and direct-initializes the contained value with <span class="underline"><code><em>GET</em>&lt;<em>j</em>&gt;(rhs)</code>.</span></p>
 </li>
 <li>
-<p>&#8201;&#8212;&#8201;Otherwise, if <span class="underline"><code>std::is_same_v&lt;<a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;T<sub><em>i</em></sub>&gt;, <a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;U<sub><em>j</em></sub>&gt;&gt;</code> is <code>true</code></span>, assigns <span class="underline"><code><em>GET</em>&lt;<em>j</em>&gt;(rhs)</code></span> to the value contained in <code>*this</code>. <span class="underline">(<em>Note:</em> the left hand side is <code>T<sub><em>i</em></sub></code>, <em>not</em> <code>VT<sub><em>i</em></sub></code>. This ensures that the existing storage is reused even for <code>rvariant</code> with duplicate corresponding alternatives; i.e., <code>index()</code> is unchanged.)</span></p>
+<p>&#8201;&#8212;&#8201;Otherwise, if <span class="underline"><code>std::is_same_v&lt;<a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;T<sub><em>i</em></sub>&gt;, <a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;U<sub><em>j</em></sub>&gt;&gt;</code> is <code>true</code></span>, assigns <span class="underline"><code><em>GET</em>&lt;<em>j</em>&gt;(rhs)</code></span> to the value contained in <code>*this</code>. <span class="underline">(<em>Note:</em> the left hand side is <code>T<sub><em>i</em></sub></code>, <em>not</em> <code>VT<sub><em>i</em></sub></code>. This ensures that the existing storage is reused even for <code>rvariant</code> with duplicate corresponding alternatives; i.e., <code>index()</code> is unchanged.)</span></p>
 </li>
 <li>
 <p>&#8201;&#8212;&#8201;Otherwise, if either <code>std::is_nothrow_constructible_v&lt;VT<sub><em>i</em></sub>, U<sub><em>j</em></sub> const&amp;&gt;</code> is <code>true</code> or <code>std::is_nothrow_move_constructible_v&lt;VT<sub><em>i</em></sub>&gt;</code> is <code>false</code>, equivalent to <code>emplace<span class="underline">&lt;VT<sub><em>i</em></sub>&gt;</span>(<em>GET</em>&lt;<em>j</em>&gt;(rhs))</code>.</p>
@@ -1865,7 +1864,7 @@ Equivalent to the <code>std::variant</code> counterpart. <sup><a href="https://e
 <p>&#8201;&#8212;&#8201;<span class="underline"><code><a href="#rvariant.flex">rvariant_set::subset_of</a>&lt;rvariant&lt;Us...&gt;, rvariant&gt;</code> is <code>true</code>, and</span></p>
 </li>
 <li>
-<p>&#8201;&#8212;&#8201;<span class="underline"><code>std::disjunction_v&lt;std::is_same&lt;rvariant&lt;Us...&gt;, <a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;Ts&gt;&gt;...&gt;</code> is <code>false</code>, and</span></p>
+<p>&#8201;&#8212;&#8201;<span class="underline"><code>std::disjunction_v&lt;std::is_same&lt;rvariant&lt;Us...&gt;, <a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;Ts&gt;&gt;...&gt;</code> is <code>false</code>, and</span></p>
 </li>
 <li>
 <p>&#8201;&#8212;&#8201;<span class="underline"><code>std::is_constructible_v&lt;VT<sub><em>i</em></sub>, U<sub><em>j</em></sub>&amp;&amp;&gt; &amp;&amp; std::is_assignable_v&lt;VT<sub><em>i</em></sub>&amp;, U<sub><em>j</em></sub>&amp;&amp;&gt;</code> is <code>true</code> for all <em>j</em>.</span></p>
@@ -1891,7 +1890,7 @@ Equivalent to the <code>std::variant</code> counterpart. <sup><a href="https://e
 <p>&#8201;&#8212;&#8201;Otherwise, if <code>rhs</code> holds a value but <code>*this</code> does not, initializes <code>rvariant</code> to hold <span class="underline"><code>VT<sub><em>i</em></sub></code> (with <em>i</em> being the index of the alternative corresponding to that of <code>rhs</code>)</span> and direct-initializes the contained value with <span class="underline"><code><em>GET</em>&lt;<em>j</em>&gt;(std::move(rhs))</code>.</span></p>
 </li>
 <li>
-<p>&#8201;&#8212;&#8201;Otherwise, if <span class="underline"><code>std::is_same_v&lt;<a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;T<sub><em>i</em></sub>&gt;, <a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;U<sub><em>j</em></sub>&gt;&gt;</code> is <code>true</code></span>, assigns <span class="underline"><code><em>GET</em>&lt;<em>j</em>&gt;(std::move(rhs))</code></span> to the value contained in <code>*this</code>. <span class="underline">(<em>Note:</em> the left hand side is <code>T<sub><em>i</em></sub></code>, <em>not</em> <code>VT<sub><em>i</em></sub></code>. This ensures that the existing storage is reused even for <code>rvariant</code> with duplicate corresponding alternatives; i.e., <code>index()</code> is unchanged.)</span></p>
+<p>&#8201;&#8212;&#8201;Otherwise, if <span class="underline"><code>std::is_same_v&lt;<a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;T<sub><em>i</em></sub>&gt;, <a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;U<sub><em>j</em></sub>&gt;&gt;</code> is <code>true</code></span>, assigns <span class="underline"><code><em>GET</em>&lt;<em>j</em>&gt;(std::move(rhs))</code></span> to the value contained in <code>*this</code>. <span class="underline">(<em>Note:</em> the left hand side is <code>T<sub><em>i</em></sub></code>, <em>not</em> <code>VT<sub><em>i</em></sub></code>. This ensures that the existing storage is reused even for <code>rvariant</code> with duplicate corresponding alternatives; i.e., <code>index()</code> is unchanged.)</span></p>
 </li>
 <li>
 <p>&#8201;&#8212;&#8201;Otherwise, equivalent to <code>emplace<span class="underline">&lt;VT<sub><em>i</em></sub>&gt;</span>(<em>GET</em>&lt;<em>j</em>&gt;(std::move(rhs)))</code>.</p>
@@ -1937,12 +1936,12 @@ constexpr variant_alternative_t&lt;I, rvariant&lt;Ts...&gt;&gt;&amp;
 <p><strong><em>Mandates:</em></strong> <span class="underline"><code>T</code> is not a specialization of <code><a href="#rvariant.recursive">recursive_wrapper</a></code>.</span></p>
 </div>
 <div class="paragraph">
-<p><strong><em>Constraints:</em></strong> <code>std::is_constructible_v&lt;<span class="underline">VT</span>, Args...&gt;</code> is <code>true</code>, and <code>T</code> occurs exactly once in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;Ts&gt;</code></span>.</p>
+<p><strong><em>Constraints:</em></strong> <code>std::is_constructible_v&lt;<span class="underline">VT</span>, Args...&gt;</code> is <code>true</code>, and <code>T</code> occurs exactly once in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;Ts&gt;</code></span>.</p>
 </div>
 <div class="paragraph">
 <p><strong><em>Effects:</em></strong> Equivalent to:<br>
 &nbsp;&nbsp;<code>return emplace&lt;<em>I</em>&gt;(std::forward&lt;Args&gt;(args)...);</code><br>
-where <code><em>I</em></code> is the zero-based index of <code>T</code> in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;Ts&gt;</code></span>.</p>
+where <code><em>I</em></code> is the zero-based index of <code>T</code> in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;Ts&gt;</code></span>.</p>
 </div>
 </li>
 <li>
@@ -1951,18 +1950,18 @@ where <code><em>I</em></code> is the zero-based index of <code>T</code> in <span
 <p><strong><em>Mandates:</em></strong> <span class="underline"><code>T</code> is not a specialization of <code><a href="#rvariant.recursive">recursive_wrapper</a></code>.</span></p>
 </div>
 <div class="paragraph">
-<p><strong><em>Constraints:</em></strong> <code>std::is_constructible_v&lt;<span class="underline">VT</span>, std::initializer_list&lt;U&gt;&amp;, Args...&gt;</code> is <code>true</code>, and <code>T</code> occurs exactly once in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;Ts&gt;</code></span>.</p>
+<p><strong><em>Constraints:</em></strong> <code>std::is_constructible_v&lt;<span class="underline">VT</span>, std::initializer_list&lt;U&gt;&amp;, Args...&gt;</code> is <code>true</code>, and <code>T</code> occurs exactly once in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;Ts&gt;</code></span>.</p>
 </div>
 <div class="paragraph">
 <p><strong><em>Effects:</em></strong> Equivalent to:<br>
 &nbsp;&nbsp;<code>return emplace&lt;<em>I</em>&gt;(il, std::forward&lt;Args&gt;(args)...);</code><br>
-where <code><em>I</em></code> is the zero-based index of <code>T</code> in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;Ts&gt;</code></span>.</p>
+where <code><em>I</em></code> is the zero-based index of <code>T</code> in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;Ts&gt;</code></span>.</p>
 </div>
 </li>
 <li>
 <p><span class="candidate">3)</span> Equivalent to the <code>std::variant</code> counterpart, <sup><a href="https://eel.is/c++draft/variant.mod">[spec]</a></sup> except:</p>
 <div class="paragraph">
-<p><strong><em>Returns:</em></strong> <span class="underline">Let <code>o</code> denote</span> a reference to the new contained value. <span class="underline">Returns <code><em><a href="#rvariant.recursive.helper">UNWRAP_RECURSIVE</a></em>(o)</code>.</span></p>
+<p><strong><em>Returns:</em></strong> <span class="underline">Let <code>o</code> denote</span> a reference to the new contained value. <span class="underline">Returns <code><a href="#rvariant.recursive.helper">unwrap_recursive</a>(o)</code>.</span></p>
 </div>
 <div class="paragraph">
 <p><strong><em>Remarks:</em></strong> <span class="underline">If <code>T<sub><em>I</em></sub></code> is a specialization of <code><a href="#rvariant.recursive">recursive_wrapper</a></code>, this function is permitted to construct an intermediate variable <code>tmp</code> as if by passing <code>std::forward&lt;Args&gt;(args)...</code> to <code>T<sub><em>I</em></sub></code>'s constructor. Then <code>rvariant</code> direct-non-list-initializes the contained value of <code>T<sub><em>I</em></sub></code> with the argument <code>std::move(tmp)</code>. (<em>Note:</em> This allows optimization where <code>rvariant</code> can be assumed to become never valueless on certain cases.)</span></p>
@@ -1971,7 +1970,7 @@ where <code><em>I</em></code> is the zero-based index of <code>T</code> in <span
 <li>
 <p><span class="candidate">4)</span> Equivalent to the <code>std::variant</code> counterpart, <sup><a href="https://eel.is/c++draft/variant.mod">[spec]</a></sup> except:</p>
 <div class="paragraph">
-<p><strong><em>Returns:</em></strong> <span class="underline">Let <code>o</code> denote</span> a reference to the new contained value. <span class="underline">Returns <code><em><a href="#rvariant.recursive.helper">UNWRAP_RECURSIVE</a></em>(o)</code>.</span></p>
+<p><strong><em>Returns:</em></strong> <span class="underline">Let <code>o</code> denote</span> a reference to the new contained value. <span class="underline">Returns <code><a href="#rvariant.recursive.helper">unwrap_recursive</a>(o)</code>.</span></p>
 </div>
 <div class="paragraph">
 <p><strong><em>Remarks:</em></strong> <span class="underline">If <code>T<sub><em>I</em></sub></code> is a specialization of <code><a href="#rvariant.recursive">recursive_wrapper</a></code>, this function is permitted to construct an intermediate variable <code>tmp</code> as if by passing <code>il, std::forward&lt;Args&gt;(args)...</code> to <code>T<sub><em>I</em></sub></code>'s constructor. Then <code>rvariant</code> direct-non-list-initializes the contained value of <code>T<sub><em>I</em></sub></code> with the argument <code>std::move(tmp)</code>. (<em>Note:</em> This allows optimization where <code>rvariant</code> can be assumed to become never valueless on certain cases.)</span></p>
@@ -2122,7 +2121,7 @@ struct variant_alternative&lt;I, rvariant&lt;Ts...&gt;&gt;;<span class="candidat
 Equivalent to the <code>std::variant</code> counterpart. <sup><a href="https://eel.is/c++draft/variant#helper-3">[spec]</a></sup></p>
 </li>
 <li>
-<p><span class="candidate">2)</span> The member typedef <code>type</code> denotes <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;T<sub><em>I</em></sub>&gt;</code></span>.</p>
+<p><span class="candidate">2)</span> The member typedef <code>type</code> denotes <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;T<sub><em>I</em></sub>&gt;</code></span>.</p>
 <div class="paragraph">
 <p><strong><em>Mandates:</em></strong> <code>I &lt; sizeof...(Ts)</code>.</p>
 </div>
@@ -2169,7 +2168,7 @@ concept equivalent_to = subset_of&lt;W, V&gt; &amp;&amp; subset_of&lt;V, W&gt;;
 <p>&#8201;&#8212;&#8201;<code>T</code> is the same type as <code>U</code> or,</p>
 </li>
 <li>
-<p>&#8201;&#8212;&#8201;<code><a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;T&gt;</code> is the same type as <code>U</code>.</p>
+<p>&#8201;&#8212;&#8201;<code><a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;T&gt;</code> is the same type as <code>U</code>.</p>
 </li>
 </ul>
 </div>
@@ -2194,9 +2193,9 @@ constexpr bool holds_alternative(rvariant&lt;Ts...&gt; const&amp; v) noexcept;
 <div class="ulist candidates">
 <ul>
 <li>
-<p><span class="candidate"></span> <strong><em>Mandates:</em></strong> The type <code>T</code> occurs exactly once in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;Ts&gt;</code></span>.</p>
+<p><span class="candidate"></span> <strong><em>Mandates:</em></strong> The type <code>T</code> occurs exactly once in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;Ts&gt;</code></span>.</p>
 <div class="paragraph">
-<p><strong><em>Returns:</em></strong> <code>true</code> if <code>v.index()</code> is equal to the zero-based index of <code>T</code> in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;Ts&gt;</code></span>.</p>
+<p><strong><em>Returns:</em></strong> <code>true</code> if <code>v.index()</code> is equal to the zero-based index of <code>T</code> in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;Ts&gt;</code></span>.</p>
 </div>
 <div class="paragraph">
 <p><strong><em>Remarks:</em></strong> <span class="underline">This function is defined as deleted if <code>T</code> is a specialization of <code><a href="#rvariant.recursive">recursive_wrapper</a></code>.</span></p>
@@ -2227,7 +2226,7 @@ constexpr <span class="see-below">see below</span> const&amp;&amp; <em>GET</em>(
 <p><strong><em>Preconditions:</em></strong> <code>v.index()</code> is <code>I</code>.</p>
 </div>
 <div class="paragraph">
-<p><strong><em>Returns:</em></strong> <span class="underline"><code>o</code>, where <code>o</code> denotes a reference to the object stored in <code>v</code>, if the type of the expression&#8217;s receiver is a specialization of <code><a href="#rvariant.recursive">recursive_wrapper</a></code>; otherwise, returns <code><em><a href="#rvariant.recursive.helper">UNWRAP_RECURSIVE</a></em>(o)</code></span>.</p>
+<p><strong><em>Returns:</em></strong> <span class="underline"><code>o</code>, where <code>o</code> denotes a reference to the object stored in <code>v</code>, if the type of the expression&#8217;s receiver is a specialization of <code><a href="#rvariant.recursive">recursive_wrapper</a></code>; otherwise, returns <code><a href="#rvariant.recursive.helper">unwrap_recursive</a>(o)</code></span>.</p>
 </div>
 </li>
 </ul>
@@ -2260,7 +2259,7 @@ constexpr variant_alternative_t&lt;I, rvariant&lt;Ts...&gt;&gt; const&amp;&amp;
 <li>
 <p><span class="candidate"></span> <strong><em>Mandates:</em></strong> <code>I &lt; sizeof...(Ts)</code>.</p>
 <div class="paragraph">
-<p><strong><em>Effects:</em></strong> If <code>v.index()</code> is <code>I</code>, returns <span class="underline"><code><em><a href="#rvariant.recursive.helper">UNWRAP_RECURSIVE</a></em>(o)</code>, where <code>o</code> denotes a reference to the object stored in the <code>rvariant</code></span>. Otherwise, throws an exception of type <a href="https://eel.is/c++draft/variant.bad.access"><code>std::bad_variant_access</code></a>.</p>
+<p><strong><em>Effects:</em></strong> If <code>v.index()</code> is <code>I</code>, returns <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive</a>(o)</code>, where <code>o</code> denotes a reference to the object stored in the <code>rvariant</code></span>. Otherwise, throws an exception of type <a href="https://eel.is/c++draft/variant.bad.access"><code>std::bad_variant_access</code></a>.</p>
 </div>
 </li>
 </ul>
@@ -2280,9 +2279,9 @@ template&lt;class T, class... Ts&gt; constexpr T const&amp;&amp; get(rvariant&lt
 <div class="ulist candidates">
 <ul>
 <li>
-<p><span class="candidate"></span> <strong><em>Mandates:</em></strong> The type <code>T</code> occurs exactly once in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;Ts&gt;</code></span>.</p>
+<p><span class="candidate"></span> <strong><em>Mandates:</em></strong> The type <code>T</code> occurs exactly once in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;Ts&gt;</code></span>.</p>
 <div class="paragraph">
-<p><strong><em>Effects:</em></strong> <span class="underline">Let <code>VT</code> denote the type of the alternative held by <code>v</code>. If <code><a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;VT&gt;</code> is the same type as <code>T</code></span>, returns <span class="underline"><code><em><a href="#rvariant.recursive.helper">UNWRAP_RECURSIVE</a></em>(o)</code>, where <code>o</code> denotes a reference to the object stored in the <code>rvariant</code></span>. Otherwise, throws an exception of type <a href="https://eel.is/c++draft/variant.bad.access"><code>std::bad_variant_access</code></a>.</p>
+<p><strong><em>Effects:</em></strong> <span class="underline">Let <code>VT</code> denote the type of the alternative held by <code>v</code>. If <code><a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;VT&gt;</code> is the same type as <code>T</code></span>, returns <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive</a>(o)</code>, where <code>o</code> denotes a reference to the object stored in the <code>rvariant</code></span>. Otherwise, throws an exception of type <a href="https://eel.is/c++draft/variant.bad.access"><code>std::bad_variant_access</code></a>.</p>
 </div>
 <div class="paragraph">
 <p><strong><em>Remarks:</em></strong> <span class="underline">This function is defined as deleted if <code>T</code> is a specialization of <code><a href="#rvariant.recursive">recursive_wrapper</a></code>.</span></p>
@@ -2310,7 +2309,7 @@ constexpr std::add_pointer_t&lt;variant_alternative_t&lt;I, rvariant&lt;Ts...&gt
 <li>
 <p><span class="candidate">1-2)</span> <strong><em>Mandates:</em></strong> <code>I &lt; sizeof...(Ts)</code>.</p>
 <div class="paragraph">
-<p><strong><em>Returns:</em></strong> A pointer to the value <span class="underline">denoted by <code><em><a href="#rvariant.recursive.helper">UNWRAP_RECURSIVE</a></em>(o)</code>, where <code>o</code> denotes a reference to the object stored in the <code>rvariant</code></span>, if <code>v != nullptr</code> and <code>v-&gt;index() == I</code>. Otherwise, returns <code>nullptr</code>.</p>
+<p><strong><em>Returns:</em></strong> A pointer to the value <span class="underline">denoted by <code><a href="#rvariant.recursive.helper">unwrap_recursive</a>(o)</code>, where <code>o</code> denotes a reference to the object stored in the <code>rvariant</code></span>, if <code>v != nullptr</code> and <code>v-&gt;index() == I</code>. Otherwise, returns <code>nullptr</code>.</p>
 </div>
 </li>
 </ul>
@@ -2333,9 +2332,9 @@ constexpr std::add_pointer_t&lt;T const&gt;
 <div class="ulist candidates">
 <ul>
 <li>
-<p><span class="candidate">1-2)</span> <strong><em>Mandates:</em></strong> The type <code>T</code> occurs exactly once in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;Ts&gt;</code></span>.</p>
+<p><span class="candidate">1-2)</span> <strong><em>Mandates:</em></strong> The type <code>T</code> occurs exactly once in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;Ts&gt;</code></span>.</p>
 <div class="paragraph">
-<p><strong><em>Effects:</em></strong> Equivalent to: <code>return get_if&lt;<em>i</em>&gt;(v);</code> with <em>i</em> being the zero-based index of <code>T</code> in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;Ts&gt;</code></span>.</p>
+<p><strong><em>Effects:</em></strong> Equivalent to: <code>return get_if&lt;<em>i</em>&gt;(v);</code> with <em>i</em> being the zero-based index of <code>T</code> in <span class="underline"><code><a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;Ts&gt;</code></span>.</p>
 </div>
 <div class="paragraph">
 <p><strong><em>Remarks:</em></strong> <span class="underline">This function is defined as deleted if <code>T</code> is a specialization of <code><a href="#rvariant.recursive">recursive_wrapper</a></code>.</span></p>
@@ -2376,7 +2375,7 @@ constexpr R visit(this Self&amp;&amp; self, Visitor&amp;&amp; vis);<span class="
 <div class="ulist none">
 <ul class="none">
 <li>
-<p>&#8201;&#8212;&#8201;<code><em>GET</em>&lt;<em>m</em>&gt;(std::forward&lt;V&gt;(vars))</code> is replaced with <code><em><a href="#rvariant.recursive.helper">UNWRAP_RECURSIVE</a></em>(<em>GET</em>&lt;<em>m</em>&gt;(std::forward&lt;V&gt;(vars)))</code>.</p>
+<p>&#8201;&#8212;&#8201;<code><em>GET</em>&lt;<em>m</em>&gt;(std::forward&lt;V&gt;(vars))</code> is replaced with <code><a href="#rvariant.recursive.helper">unwrap_recursive</a>(<em>GET</em>&lt;<em>m</em>&gt;(std::forward&lt;V&gt;(vars)))</code>.</p>
 </li>
 </ul>
 </div>
@@ -2489,7 +2488,7 @@ std::ostream&amp; operator&lt;&lt;(std::ostream&amp; os, rvariant&lt;Ts...&gt; c
 </div>
 </li>
 <li>
-<p><span class="candidate">2)</span> <strong><em>Constraints:</em></strong> <code><em>ADL-ostreamable</em>&lt;<a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;T<sub><em>i</em></sub>&gt;&gt;</code> is <code>true</code> for all <em>i</em>.</p>
+<p><span class="candidate">2)</span> <strong><em>Constraints:</em></strong> <code><em>ADL-ostreamable</em>&lt;<a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;T<sub><em>i</em></sub>&gt;&gt;</code> is <code>true</code> for all <em>i</em>.</p>
 <div class="paragraph">
 <p><strong><em>Effects:</em></strong> Behaves as a formatted output function (<a href="https://eel.is/c++draft/ostream.formatted.reqmts">[ostream.formatted.reqmts]</a>) of <code>os</code>, except that:</p>
 </div>
@@ -2498,7 +2497,7 @@ std::ostream&amp; operator&lt;&lt;(std::ostream&amp; os, rvariant&lt;Ts...&gt; c
 <div class="ulist none">
 <ul class="none">
 <li>
-<p>&#8201;&#8212;&#8201;the output is done as if by calling <code>os &lt;&lt; <em><a href="#rvariant.recursive.helper">UNWRAP_RECURSIVE</a></em>(<em>GET</em>&lt;<em>i</em>&gt;(v))</code> (with <em>i</em> being <code>v.index()</code>), and</p>
+<p>&#8201;&#8212;&#8201;the output is done as if by calling <code>os &lt;&lt; <a href="#rvariant.recursive.helper">unwrap_recursive</a>(<em>GET</em>&lt;<em>i</em>&gt;(v))</code> (with <em>i</em> being <code>v.index()</code>), and</p>
 </li>
 <li>
 <p>&#8201;&#8212;&#8201;any exception of type <code>std::bad_variant_access</code>, whether thrown directly (i.e., due to <code>v</code> being valueless) or indirectly (i.e., by a nested call to an alternative&#8217;s output function), is propagated without regard to the value of <code>os.exceptions()</code> and without turning on <code>std::ios_base::badbit</code> in the error state of <code>os</code>.</p>
@@ -2525,7 +2524,7 @@ std::ostream&amp; operator&lt;&lt;(std::ostream&amp; os, rvariant&lt;Ts...&gt; c
 <p>Let <code>v</code> denote an object of <code>rvariant</code>, and let <code>proxy</code> denote an object of <code><em>variant_format_proxy</em></code>.</p>
 </li>
 <li>
-<p>The specialization <code>std::formatter&lt;::temp_ns::rvariant&lt;Ts...&gt;, charT&gt;</code> (for arbitrary <code>charT</code>) is enabled if and only if <code>std::formattable&lt;<a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;Ts<sub><em>i</em></sub>&gt;, charT&gt;</code> is <code>true</code> for all <em>i</em>, with the following characteristics:</p>
+<p>The specialization <code>std::formatter&lt;::temp_ns::rvariant&lt;Ts...&gt;, charT&gt;</code> (for arbitrary <code>charT</code>) is enabled if and only if <code>std::formattable&lt;<a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;Ts<sub><em>i</em></sub>&gt;, charT&gt;</code> is <code>true</code> for all <em>i</em>, with the following characteristics:</p>
 <div class="ulist none">
 <ul class="none">
 <li>
@@ -2535,7 +2534,7 @@ std::ostream&amp; operator&lt;&lt;(std::ostream&amp; os, rvariant&lt;Ts...&gt; c
 <p>&#8201;&#8212;&#8201;if <code>v.valueless_by_exception()</code> is <code>true</code>, <code>std::bad_variant_access</code> is thrown, and</p>
 </li>
 <li>
-<p>&#8201;&#8212;&#8201;the output is done as if by calling <code>std::format_to(fmt_ctx.out(), <em>paren</em>, <em><a href="#rvariant.recursive.helper">UNWRAP_RECURSIVE</a></em>(<em>GET</em>&lt;v.index()&gt;(v)))</code>, with <code><em>paren</em></code> being a string literal <code>"{}"</code> interpreted on the target character type.</p>
+<p>&#8201;&#8212;&#8201;the output is done as if by calling <code>std::format_to(fmt_ctx.out(), <em>paren</em>, <a href="#rvariant.recursive.helper">unwrap_recursive</a>(<em>GET</em>&lt;v.index()&gt;(v)))</code>, with <code><em>paren</em></code> being a string literal <code>"{}"</code> interpreted on the target character type.</p>
 </li>
 <li>
 <p><em>Example:</em></p>
@@ -2559,7 +2558,7 @@ std::ostream&amp; operator&lt;&lt;(std::ostream&amp; os, rvariant&lt;Ts...&gt; c
 <p>&#8201;&#8212;&#8201;<code>std::remove_cvref_t&lt;Variant&gt;</code> is a specialization of <code>rvariant</code>, and</p>
 </li>
 <li>
-<p>&#8201;&#8212;&#8201;<code>std::formattable&lt;<a href="#rvariant.recursive.helper">unwrap_recursive_t</a>&lt;Ts<sub><em>i</em></sub>&gt;, charT&gt;</code> is <code>true</code> for all <em>i</em>, with <code>Ts</code> being the template parameter pack of cv-unqualified non-reference type for <code>Variant</code>.</p>
+<p>&#8201;&#8212;&#8201;<code>std::formattable&lt;<a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;Ts<sub><em>i</em></sub>&gt;, charT&gt;</code> is <code>true</code> for all <em>i</em>, with <code>Ts</code> being the template parameter pack of cv-unqualified non-reference type for <code>Variant</code>.</p>
 </li>
 </ul>
 </div>
@@ -2575,7 +2574,7 @@ std::ostream&amp; operator&lt;&lt;(std::ostream&amp; os, rvariant&lt;Ts...&gt; c
 <p>&#8201;&#8212;&#8201;if <code>v.valueless_by_exception()</code> is <code>true</code>, <code>std::bad_variant_access</code> is thrown, and</p>
 </li>
 <li>
-<p>&#8201;&#8212;&#8201;the output is done as if by calling <code>std::format_to(fmt_ctx.out(), proxy.v_fmt(std::in_place_type&lt;Ts...[proxy.v.index()]&gt;), <em><a href="#rvariant.recursive.helper">UNWRAP_RECURSIVE</a></em>(<em>GET</em>&lt;proxy.v.index()&gt;(proxy.v)))</code>, with <code>Ts</code> being the template parameter pack of the cv-unqualified non-reference type of <code>proxy.v</code>.</p>
+<p>&#8201;&#8212;&#8201;the output is done as if by calling <code>std::format_to(fmt_ctx.out(), proxy.v_fmt(std::in_place_type&lt;Ts...[proxy.v.index()]&gt;), <a href="#rvariant.recursive.helper">unwrap_recursive</a>(<em>GET</em>&lt;proxy.v.index()&gt;(proxy.v)))</code>, with <code>Ts</code> being the template parameter pack of the cv-unqualified non-reference type of <code>proxy.v</code>.</p>
 </li>
 <li>
 <p><em>Example:</em></p>
@@ -2834,37 +2833,42 @@ constexpr <span class="underline">/* not explicit */</span> recursive_wrapper(U&
 </div>
 </div>
 <div class="sect1">
-<h2 id="rvariant.recursive.helper"><a class="anchor" href="#rvariant.recursive.helper"></a><code>recursive_wrapper</code> helper classes <span class="slug"><a href="#rvariant.recursive.helper">[rvariant.recursive.helper]</a></span></h2>
+<h2 id="rvariant.recursive.helper"><a class="anchor" href="#rvariant.recursive.helper"></a><code>recursive_wrapper</code> helper utilities <span class="slug"><a href="#rvariant.recursive.helper">[rvariant.recursive.helper]</a></span></h2>
 <div class="sectionbody">
 <div class="listingblock">
 <div class="content">
 <pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace temp_ns {
 
 template&lt;class T&gt;
-struct unwrap_recursive
-{
-  using type = T;
-};
-
-template&lt;class T, class Allocator&gt;
-struct unwrap_recursive&lt;recursive_wrapper&lt;T, Allocator&gt;&gt;
-{
-  using type = T;
-};
+using unwrap_recursive_type = <span class="see-below">see below</span>;
 
 } // temp_ns</code></pre>
-</div>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">template&lt;class T&gt;
-constexpr <span class="see-below">see below</span> <em>UNWRAP_RECURSIVE</em>(T&amp;&amp; o) noexcept; // <span class="exposition-only">exposition only</span></code></pre>
 </div>
 </div>
 <div class="ulist candidates">
 <ul>
 <li>
-<p><span class="candidate"></span> <strong><em>Effects:</em></strong> Denotes <code>*o</code>, if cv-unqualified non-reference type for <code>T</code> is a specialization of <code><a href="#rvariant.recursive">recursive_wrapper</a></code>. Otherwise, denotes <code>o</code>.</p>
+<p><span class="candidate"></span> Denotes <code>T::value_type</code> if <code>T</code> is a specialization of <code><a href="#rvariant.recursive">recursive_wrapper</a></code>. Otherwise, denotes <code>T</code>.</p>
+</li>
+</ul>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace temp_ns {
+
+template&lt;class T&gt;
+constexpr auto&amp;&amp; unwrap_recursive(T&amp;&amp; o) noexcept;
+
+} // temp_ns</code></pre>
+</div>
+</div>
+<div class="ulist candidates">
+<ul>
+<li>
+<p><span class="candidate"></span> <strong><em>Returns:</em></strong> <code>*o</code>, if cv-unqualified non-reference type for <code>T</code> is a specialization of <code><a href="#rvariant.recursive">recursive_wrapper</a></code>. Otherwise, returns <code>o</code>.</p>
+<div class="paragraph">
+<p><strong><em>Remarks:</em></strong> <code>unwrap_recursive</code> is an <em>algorithm function object</em> (<a href="https://eel.is/c++draft/alg.func.obj" target="_blank" rel="noopener">[alg.func.obj]</a>).</p>
+</div>
 </li>
 </ul>
 </div>
@@ -2913,7 +2917,7 @@ A variant with a single alternative may introduce unnecessary overhead when used
 <i class="fa icon-warning" title="Warning"></i>
 </td>
 <td class="content">
-<code>compact_alternative</code> does not unwrap <code><a href="#rvariant.recursive">recursive_wrapper</a></code>. This is intentional, because doing so could lead to instantiating incomplete type on undesired timings. You may apply <code><a href="#rvariant.recursive.helper">unwrap_recursive_t</a></code> manually.
+<code>compact_alternative</code> does not unwrap <code><a href="#rvariant.recursive">recursive_wrapper</a></code>. This is intentional, because doing so could lead to instantiating incomplete type on undesired timings. You may apply <code><a href="#rvariant.recursive.helper">unwrap_recursive_type</a></code> manually.
 </td>
 </tr>
 </table>
