@@ -16,7 +16,7 @@ namespace iris {
 
 template<class T, class Allocator = std::allocator<T>>
 class recursive_wrapper
-    : private iris::indirect<T, Allocator>
+    : private iris::detail::indirect_base<T, Allocator>
 {
     static_assert(std::is_object_v<T>);
     static_assert(!std::is_array_v<T>);
@@ -25,7 +25,7 @@ class recursive_wrapper
     static_assert(!std::is_const_v<T> && !std::is_volatile_v<T>);
     static_assert(std::is_same_v<T, typename std::allocator_traits<Allocator>::value_type>);
 
-    using base_type = iris::indirect<T, Allocator>;
+    using base_type = iris::detail::indirect_base<T, Allocator>;
 
 public:
     using typename base_type::allocator_type;
@@ -167,7 +167,7 @@ recursive_wrapper(std::allocator_arg_t, Allocator, Value)
     -> recursive_wrapper<Value, typename std::allocator_traits<Allocator>::template rebind_alloc<Value>>;
 
 template<class T, class TA, class U, class UA>
-constexpr bool operator==(recursive_wrapper<T, TA> const& lhs, recursive_wrapper<U, UA> const& rhs)
+[[nodiscard]] constexpr bool operator==(recursive_wrapper<T, TA> const& lhs, recursive_wrapper<U, UA> const& rhs)
     noexcept(noexcept(*lhs == *rhs))
 {
     if (lhs.valueless_after_move() || rhs.valueless_after_move()) [[unlikely]] {
@@ -177,19 +177,8 @@ constexpr bool operator==(recursive_wrapper<T, TA> const& lhs, recursive_wrapper
     }
 }
 
-template<class T, class TA, class U, class UA>
-constexpr auto operator<=>(recursive_wrapper<T, TA> const& lhs, recursive_wrapper<U, UA> const& rhs) noexcept(synth_three_way_noexcept<T, U>)
-    -> synth_three_way_result_t<T, U>
-{
-    if (lhs.valueless_after_move() || rhs.valueless_after_move()) [[unlikely]] {
-        return !lhs.valueless_after_move() <=> !rhs.valueless_after_move();
-    } else [[likely]] {
-        return synth_three_way(*lhs, *rhs);
-    }
-}
-
 template<class T, class A, class U>
-constexpr bool operator==(recursive_wrapper<T, A> const& lhs, U const& rhs)
+[[nodiscard]] constexpr bool operator==(recursive_wrapper<T, A> const& lhs, U const& rhs)
     noexcept(noexcept(*lhs == rhs))
 {
     if (lhs.valueless_after_move()) [[unlikely]] {
@@ -199,14 +188,47 @@ constexpr bool operator==(recursive_wrapper<T, A> const& lhs, U const& rhs)
     }
 }
 
+namespace detail {
+
+// These cannot be overloaded with the same function name, as it
+// breaks MSVC's overload resolution on recursive types (possibly bug)
+
+template<class T, class TA, class U, class UA>
+[[nodiscard]] constexpr auto rw_three_way_impl_00(recursive_wrapper<T, TA> const& lhs, recursive_wrapper<U, UA> const& rhs)
+    -> cmp::synth_three_way_result<T, U>
+{
+    if (lhs.valueless_after_move() || rhs.valueless_after_move()) [[unlikely]] {
+        return !lhs.valueless_after_move() <=> !rhs.valueless_after_move();
+    } else [[likely]] {
+        return cmp::synth_three_way{}(*lhs, *rhs);
+    }
+}
+
 template<class T, class A, class U>
-constexpr auto operator<=>(recursive_wrapper<T, A> const& lhs, U const& rhs) noexcept(synth_three_way_noexcept<T, U>) -> synth_three_way_result_t<T, U>
+[[nodiscard]] constexpr auto rw_three_way_impl_01(recursive_wrapper<T, A> const& lhs, U const& rhs)
+    -> cmp::synth_three_way_result<T, U>
 {
     if (lhs.valueless_after_move()) [[unlikely]] {
         return std::strong_ordering::less;
     } else [[likely]] {
-        return synth_three_way(*lhs, rhs);
+        return cmp::synth_three_way{}(*lhs, rhs);
     }
+}
+
+} // detail
+
+template<class T, class TA, class U, class UA>
+[[nodiscard]] constexpr auto operator<=>(recursive_wrapper<T, TA> const& lhs, recursive_wrapper<U, UA> const& rhs)
+    // no explicit return type
+{
+    return detail::rw_three_way_impl_00(lhs, rhs);
+}
+
+template<class T, class A, class U>
+[[nodiscard]] constexpr auto operator<=>(recursive_wrapper<T, A> const& lhs, U const& rhs)
+    // no explicit return type
+{
+    return detail::rw_three_way_impl_01(lhs, rhs);
 }
 
 }  // iris

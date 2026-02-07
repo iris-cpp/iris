@@ -8,59 +8,35 @@
 #include <compare>
 #include <functional>
 #include <type_traits>
+#include <utility>
 
-namespace iris {
+namespace iris::cmp {
 
-// Utilities defined in [library]
-// https://eel.is/c++draft/library
+// https://eel.is/c++draft/library#expos.only.entity-2
 
-namespace detail {
-
-template<class T, class U>
-struct synth_three_way_result_impl
+struct synth_three_way
 {
-    using type = std::weak_ordering;
-};
-
-template<class T, class U> requires std::three_way_comparable<T, U>
-struct synth_three_way_result_impl<T, U>
-{
-    using type = std::invoke_result_t<std::compare_three_way, T const&, U const&>;
-};
-
-} // detail
-
-template<class T, class U = T>
-using synth_three_way_result_t = detail::synth_three_way_result_impl<T, U>::type;
-
-template<class T, class U = T>
-inline constexpr bool synth_three_way_noexcept =
-    std::conditional_t<
-        std::three_way_comparable_with<T, U>,
-        std::is_nothrow_invocable<std::compare_three_way, T const&, U const&>,
-        std::conjunction<
-            std::is_nothrow_invocable<std::less<>, T const&, U const&>,
-            std::is_nothrow_invocable<std::less<>, U const&, T const&>
-        >
-    >::value;
-
-constexpr auto synth_three_way = []<class T, class U>(T const& t, U const& u) noexcept(synth_three_way_noexcept<T, U>)
-    -> synth_three_way_result_t<T, U>
-    requires requires {
-        { t < u } -> req::boolean_testable;
-        { u < t } -> req::boolean_testable;
-    }
-{
-    if constexpr (std::three_way_comparable_with<T, U>) {
-        return t <=> u;
-    } else {
-        if (t < u) return std::weak_ordering::less;
-        if (u < t) return std::weak_ordering::greater;
-        return std::weak_ordering::equivalent;
+    template<class T, class U>
+    [[nodiscard]] static constexpr auto operator()(T const& t, U const& u)
+        noexcept(noexcept(t < u) && noexcept(u < t)) // strengthened
+        requires requires {
+            { t < u } -> req::boolean_testable;
+            { u < t } -> req::boolean_testable;
+        }
+    {
+        if constexpr (std::three_way_comparable_with<T, U>) {
+            return t <=> u;
+        } else {
+            if (t < u) return std::weak_ordering::less;
+            if (u < t) return std::weak_ordering::greater;
+            return std::weak_ordering::equivalent;
+        }
     }
 };
 
-namespace cmp {
+template<class T, class U = T>
+using synth_three_way_result = decltype(synth_three_way{}(std::declval<T&>(), std::declval<U&>()));
+
 
 template<class Compare, class T>
 struct relop_bool_expr : std::false_type {};
@@ -94,8 +70,6 @@ template<class T>
     requires requires(T const& t) { { t >= t } -> std::convertible_to<bool>; }
 struct relop_bool_expr<std::greater_equal<>, T> : std::true_type {};
 
-}  // cmp
-
-}  // iris
+}  // iris::cmp
 
 #endif

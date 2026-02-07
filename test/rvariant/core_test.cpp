@@ -1,7 +1,8 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 
 #include <iris/type_traits.hpp>
 #include <iris/requirements.hpp>
+#include <iris/compare.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -408,6 +409,26 @@ TEST_CASE("Cpp17Swappable")
         using std::swap;
         swap(a, b);
     }
+}
+
+TEST_CASE("synth_three_way")
+{
+    struct NoThreeWay
+    {
+        int value = 0;
+
+        constexpr bool operator<(NoThreeWay const& other) const noexcept
+        {
+            return value < other.value;
+        }
+    };
+
+    static_assert(!std::three_way_comparable<NoThreeWay>);
+    static_assert(!std::three_way_comparable_with<NoThreeWay, NoThreeWay>);
+
+    STATIC_CHECK(std::same_as<iris::cmp::synth_three_way_result<NoThreeWay>, std::weak_ordering>);
+    STATIC_CHECK(noexcept(iris::cmp::synth_three_way{}(NoThreeWay{0}, NoThreeWay{1})));
+    STATIC_CHECK(iris::cmp::synth_three_way{}(NoThreeWay{0}, NoThreeWay{1}) == std::weak_ordering::less);
 }
 
 } // unit_test

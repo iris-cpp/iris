@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 
 #include "iris/rvariant.hpp"
 
@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 namespace unit_test {
 
@@ -134,6 +135,51 @@ TEST_CASE("truly recursive", "[wrapper][recursive]")
             [](BinaryExpr const&) { /* ... */ },
         });
     }
+}
+
+namespace {
+
+struct NodeArray;
+
+using Node = iris::rvariant<int, iris::recursive_wrapper<NodeArray>>;
+
+struct NodeArray : std::vector<Node>
+{
+    using std::vector<Node>::vector;
+};
+
+bool operator==(NodeArray const& a, NodeArray const& b)
+{
+    return static_cast<std::vector<Node> const&>(a) == static_cast<std::vector<Node> const&>(b);
+}
+
+std::strong_ordering operator<=>(NodeArray const& a, NodeArray const& b)
+{
+    return static_cast<std::vector<Node> const&>(a) <=> static_cast<std::vector<Node> const&>(b);
+}
+
+} // anonymous
+
+TEST_CASE("recursive vector", "[wrapper][recursive]")
+{
+    STATIC_CHECK(std::three_way_comparable<NodeArray>);
+
+    // ReSharper disable CppIdenticalOperandsInBinaryExpression
+    // NOLINTBEGIN(misc-redundant-expression)
+    {
+        NodeArray node_arr;
+        (void)(node_arr == node_arr);
+        (void)(node_arr <=> node_arr);
+        (void)(node_arr < node_arr);
+    }
+    {
+        iris::recursive_wrapper<NodeArray> node_arr_rw;
+        (void)(node_arr_rw == node_arr_rw);
+        (void)(node_arr_rw <=> node_arr_rw);
+        (void)(node_arr_rw < node_arr_rw);
+    }
+    // NOLINTEND(misc-redundant-expression)
+    // ReSharper restore CppIdenticalOperandsInBinaryExpression
 }
 
 #ifdef _MSC_VER

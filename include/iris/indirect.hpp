@@ -51,13 +51,10 @@ private:
     pointer ptr_;
 };
 
-}  // detail
-
-
 // Polyfill for the C++26 `std::indirect`
 // https://eel.is/c++draft/indirect
 template<class T, class Allocator = std::allocator<T>>
-class indirect
+class indirect_base
 {
     static_assert(std::is_object_v<T>);
     static_assert(!std::is_array_v<T>);
@@ -72,36 +69,36 @@ public:
     using pointer = std::allocator_traits<Allocator>::pointer;
     using const_pointer = std::allocator_traits<Allocator>::const_pointer;
 
-    constexpr explicit indirect() requires std::is_default_constructible_v<Allocator>
+    constexpr explicit indirect_base() requires std::is_default_constructible_v<Allocator>
         : ptr_(make_obj())
     {}
 
-    constexpr indirect(indirect const& other)
-        : indirect(
+    constexpr indirect_base(indirect_base const& other)
+        : indirect_base(
             std::allocator_arg,
             std::allocator_traits<Allocator>::select_on_container_copy_construction(other.alloc_),
             other
         )
     {}
 
-    constexpr explicit indirect(std::allocator_arg_t, Allocator const& a)
+    constexpr explicit indirect_base(std::allocator_arg_t, Allocator const& a)
         : alloc_(a)
         , ptr_(make_obj())
     {}
 
-    constexpr indirect(std::allocator_arg_t, Allocator const& a, indirect const& other)
+    constexpr indirect_base(std::allocator_arg_t, Allocator const& a, indirect_base const& other)
         : alloc_(a)
         , ptr_(other.ptr_ ? make_obj(std::as_const(*other.ptr_)) : nullptr)
     {
         static_assert(std::is_copy_constructible_v<T>);
     }
 
-    constexpr indirect(indirect&& other) noexcept
+    constexpr indirect_base(indirect_base&& other) noexcept
         : alloc_(std::move(other.alloc_))
         , ptr_(std::exchange(other.ptr_, nullptr))
     {}
 
-    constexpr indirect(std::allocator_arg_t, Allocator const& a, indirect&& other)
+    constexpr indirect_base(std::allocator_arg_t, Allocator const& a, indirect_base&& other)
         noexcept(std::allocator_traits<Allocator>::is_always_equal::value)
         : alloc_(a)
         , ptr_(alloc_ == other.alloc_
@@ -112,20 +109,20 @@ public:
 
     template<class U = T>
         requires
-            (!std::is_same_v<std::remove_cvref_t<U>, indirect>) &&
+            (!std::is_same_v<std::remove_cvref_t<U>, indirect_base>) &&
             (!std::is_same_v<std::remove_cvref_t<U>, std::in_place_t>) &&
             std::is_constructible_v<T, U> &&
             std::is_default_constructible_v<Allocator>
-    constexpr explicit indirect(U&& u)
+    constexpr explicit indirect_base(U&& u)
         : ptr_(make_obj(std::forward<U>(u)))
     {}
 
     template<class U = T>
         requires
-            (!std::is_same_v<std::remove_cvref_t<U>, indirect>) &&
+            (!std::is_same_v<std::remove_cvref_t<U>, indirect_base>) &&
             (!std::is_same_v<std::remove_cvref_t<U>, std::in_place_t>) &&
             std::is_constructible_v<T, U>
-    constexpr explicit indirect(std::allocator_arg_t, Allocator const& a, U&& u)
+    constexpr explicit indirect_base(std::allocator_arg_t, Allocator const& a, U&& u)
         : alloc_(a)
         , ptr_(make_obj(std::forward<U>(u)))
     {}
@@ -134,14 +131,14 @@ public:
         requires
             std::is_constructible_v<T, Us...> &&
             std::is_default_constructible_v<Allocator>
-    constexpr explicit indirect(std::in_place_t, Us&&... us)
+    constexpr explicit indirect_base(std::in_place_t, Us&&... us)
         : ptr_(make_obj(std::forward<Us>(us)...))
     {}
 
     template<class... Us>
         requires
             std::is_constructible_v<T, Us...>
-    constexpr explicit indirect(std::allocator_arg_t, Allocator const& a, std::in_place_t, Us&&... us)
+    constexpr explicit indirect_base(std::allocator_arg_t, Allocator const& a, std::in_place_t, Us&&... us)
         : alloc_(a)
         , ptr_(make_obj(std::forward<Us>(us)...))
     {}
@@ -150,26 +147,26 @@ public:
         requires
             std::is_constructible_v<T, std::initializer_list<I>&, Us...> &&
             std::is_default_constructible_v<Allocator>
-    constexpr explicit indirect(std::in_place_t, std::initializer_list<I> il, Us&&... us)
+    constexpr explicit indirect_base(std::in_place_t, std::initializer_list<I> il, Us&&... us)
         : ptr_(make_obj(il, std::forward<Us>(us)...))
     {}
 
     template<class I, class... Us>
         requires
             std::is_constructible_v<T, std::initializer_list<I>&, Us...>
-    constexpr explicit indirect(std::allocator_arg_t, Allocator const& a, std::in_place_t, std::initializer_list<I> il, Us&&... us)
+    constexpr explicit indirect_base(std::allocator_arg_t, Allocator const& a, std::in_place_t, std::initializer_list<I> il, Us&&... us)
         : alloc_(a)
         , ptr_(make_obj(il, std::forward<Us>(us)...))
     {}
 
-    constexpr ~indirect() noexcept
+    constexpr ~indirect_base() noexcept
     {
         if (ptr_) [[likely]] {
             destroy_deallocate();
         }
     }
 
-    constexpr indirect& operator=(indirect const& other)
+    constexpr indirect_base& operator=(indirect_base const& other)
     {
         static_assert(std::is_copy_assignable_v<T>);
         static_assert(std::is_copy_constructible_v<T>);
@@ -247,7 +244,7 @@ public:
         }
     }
 
-    constexpr indirect& operator=(indirect&& other)
+    constexpr indirect_base& operator=(indirect_base&& other)
         noexcept(
             std::allocator_traits<Allocator>::propagate_on_container_move_assignment::value ||
             std::allocator_traits<Allocator>::is_always_equal::value
@@ -308,10 +305,10 @@ public:
 
     template<class U = T>
         requires
-            (!std::is_same_v<std::remove_cvref_t<U>, indirect>) &&
+            (!std::is_same_v<std::remove_cvref_t<U>, indirect_base>) &&
             std::is_constructible_v<T, U> &&
             std::is_assignable_v<T&, U>
-    constexpr indirect& operator=(U&& u)
+    constexpr indirect_base& operator=(U&& u)
     {
         if (ptr_) [[likely]] {
             **this = std::forward<U>(u);
@@ -334,7 +331,7 @@ public:
 
     [[nodiscard]] constexpr allocator_type get_allocator() const noexcept { return alloc_; }
 
-    constexpr void swap(indirect& other)
+    constexpr void swap(indirect_base& other)
         noexcept(
             std::allocator_traits<Allocator>::propagate_on_container_swap::value ||
             std::allocator_traits<Allocator>::is_always_equal::value
@@ -348,7 +345,7 @@ public:
         }
     }
 
-    friend constexpr void swap(indirect& lhs, indirect& rhs) noexcept(noexcept(lhs.swap(rhs)))
+    friend constexpr void swap(indirect_base& lhs, indirect_base& rhs) noexcept(noexcept(lhs.swap(rhs)))
     {
         return lhs.swap(rhs);
     }
@@ -372,6 +369,17 @@ private:
     pointer ptr_;
 };
 
+} // detail
+
+// Polyfill for the C++26 `std::indirect`
+// https://eel.is/c++draft/indirect
+template<class T, class Allocator = std::allocator<T>>
+class indirect : public detail::indirect_base<T, Allocator>
+{
+public:
+    using detail::indirect_base<T, Allocator>::indirect_base;
+};
+
 template<class Value>
 indirect(Value)
     -> indirect<Value>;
@@ -382,7 +390,7 @@ indirect(std::allocator_arg_t, Allocator, Value)
 
 
 template<class T, class Allocator, class U, class AA>
-constexpr bool operator==(indirect<T, Allocator> const& lhs, indirect<U, AA> const& rhs)
+[[nodiscard]] constexpr bool operator==(indirect<T, Allocator> const& lhs, indirect<U, AA> const& rhs)
     noexcept(noexcept(*lhs == *rhs))
 {
     if (lhs.valueless_after_move() || rhs.valueless_after_move()) [[unlikely]] {
@@ -392,19 +400,8 @@ constexpr bool operator==(indirect<T, Allocator> const& lhs, indirect<U, AA> con
     }
 }
 
-template<class T, class Allocator, class U, class AA>
-constexpr auto operator<=>(indirect<T, Allocator> const& lhs, indirect<U, AA> const& rhs)
-    noexcept(synth_three_way_noexcept<T, U>) -> synth_three_way_result_t<T, U>
-{
-    if (lhs.valueless_after_move() || rhs.valueless_after_move()) [[unlikely]] {
-        return !lhs.valueless_after_move() <=> !rhs.valueless_after_move();
-    } else [[likely]] {
-        return synth_three_way(*lhs, *rhs);
-    }
-}
-
 template<class T, class Allocator, class U>
-constexpr bool operator==(indirect<T, Allocator> const& lhs, U const& rhs)
+[[nodiscard]] constexpr bool operator==(indirect<T, Allocator> const& lhs, U const& rhs)
     noexcept(noexcept(*lhs == rhs))
 {
     if (lhs.valueless_after_move()) [[unlikely]] {
@@ -414,15 +411,48 @@ constexpr bool operator==(indirect<T, Allocator> const& lhs, U const& rhs)
     }
 }
 
-template<class T, class Allocator, class U> requires (!is_ttp_specialization_of_v<U, indirect>)
-constexpr auto operator<=>(indirect<T, Allocator> const& lhs, U const& rhs)
-    noexcept(synth_three_way_noexcept<T, U>) -> synth_three_way_result_t<T, U>
+
+namespace detail {
+
+// These cannot be overloaded with the same function name, as it
+// breaks MSVC's overload resolution on recursive types (possibly bug)
+
+template<class T, class Allocator, class U, class AA>
+[[nodiscard]] constexpr auto indirect_three_way_impl_00(indirect<T, Allocator> const& lhs, indirect<U, AA> const& rhs)
+    -> cmp::synth_three_way_result<T, U>
+{
+    if (lhs.valueless_after_move() || rhs.valueless_after_move()) [[unlikely]] {
+        return !lhs.valueless_after_move() <=> !rhs.valueless_after_move();
+    } else [[likely]] {
+        return cmp::synth_three_way{}(*lhs, *rhs);
+    }
+}
+
+template<class T, class A, class U>
+[[nodiscard]] constexpr auto indirect_three_way_impl_01(indirect<T, A> const& lhs, U const& rhs)
+    -> cmp::synth_three_way_result<T, U>
 {
     if (lhs.valueless_after_move()) [[unlikely]] {
         return std::strong_ordering::less;
     } else [[likely]] {
-        return synth_three_way(*lhs, rhs);
+        return cmp::synth_three_way{}(*lhs, rhs);
     }
+}
+
+} // detail
+
+template<class T, class Allocator, class U, class AA>
+[[nodiscard]] constexpr auto operator<=>(indirect<T, Allocator> const& lhs, indirect<U, AA> const& rhs)
+    // no explicit return type
+{
+    return detail::indirect_three_way_impl_00(lhs, rhs);
+}
+
+template<class T, class A, class U>
+[[nodiscard]] constexpr auto operator<=>(indirect<T, A> const& lhs, U const& rhs)
+    // no explicit return type
+{
+    return detail::indirect_three_way_impl_01(lhs, rhs);
 }
 
 }  // iris

@@ -32,7 +32,7 @@ namespace iris {
 
 namespace detail {
 
-template<class Compare, class... Ts>
+template<class R, class Compare, class... Ts>
 struct relops_visitor;
 
 template<class... Ts>
@@ -1036,7 +1036,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     detail::raw_visit_i(std::size_t, Variant&&, Visitor&&)  // NOLINT(clang-diagnostic-microsoft-exception-spec)
         noexcept(detail::raw_visit_noexcept_all<Visitor, detail::forward_storage_t<Variant>>);
 
-    template<class Compare, class... Ts_>
+    template<class R, class Compare, class... Ts_>
     friend struct detail::relops_visitor;
 
     template<class... Ts_>
@@ -1334,19 +1334,13 @@ get_if(rvariant<Ts...> const* v) noexcept
 
 namespace detail {
 
-template<class Compare, class... Ts>
+template<class R, class Compare, class... Ts>
 struct relops_visitor
 {
     static_assert(sizeof...(Ts) > 0);
 
     using Storage = make_variadic_union_t<Ts...>;
     Storage const& v_storage;  // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
-
-    using R = std::conditional_t<
-        std::is_same_v<Compare, std::compare_three_way>,
-        std::common_comparison_category_t<std::compare_three_way_result_t<Ts>...>,
-        bool
-    >;
 
     template<std::size_t i, class T>
     [[nodiscard]] IRIS_FORCEINLINE constexpr R operator()(std::in_place_index_t<i>, T const& w_alt) const
@@ -1374,7 +1368,7 @@ template<class... Ts>
 {
     auto const vi = detail::valueless_bias<rvariant<Ts...>>(v.index_);
     auto const wi = detail::valueless_bias<rvariant<Ts...>>(w.index_);
-    return vi == wi && detail::raw_visit_i(wi, w, detail::relops_visitor<std::equal_to<>, Ts...>{v.storage_});
+    return vi == wi && detail::raw_visit_i(wi, w, detail::relops_visitor<bool, std::equal_to<>, Ts...>{v.storage_});
 }
 
 template<class... Ts>
@@ -1384,7 +1378,7 @@ template<class... Ts>
 {
     auto const vi = detail::valueless_bias<rvariant<Ts...>>(v.index_);
     auto const wi = detail::valueless_bias<rvariant<Ts...>>(w.index_);
-    return vi != wi || detail::raw_visit_i(wi, w, detail::relops_visitor<std::not_equal_to<>, Ts...>{v.storage_});
+    return vi != wi || detail::raw_visit_i(wi, w, detail::relops_visitor<bool, std::not_equal_to<>, Ts...>{v.storage_});
 }
 
 template<class... Ts>
@@ -1424,7 +1418,7 @@ template<class... Ts>
     // enabling more aggressive optimization, which actually
     // introduces extra branch (unfortunately).
     return (vi < wi) |
-        ((vi == wi) && detail::raw_visit_i(wi, w, detail::relops_visitor<std::less<>, Ts...>{v.storage_}));
+        ((vi == wi) && detail::raw_visit_i(wi, w, detail::relops_visitor<bool, std::less<>, Ts...>{v.storage_}));
 }
 
 template<class... Ts>
@@ -1435,7 +1429,7 @@ template<class... Ts>
     auto const vi = detail::valueless_bias<rvariant<Ts...>>(v.index_);
     auto const wi = detail::valueless_bias<rvariant<Ts...>>(w.index_);
     return (vi > wi) |
-        ((vi == wi) && detail::raw_visit_i(wi, w, detail::relops_visitor<std::greater<>, Ts...>{v.storage_}));
+        ((vi == wi) && detail::raw_visit_i(wi, w, detail::relops_visitor<bool, std::greater<>, Ts...>{v.storage_}));
 }
 
 template<class... Ts>
@@ -1446,7 +1440,7 @@ template<class... Ts>
     auto const vi = detail::valueless_bias<rvariant<Ts...>>(v.index_);
     auto const wi = detail::valueless_bias<rvariant<Ts...>>(w.index_);
     return (vi < wi) |
-        ((vi == wi) && detail::raw_visit_i(wi, w, detail::relops_visitor<std::less_equal<>, Ts...>{v.storage_}));
+        ((vi == wi) && detail::raw_visit_i(wi, w, detail::relops_visitor<bool, std::less_equal<>, Ts...>{v.storage_}));
 }
 
 template<class... Ts>
@@ -1457,7 +1451,7 @@ template<class... Ts>
     auto const vi = detail::valueless_bias<rvariant<Ts...>>(v.index_);
     auto const wi = detail::valueless_bias<rvariant<Ts...>>(w.index_);
     return (vi > wi) |
-        ((vi == wi) && detail::raw_visit_i(wi, w, detail::relops_visitor<std::greater_equal<>, Ts...>{v.storage_}));
+        ((vi == wi) && detail::raw_visit_i(wi, w, detail::relops_visitor<bool, std::greater_equal<>, Ts...>{v.storage_}));
 }
 
 
@@ -1474,7 +1468,14 @@ operator<=>(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
     auto const wi = detail::valueless_bias<rvariant<Ts...>>(w.index_);
     auto const comp = vi <=> wi;
     return comp != 0 ? comp :
-        detail::raw_visit_i(wi, w, detail::relops_visitor<std::compare_three_way, Ts...>{v.storage_});
+        detail::raw_visit_i(
+            wi, w,
+            detail::relops_visitor<
+                std::common_comparison_category_t<std::compare_three_way_result_t<Ts>...>,
+                std::compare_three_way,
+                Ts...
+            >{v.storage_}
+        );
 }
 
 }  // iris
