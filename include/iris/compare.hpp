@@ -9,32 +9,32 @@
 #include <functional>
 #include <type_traits>
 
-namespace iris {
+namespace iris::cmp {
 
-// Utilities defined in [library]
-// https://eel.is/c++draft/library
+// https://eel.is/c++draft/library#expos.only.entity-2
 
-constexpr auto synth_three_way = []<class T, class U>(T const& t, U const& u)
-    requires requires {
-        { t < u } -> req::boolean_testable;
-        { u < t } -> req::boolean_testable;
-    }
+struct synth_three_way
 {
-    if constexpr (std::three_way_comparable_with<T, U>) {
-    //if constexpr (requires { t <=> u; }) {
-        return t <=> u;
-    } else {
-        if (t < u) return std::weak_ordering::less;
-        if (u < t) return std::weak_ordering::greater;
-        return std::weak_ordering::equivalent;
+    template<class T, class U>
+    static constexpr auto operator()(T const& t, U const& u)
+        requires requires {
+            { t < u } -> req::boolean_testable;
+            { u < t } -> req::boolean_testable;
+        }
+    {
+        if constexpr (std::three_way_comparable_with<T, U>) {
+            return t <=> u;
+        } else {
+            if (t < u) return std::weak_ordering::less;
+            if (u < t) return std::weak_ordering::greater;
+            return std::weak_ordering::equivalent;
+        }
     }
 };
 
 template<class T, class U = T>
-using synth_three_way_result_t = decltype(synth_three_way(std::declval<T&>(), std::declval<U&>()));
+using synth_three_way_result = decltype(synth_three_way{}(std::declval<T&>(), std::declval<U&>()));
 
-
-namespace cmp {
 
 template<class Compare, class T>
 struct relop_bool_expr : std::false_type {};
@@ -68,8 +68,6 @@ template<class T>
     requires requires(T const& t) { { t >= t } -> std::convertible_to<bool>; }
 struct relop_bool_expr<std::greater_equal<>, T> : std::true_type {};
 
-}  // cmp
-
-}  // iris
+}  // iris::cmp
 
 #endif

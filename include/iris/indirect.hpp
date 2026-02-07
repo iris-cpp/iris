@@ -419,23 +419,23 @@ namespace detail {
 
 template<class T, class Allocator, class U, class AA>
 constexpr auto indirect_three_way_impl_00(indirect<T, Allocator> const& lhs, indirect<U, AA> const& rhs)
-    -> synth_three_way_result_t<T, U>
+    -> cmp::synth_three_way_result<T, U>
 {
     if (lhs.valueless_after_move() || rhs.valueless_after_move()) [[unlikely]] {
         return !lhs.valueless_after_move() <=> !rhs.valueless_after_move();
     } else [[likely]] {
-        return synth_three_way(*lhs, *rhs);
+        return cmp::synth_three_way{}(*lhs, *rhs);
     }
 }
 
 template<class T, class A, class U>
 constexpr auto indirect_three_way_impl_01(indirect<T, A> const& lhs, U const& rhs)
-    -> synth_three_way_result_t<T, U>
+    -> cmp::synth_three_way_result<T, U>
 {
     if (lhs.valueless_after_move()) [[unlikely]] {
         return std::strong_ordering::less;
     } else [[likely]] {
-        return synth_three_way(*lhs, rhs);
+        return cmp::synth_three_way{}(*lhs, rhs);
     }
 }
 

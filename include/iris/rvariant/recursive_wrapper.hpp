@@ -195,23 +195,23 @@ namespace detail {
 
 template<class T, class TA, class U, class UA>
 constexpr auto rw_three_way_impl_00(recursive_wrapper<T, TA> const& lhs, recursive_wrapper<U, UA> const& rhs)
-    -> synth_three_way_result_t<T, U>
+    -> cmp::synth_three_way_result<T, U>
 {
     if (lhs.valueless_after_move() || rhs.valueless_after_move()) [[unlikely]] {
         return !lhs.valueless_after_move() <=> !rhs.valueless_after_move();
     } else [[likely]] {
-        return synth_three_way(*lhs, *rhs);
+        return cmp::synth_three_way{}(*lhs, *rhs);
     }
 }
 
 template<class T, class A, class U>
 constexpr auto rw_three_way_impl_01(recursive_wrapper<T, A> const& lhs, U const& rhs)
-    -> synth_three_way_result_t<T, U>
+    -> cmp::synth_three_way_result<T, U>
 {
     if (lhs.valueless_after_move()) [[unlikely]] {
         return std::strong_ordering::less;
     } else [[likely]] {
-        return synth_three_way(*lhs, rhs);
+        return cmp::synth_three_way{}(*lhs, rhs);
     }
 }
 
