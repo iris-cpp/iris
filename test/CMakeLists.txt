@@ -44,6 +44,8 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 set_target_properties(Catch2 PROPERTIES CXX_EXTENSIONS OFF)
+set_target_properties(Catch2 Catch2WithMain PROPERTIES FOLDER "_deps")
+
 target_compile_definitions(Catch2 PUBLIC DO_NOT_USE_WMAIN)
 target_link_libraries(Catch2 PRIVATE iris_cxx_test_external)
 target_link_libraries(Catch2WithMain PRIVATE iris_cxx_test_external)
@@ -58,8 +60,8 @@ endfunction()
 
 function(iris_define_test test_name)
     add_executable(${test_name}_test ${ARGN})
+    target_include_directories(${test_name}_test PRIVATE ${CMAKE_CURRENT_FUNCTION_LIST_DIR})
     target_include_directories(${test_name}_test PRIVATE ${CMAKE_CURRENT_LIST_DIR})
-    iris_define_test_headers(${test_name} test.hpp)
     set_target_properties(${test_name}_test PROPERTIES CXX_EXTENSIONS OFF)
 
     if(MSVC)
@@ -83,12 +85,28 @@ function(iris_define_tests)
     endforeach()
 endfunction()
 
+function(iris_define_sub_tests prefix)
+    foreach(test_name IN LISTS ARGN)
+        iris_define_test(${prefix}_${test_name} ${test_name}.cpp)
+        set_target_properties(${prefix}_${test_name}_test PROPERTIES FOLDER "test/${prefix}")
+    endforeach()
+endfunction()
+
 # --------------------------------------------
 
 if(PROJECT_IS_TOP_LEVEL)
     add_subdirectory(rvariant)
 
-    iris_define_tests(
+    set(
+        IRIS_TEST_IRIS_TESTS
         type_traits
+        core
+        indirect
     )
+
+    iris_define_sub_tests(iris ${IRIS_TEST_IRIS_TESTS})
+
+    foreach(test_name IN LISTS IRIS_TEST_IRIS_TESTS)
+        iris_define_test_headers(iris_${test_name} iris_test.hpp)
+    endforeach()
 endif()

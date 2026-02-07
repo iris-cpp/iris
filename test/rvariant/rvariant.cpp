@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: MIT
 
-#include "rvariant_test.hpp"
+#include "iris_rvariant_test.hpp"
 
-#include "iris/rvariant.hpp"
-
-#include "iris/compare.hpp"
-#include "iris/hash.hpp"
-#include "iris/type_traits.hpp"
-
-#include <catch2/catch_test_macros.hpp>
+#include <iris/rvariant.hpp>
+#include <iris/compare.hpp>
+#include <iris/hash.hpp>
+#include <iris/type_traits.hpp>
 
 #include <algorithm>
 #include <array>

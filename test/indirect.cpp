@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-#include "iris/indirect.hpp"
+#include "iris_test.hpp"
 
-#include <catch2/catch_test_macros.hpp>
+#include <iris/indirect.hpp>
 
 namespace unit_test {
 

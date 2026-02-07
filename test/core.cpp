@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 
+#include "iris_test.hpp"
+
 #include <iris/type_traits.hpp>
 #include <iris/requirements.hpp>
 #include <iris/compare.hpp>
-
-#include <catch2/catch_test_macros.hpp>
 
 #include <concepts>
 #include <utility>

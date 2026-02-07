@@ -1,12 +1,12 @@
-#ifndef IRIS_RVARIANT_TEST_HPP
-#define IRIS_RVARIANT_TEST_HPP
+#ifndef IRIS_TEST_IRIS_RVARIANT_TEST_HPP
+#define IRIS_TEST_IRIS_RVARIANT_TEST_HPP
 
 // SPDX-License-Identifier: MIT
 
-#include "iris/rvariant/rvariant.hpp"  // IWYU pragma: export
-#include "iris/format_traits.hpp"  // IWYU pragma: export
+#include "iris_test.hpp"
 
-#include <catch2/catch_test_macros.hpp>  // IWYU pragma: export
+#include <iris/rvariant/rvariant.hpp>  // IWYU pragma: export
+#include <iris/format_traits.hpp>  // IWYU pragma: export
 
 #include <iosfwd>
 #include <string>

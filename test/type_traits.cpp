@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-#include "test.hpp"
+#include "iris_test.hpp"
 
 #include <iris/type_traits.hpp>
 
