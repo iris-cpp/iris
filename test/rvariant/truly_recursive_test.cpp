@@ -156,7 +156,7 @@ bool operator<=(NodeArray const& a, NodeArray const& b);
 bool operator>=(NodeArray const& a, NodeArray const& b);
 std::strong_ordering operator<=>(NodeArray const& a, NodeArray const& b);
 
-//static_assert(std::three_way_comparable<NodeArray>);
+static_assert(std::three_way_comparable<NodeArray>);
 
 bool operator==(NodeArray const& a, NodeArray const& b)
 {

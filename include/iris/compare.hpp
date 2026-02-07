@@ -15,13 +15,13 @@ namespace iris {
 // https://eel.is/c++draft/library
 
 constexpr auto synth_three_way = []<class T, class U>(T const& t, U const& u)
-    //requires requires {
-    //    { t < u } -> req::boolean_testable;
-    //    { u < t } -> req::boolean_testable;
-    //}
+    requires requires {
+        { t < u } -> req::boolean_testable;
+        { u < t } -> req::boolean_testable;
+    }
 {
-    if constexpr (std::three_way_comparable_with<T, U>) {
-    //if constexpr (requires { t <=> u; }) {
+    //if constexpr (std::three_way_comparable_with<T, U>) {
+    if constexpr (requires { t <=> u; }) {
         return t <=> u;
     } else {
         if (t < u) return std::weak_ordering::less;
