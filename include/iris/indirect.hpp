@@ -390,7 +390,7 @@ indirect(std::allocator_arg_t, Allocator, Value)
 
 
 template<class T, class Allocator, class U, class AA>
-constexpr bool operator==(indirect<T, Allocator> const& lhs, indirect<U, AA> const& rhs)
+[[nodiscard]] constexpr bool operator==(indirect<T, Allocator> const& lhs, indirect<U, AA> const& rhs)
     noexcept(noexcept(*lhs == *rhs))
 {
     if (lhs.valueless_after_move() || rhs.valueless_after_move()) [[unlikely]] {
@@ -401,7 +401,7 @@ constexpr bool operator==(indirect<T, Allocator> const& lhs, indirect<U, AA> con
 }
 
 template<class T, class Allocator, class U>
-constexpr bool operator==(indirect<T, Allocator> const& lhs, U const& rhs)
+[[nodiscard]] constexpr bool operator==(indirect<T, Allocator> const& lhs, U const& rhs)
     noexcept(noexcept(*lhs == rhs))
 {
     if (lhs.valueless_after_move()) [[unlikely]] {
@@ -418,7 +418,7 @@ namespace detail {
 // breaks MSVC's overload resolution on recursive types (possibly bug)
 
 template<class T, class Allocator, class U, class AA>
-constexpr auto indirect_three_way_impl_00(indirect<T, Allocator> const& lhs, indirect<U, AA> const& rhs)
+[[nodiscard]] constexpr auto indirect_three_way_impl_00(indirect<T, Allocator> const& lhs, indirect<U, AA> const& rhs)
     -> cmp::synth_three_way_result<T, U>
 {
     if (lhs.valueless_after_move() || rhs.valueless_after_move()) [[unlikely]] {
@@ -429,7 +429,7 @@ constexpr auto indirect_three_way_impl_00(indirect<T, Allocator> const& lhs, ind
 }
 
 template<class T, class A, class U>
-constexpr auto indirect_three_way_impl_01(indirect<T, A> const& lhs, U const& rhs)
+[[nodiscard]] constexpr auto indirect_three_way_impl_01(indirect<T, A> const& lhs, U const& rhs)
     -> cmp::synth_three_way_result<T, U>
 {
     if (lhs.valueless_after_move()) [[unlikely]] {
@@ -442,14 +442,14 @@ constexpr auto indirect_three_way_impl_01(indirect<T, A> const& lhs, U const& rh
 } // detail
 
 template<class T, class Allocator, class U, class AA>
-constexpr auto operator<=>(indirect<T, Allocator> const& lhs, indirect<U, AA> const& rhs)
+[[nodiscard]] constexpr auto operator<=>(indirect<T, Allocator> const& lhs, indirect<U, AA> const& rhs)
     // no explicit return type
 {
     return detail::indirect_three_way_impl_00(lhs, rhs);
 }
 
 template<class T, class A, class U>
-constexpr auto operator<=>(indirect<T, A> const& lhs, U const& rhs)
+[[nodiscard]] constexpr auto operator<=>(indirect<T, A> const& lhs, U const& rhs)
     // no explicit return type
 {
     return detail::indirect_three_way_impl_01(lhs, rhs);

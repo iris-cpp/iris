@@ -8,6 +8,7 @@
 #include <compare>
 #include <functional>
 #include <type_traits>
+#include <utility>
 
 namespace iris::cmp {
 
@@ -16,7 +17,8 @@ namespace iris::cmp {
 struct synth_three_way
 {
     template<class T, class U>
-    static constexpr auto operator()(T const& t, U const& u)
+    [[nodiscard]] static constexpr auto operator()(T const& t, U const& u)
+        noexcept(noexcept(t < u) && noexcept(u < t)) // strengthened
         requires requires {
             { t < u } -> req::boolean_testable;
             { u < t } -> req::boolean_testable;

@@ -167,7 +167,7 @@ recursive_wrapper(std::allocator_arg_t, Allocator, Value)
     -> recursive_wrapper<Value, typename std::allocator_traits<Allocator>::template rebind_alloc<Value>>;
 
 template<class T, class TA, class U, class UA>
-constexpr bool operator==(recursive_wrapper<T, TA> const& lhs, recursive_wrapper<U, UA> const& rhs)
+[[nodiscard]] constexpr bool operator==(recursive_wrapper<T, TA> const& lhs, recursive_wrapper<U, UA> const& rhs)
     noexcept(noexcept(*lhs == *rhs))
 {
     if (lhs.valueless_after_move() || rhs.valueless_after_move()) [[unlikely]] {
@@ -178,7 +178,7 @@ constexpr bool operator==(recursive_wrapper<T, TA> const& lhs, recursive_wrapper
 }
 
 template<class T, class A, class U>
-constexpr bool operator==(recursive_wrapper<T, A> const& lhs, U const& rhs)
+[[nodiscard]] constexpr bool operator==(recursive_wrapper<T, A> const& lhs, U const& rhs)
     noexcept(noexcept(*lhs == rhs))
 {
     if (lhs.valueless_after_move()) [[unlikely]] {
@@ -194,7 +194,7 @@ namespace detail {
 // breaks MSVC's overload resolution on recursive types (possibly bug)
 
 template<class T, class TA, class U, class UA>
-constexpr auto rw_three_way_impl_00(recursive_wrapper<T, TA> const& lhs, recursive_wrapper<U, UA> const& rhs)
+[[nodiscard]] constexpr auto rw_three_way_impl_00(recursive_wrapper<T, TA> const& lhs, recursive_wrapper<U, UA> const& rhs)
     -> cmp::synth_three_way_result<T, U>
 {
     if (lhs.valueless_after_move() || rhs.valueless_after_move()) [[unlikely]] {
@@ -205,7 +205,7 @@ constexpr auto rw_three_way_impl_00(recursive_wrapper<T, TA> const& lhs, recursi
 }
 
 template<class T, class A, class U>
-constexpr auto rw_three_way_impl_01(recursive_wrapper<T, A> const& lhs, U const& rhs)
+[[nodiscard]] constexpr auto rw_three_way_impl_01(recursive_wrapper<T, A> const& lhs, U const& rhs)
     -> cmp::synth_three_way_result<T, U>
 {
     if (lhs.valueless_after_move()) [[unlikely]] {
@@ -218,14 +218,14 @@ constexpr auto rw_three_way_impl_01(recursive_wrapper<T, A> const& lhs, U const&
 } // detail
 
 template<class T, class TA, class U, class UA>
-constexpr auto operator<=>(recursive_wrapper<T, TA> const& lhs, recursive_wrapper<U, UA> const& rhs)
+[[nodiscard]] constexpr auto operator<=>(recursive_wrapper<T, TA> const& lhs, recursive_wrapper<U, UA> const& rhs)
     // no explicit return type
 {
     return detail::rw_three_way_impl_00(lhs, rhs);
 }
 
 template<class T, class A, class U>
-constexpr auto operator<=>(recursive_wrapper<T, A> const& lhs, U const& rhs)
+[[nodiscard]] constexpr auto operator<=>(recursive_wrapper<T, A> const& lhs, U const& rhs)
     // no explicit return type
 {
     return detail::rw_three_way_impl_01(lhs, rhs);
