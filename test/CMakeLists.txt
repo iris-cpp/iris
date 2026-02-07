@@ -70,7 +70,7 @@ function(iris_define_test test_name)
             PROPERTIES VS_SETTINGS "ExcludedFromBuild=true"
         )
 
-        target_sources(${test_name}_test PRIVATE cpp.hint)
+        target_sources(${test_name}_test PRIVATE "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/cpp.hint")
     endif()
 
     target_link_libraries(${test_name}_test PRIVATE Iris::Iris iris_cxx_test)

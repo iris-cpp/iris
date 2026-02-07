@@ -1,4 +1,4 @@
-﻿#ifndef IRIS_RVARIANT_RVARIANT_IO_HPP
+#ifndef IRIS_RVARIANT_RVARIANT_IO_HPP
 #define IRIS_RVARIANT_RVARIANT_IO_HPP
 
 // SPDX-License-Identifier: MIT
@@ -42,7 +42,11 @@ namespace detail {
 // Behaves mostly like *formatted output function* (https://eel.is/c++draft/ostream.formatted.reqmts),
 // except that `std::bad_variant_access` will always be propagated.
 template<class... Ts>
-    requires std::conjunction_v<req::ADL_ostreamable<unwrap_recursive_t<Ts>>...>
+    requires
+        // Required to work around MSVC bug where it instantiates this function
+        // for completely irrelevant call, e.g. `std::cout << "foo"sv << 'c' << std::endl;`
+        (sizeof...(Ts) > 0) &&
+        std::conjunction_v<req::ADL_ostreamable<unwrap_recursive_t<Ts>>...>
 std::ostream& operator<<(std::ostream& os, rvariant<Ts...> const& v)
 {
     std::ostream::sentry sentry(os);
