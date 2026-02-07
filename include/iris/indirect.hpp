@@ -400,17 +400,6 @@ constexpr bool operator==(indirect<T, Allocator> const& lhs, indirect<U, AA> con
     }
 }
 
-template<class T, class Allocator, class U, class AA>
-constexpr auto operator<=>(indirect<T, Allocator> const& lhs, indirect<U, AA> const& rhs)
-    -> synth_three_way_result_t<T, U>
-{
-    if (lhs.valueless_after_move() || rhs.valueless_after_move()) [[unlikely]] {
-        return !lhs.valueless_after_move() <=> !rhs.valueless_after_move();
-    } else [[likely]] {
-        return synth_three_way(*lhs, *rhs);
-    }
-}
-
 template<class T, class Allocator, class U>
 constexpr bool operator==(indirect<T, Allocator> const& lhs, U const& rhs)
     noexcept(noexcept(*lhs == rhs))
@@ -425,8 +414,22 @@ constexpr bool operator==(indirect<T, Allocator> const& lhs, U const& rhs)
 
 namespace detail {
 
+// These cannot be overloaded with the same function name, as it
+// breaks MSVC's overload resolution on recursive types (possibly bug)
+
+template<class T, class Allocator, class U, class AA>
+constexpr auto indirect_three_way_impl_00(indirect<T, Allocator> const& lhs, indirect<U, AA> const& rhs)
+    -> synth_three_way_result_t<T, U>
+{
+    if (lhs.valueless_after_move() || rhs.valueless_after_move()) [[unlikely]] {
+        return !lhs.valueless_after_move() <=> !rhs.valueless_after_move();
+    } else [[likely]] {
+        return synth_three_way(*lhs, *rhs);
+    }
+}
+
 template<class T, class A, class U>
-constexpr auto three_way_compare_impl(indirect<T, A> const& lhs, U const& rhs)
+constexpr auto indirect_three_way_impl_01(indirect<T, A> const& lhs, U const& rhs)
     -> synth_three_way_result_t<T, U>
 {
     if (lhs.valueless_after_move()) [[unlikely]] {
@@ -438,11 +441,18 @@ constexpr auto three_way_compare_impl(indirect<T, A> const& lhs, U const& rhs)
 
 } // detail
 
+template<class T, class Allocator, class U, class AA>
+constexpr auto operator<=>(indirect<T, Allocator> const& lhs, indirect<U, AA> const& rhs)
+    // no explicit return type
+{
+    return detail::indirect_three_way_impl_00(lhs, rhs);
+}
+
 template<class T, class A, class U>
 constexpr auto operator<=>(indirect<T, A> const& lhs, U const& rhs)
     // no explicit return type
 {
-    return detail::three_way_compare_impl(lhs, rhs);
+    return detail::indirect_three_way_impl_01(lhs, rhs);
 }
 
 }  // iris
