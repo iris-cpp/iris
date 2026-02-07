@@ -3,9 +3,9 @@
 <AutoVisualizer
     xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://schemas.microsoft.com/vstudio/debugger/natvis/2010 file:///C:/Program%20Files/Microsoft%20Visual%20Studio/2022/Community/Xml/Schemas/1033/natvis.xsd"
+    xsi:schemaLocation="http://schemas.microsoft.com/vstudio/debugger/natvis/2010 file:///C:/Program%20Files/Microsoft%20Visual%20Studio/18/Community/Xml/Schemas/1033/natvis.xsd"
 >
-    <Type Name="iris::indirect&lt;*&gt;">
+    <Type Name="iris::detail::indirect_base&lt;*&gt;">
         <SmartPointer Usage="Minimal">ptr_</SmartPointer>
         <DisplayString Condition="ptr_ == 0">[valueless_after_move]</DisplayString>
         <DisplayString Condition="ptr_ != 0">{*ptr_}</DisplayString>
