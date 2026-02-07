@@ -65,7 +65,7 @@ function(iris_define_test test_name)
     if(MSVC)
         # Prevent "Warning: Conflicting <Type> entries detected" error
         set_source_files_properties(
-            "${PROJECT_SOURCE_DIR}/iris.natvis"
+            "${IRIS_ROOT}/iris.natvis"
             TARGET_DIRECTORY ${test_name}_test
             PROPERTIES VS_SETTINGS "ExcludedFromBuild=true"
         )
