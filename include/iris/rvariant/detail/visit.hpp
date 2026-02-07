@@ -1,4 +1,4 @@
-﻿#ifndef IRIS_RVARIANT_DETAIL_VISIT_HPP
+#ifndef IRIS_RVARIANT_DETAIL_VISIT_HPP
 #define IRIS_RVARIANT_DETAIL_VISIT_HPP
 
 // SPDX-License-Identifier: MIT
@@ -306,16 +306,16 @@ struct visit_check_impl<T0R, Visitor, type_list<Args...>>
 
 template<class T0R, class Visitor, class... Args, class... Ts, class... Rest>
 struct visit_check_impl<T0R, Visitor, type_list<Args...>, rvariant<Ts...>&, Rest...>
-    : std::conjunction<visit_check_impl<T0R, Visitor, type_list<Args..., unwrap_recursive_t<Ts>&>, Rest...>...> {};
+    : std::conjunction<visit_check_impl<T0R, Visitor, type_list<Args..., unwrap_recursive_type<Ts>&>, Rest...>...> {};
 template<class T0R, class Visitor, class... Args, class... Ts, class... Rest>
 struct visit_check_impl<T0R, Visitor, type_list<Args...>, rvariant<Ts...> const&, Rest...>
-    : std::conjunction<visit_check_impl<T0R, Visitor, type_list<Args..., unwrap_recursive_t<Ts> const&>, Rest...>...> {};
+    : std::conjunction<visit_check_impl<T0R, Visitor, type_list<Args..., unwrap_recursive_type<Ts> const&>, Rest...>...> {};
 template<class T0R, class Visitor, class... Args, class... Ts, class... Rest>
 struct visit_check_impl<T0R, Visitor, type_list<Args...>, rvariant<Ts...>&&, Rest...>
-    : std::conjunction<visit_check_impl<T0R, Visitor, type_list<Args..., unwrap_recursive_t<Ts>>, Rest...>...> {};
+    : std::conjunction<visit_check_impl<T0R, Visitor, type_list<Args..., unwrap_recursive_type<Ts>>, Rest...>...> {};
 template<class T0R, class Visitor, class... Args, class... Ts, class... Rest>
 struct visit_check_impl<T0R, Visitor, type_list<Args...>, rvariant<Ts...> const&&, Rest...>
-    : std::conjunction<visit_check_impl<T0R, Visitor, type_list<Args..., unwrap_recursive_t<Ts> const>, Rest...>...> {};
+    : std::conjunction<visit_check_impl<T0R, Visitor, type_list<Args..., unwrap_recursive_type<Ts> const>, Rest...>...> {};
 
 template<class T0R, class Visitor, class... Variants>
 using visit_check = visit_check_impl<T0R, Visitor, type_list<>, Variants...>;
@@ -357,16 +357,16 @@ struct visit_R_check_impl<R, Visitor, type_list<Args...>>
 
 template<class R, class Visitor, class... Args, class... Ts, class... Rest>
 struct visit_R_check_impl<R, Visitor, type_list<Args...>, rvariant<Ts...>&, Rest...>
-    : std::conjunction<visit_R_check_impl<R, Visitor, type_list<Args..., unwrap_recursive_t<Ts>&>, Rest...>...> {};
+    : std::conjunction<visit_R_check_impl<R, Visitor, type_list<Args..., unwrap_recursive_type<Ts>&>, Rest...>...> {};
 template<class R, class Visitor, class... Args, class... Ts, class... Rest>
 struct visit_R_check_impl<R, Visitor, type_list<Args...>, rvariant<Ts...> const&, Rest...>
-    : std::conjunction<visit_R_check_impl<R, Visitor, type_list<Args..., unwrap_recursive_t<Ts> const&>, Rest...>...> {};
+    : std::conjunction<visit_R_check_impl<R, Visitor, type_list<Args..., unwrap_recursive_type<Ts> const&>, Rest...>...> {};
 template<class R, class Visitor, class... Args, class... Ts, class... Rest>
 struct visit_R_check_impl<R, Visitor, type_list<Args...>, rvariant<Ts...>&&, Rest...>
-    : std::conjunction<visit_R_check_impl<R, Visitor, type_list<Args..., unwrap_recursive_t<Ts>>, Rest...>...> {};
+    : std::conjunction<visit_R_check_impl<R, Visitor, type_list<Args..., unwrap_recursive_type<Ts>>, Rest...>...> {};
 template<class R, class Visitor, class... Args, class... Ts, class... Rest>
 struct visit_R_check_impl<R, Visitor, type_list<Args...>, rvariant<Ts...> const&&, Rest...>
-    : std::conjunction<visit_R_check_impl<R, Visitor, type_list<Args..., unwrap_recursive_t<Ts> const>, Rest...>...> {};
+    : std::conjunction<visit_R_check_impl<R, Visitor, type_list<Args..., unwrap_recursive_type<Ts> const>, Rest...>...> {};
 
 template<class R, class Visitor, class... Variants>
 using visit_R_check = visit_R_check_impl<R, Visitor, type_list<>, Variants...>;
@@ -387,7 +387,7 @@ private:
         using type = std::is_nothrow_invocable_r<
             R,
             Visitor,
-            unwrap_recursive_t<
+            unwrap_recursive_type<
                 detail::raw_get_t<detail::valueless_unbias<Storage_>(Is), Storage_>
             >...
         >;

@@ -46,7 +46,7 @@ template<class... Ts>
         // Required to work around MSVC bug where it instantiates this function
         // for completely irrelevant call, e.g. `std::cout << "foo"sv << 'c' << std::endl;`
         (sizeof...(Ts) > 0) &&
-        std::conjunction_v<req::ADL_ostreamable<unwrap_recursive_t<Ts>>...>
+        std::conjunction_v<req::ADL_ostreamable<unwrap_recursive_type<Ts>>...>
 std::ostream& operator<<(std::ostream& os, rvariant<Ts...> const& v)
 {
     std::ostream::sentry sentry(os);
@@ -65,7 +65,7 @@ std::ostream& operator<<(std::ostream& os, rvariant<Ts...> const& v)
             if constexpr (i == std::variant_npos) {
                 std::unreachable();
             } else {
-                os << detail::unwrap_recursive(o); // NOTE: this may also throw `std::bad_variant_access`
+                os << unwrap_recursive(o); // NOTE: this may also throw `std::bad_variant_access`
             }
         });
 
@@ -181,7 +181,7 @@ struct variant_alts_formattable : std::false_type
 
 template<class charT, class... Ts>
 struct variant_alts_formattable<charT, rvariant<Ts...>>
-    : std::bool_constant<(std::formattable<unwrap_recursive_t<Ts>, charT> && ...)>
+    : std::bool_constant<(std::formattable<unwrap_recursive_type<Ts>, charT> && ...)>
 {};
 
 } // detail
@@ -192,7 +192,7 @@ struct variant_alts_formattable<charT, rvariant<Ts...>>
 namespace std {
 
 template<class... Ts, class charT>
-    requires (std::formattable<::iris::unwrap_recursive_t<Ts>, charT> && ...)
+    requires (std::formattable<::iris::unwrap_recursive_type<Ts>, charT> && ...)
 struct formatter<::iris::rvariant<Ts...>, charT>  // NOLINT(cert-dcl58-cpp)
 {
     static constexpr typename std::basic_format_parse_context<charT>::const_iterator
@@ -219,8 +219,8 @@ struct formatter<::iris::rvariant<Ts...>, charT>  // NOLINT(cert-dcl58-cpp)
                 } else {
                     return std::format_to(
                         ctx.out(),
-                        ::iris::format_traits<charT>::template brace_full<::iris::unwrap_recursive_t<VT> const&>,
-                        ::iris::detail::unwrap_recursive(alt)
+                        ::iris::format_traits<charT>::template brace_full<::iris::unwrap_recursive_type<VT> const&>,
+                        ::iris::unwrap_recursive(alt)
                     );
                 }
             }
@@ -257,13 +257,13 @@ struct formatter<::iris::detail::variant_format_proxy<VFormat, Variant>, charT> 
                     ::iris::detail::throw_bad_variant_access();
                 } else {
                     static_assert(
-                        std::is_invocable_v<VFormat, std::in_place_type_t<::iris::unwrap_recursive_t<VT>>>,
+                        std::is_invocable_v<VFormat, std::in_place_type_t<::iris::unwrap_recursive_type<VT>>>,
                         "`VFormat` must provide format string for all alternative types."
                     );
                     return std::format_to(
                         ctx.out(),
-                        std::invoke(proxy.v_fmt, std::in_place_type<::iris::unwrap_recursive_t<VT>>),
-                        ::iris::detail::unwrap_recursive(alt)
+                        std::invoke(proxy.v_fmt, std::in_place_type<::iris::unwrap_recursive_type<VT>>),
+                        ::iris::unwrap_recursive(alt)
                     );
                 }
             }

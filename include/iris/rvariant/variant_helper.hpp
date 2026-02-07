@@ -1,4 +1,4 @@
-﻿#ifndef IRIS_RVARIANT_VARIANT_HELPER_HPP
+#ifndef IRIS_RVARIANT_VARIANT_HELPER_HPP
 #define IRIS_RVARIANT_VARIANT_HELPER_HPP
 
 // SPDX-License-Identifier: MIT
@@ -70,21 +70,37 @@ struct variant_size<rvariant<Ts...>> : std::integral_constant<std::size_t, sizeo
 namespace detail {
 
 template<class T>
-[[nodiscard]] IRIS_FORCEINLINE constexpr auto&&
-unwrap_recursive(T&& o IRIS_LIFETIMEBOUND) noexcept
+struct unwrap_recursive_type_impl
 {
-    if constexpr (is_ttp_specialization_of_v<std::remove_cvref_t<T>, recursive_wrapper>) {
-        return *std::forward<T>(o);
-    } else {
-        return std::forward<T>(o);
+    using type = T;
+};
+
+template<class T, class Allocator>
+struct unwrap_recursive_type_impl<recursive_wrapper<T, Allocator>>
+{
+    using type = T;
+};
+
+struct unwrap_recursive_fn
+{
+    template<class T>
+    [[nodiscard]] IRIS_FORCEINLINE static constexpr auto&&
+    operator()(T&& o IRIS_LIFETIMEBOUND) noexcept
+    {
+        if constexpr (is_ttp_specialization_of_v<std::remove_cvref_t<T>, recursive_wrapper>) {
+            return *std::forward<T>(o);
+        } else {
+            return std::forward<T>(o);
+        }
     }
-}
+};
 
 }  // detail
 
-template<class T> struct unwrap_recursive { using type = T; };
-template<class T, class Allocator> struct unwrap_recursive<recursive_wrapper<T, Allocator>> { using type = T; };
-template<class T> using unwrap_recursive_t = unwrap_recursive<T>::type;
+template<class T>
+using unwrap_recursive_type = detail::unwrap_recursive_type_impl<T>::type;
+
+inline constexpr detail::unwrap_recursive_fn unwrap_recursive{};
 
 
 template<std::size_t I, class Variant>
@@ -97,7 +113,7 @@ template<std::size_t I, class Variant>
 struct variant_alternative<I, Variant const> : std::add_const<variant_alternative_t<I, Variant>> {};
 
 template<std::size_t I, class... Ts>
-struct variant_alternative<I, rvariant<Ts...>> : pack_indexing<I, unwrap_recursive_t<Ts>...>
+struct variant_alternative<I, rvariant<Ts...>> : pack_indexing<I, unwrap_recursive_type<Ts>...>
 {
     static_assert(I < sizeof...(Ts));
 };
