@@ -1,4 +1,6 @@
-﻿// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
+
+#include "iris_rvariant_test.hpp"
 
 #include <iostream>
 
@@ -37,15 +39,11 @@ struct NonStreamable {};
 
 } // anonymous global
 
-#include "iris/io_fwd.hpp" // this finds `operator<<` in the global ns
+#include <iris/io_fwd.hpp> // this finds `operator<<` in the global ns
 
-#include "rvariant_test.hpp"
-
-#include "iris/rvariant/rvariant.hpp"
-#include "iris/rvariant/rvariant_io.hpp"
-#include "iris/rvariant/recursive_wrapper.hpp"
-
-#include <catch2/catch_test_macros.hpp>
+#include <iris/rvariant/rvariant.hpp>
+#include <iris/rvariant/rvariant_io.hpp>
+#include <iris/rvariant/recursive_wrapper.hpp>
 
 #include <string>
 #include <sstream>

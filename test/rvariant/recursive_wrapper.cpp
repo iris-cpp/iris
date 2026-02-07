@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 
-#include "iris/rvariant/recursive_wrapper.hpp"
-#include "iris/rvariant/rvariant.hpp"
+#include "iris_rvariant_test.hpp"
 
-#include <catch2/catch_test_macros.hpp>
+#include <iris/rvariant/recursive_wrapper.hpp>
+#include <iris/rvariant/rvariant.hpp>
 
 #include <string>
 #include <string_view>
