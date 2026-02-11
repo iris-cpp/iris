@@ -37,7 +37,7 @@ struct basic_fixed_string
 template<class CharT, std::size_t N>
 basic_fixed_string(CharT const (&)[N]) -> basic_fixed_string<CharT, N - 1>;
 
-template <std::size_t N>
+template<std::size_t N>
 using fixed_string = basic_fixed_string<char, N>;
 
 }  // iris

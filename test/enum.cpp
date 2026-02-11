@@ -31,7 +31,7 @@ enum class SpellType : std::uint8_t
     ATTR_THUNDER = 1 << 4,
 };
 
-template <>
+template<>
 struct iris::bitops_enabled<MyFlags> : std::true_type
 {
     static MyFlags parse(std::string_view sv) noexcept
@@ -44,7 +44,7 @@ struct iris::bitops_enabled<MyFlags> : std::true_type
     }
 };
 
-template <>
+template<>
 struct iris::bitops_enabled<SpellType> : std::true_type
 {
     static constexpr int min_bit = 2;
