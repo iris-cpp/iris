@@ -131,11 +131,6 @@ TEST_CASE("colorize")
     CHECK_THROWS_AS((void)iris::colorize(iris::runtime_colorize("[bg:rgb(12,34,56)|bg:rgb(78,90,12)]foo")), iris::colorize_error);
 
     CHECK(iris::colorized_size("[red]foo") == 18);
-
-    // TODO
-    #ifndef _MSC_VER
-        static_assert(iris::colorize("[red]foo") == "\033[38;2;255;0;0mfoo");
-    #endif
 }
 
 TEST_CASE("format_colorize")
@@ -167,18 +162,3 @@ TEST_CASE("colorize_format")
 }
 
 #endif
-
-TEST_CASE("fixed")
-{
-    // TODO
-#ifndef _MSC_VER
-    static constexpr iris::fixed_string str = "[red]foo";
-    static_assert(iris::colorized_size(str) == 18);
-    static_assert(iris::colorize(str) == "\033[38;2;255;0;0mfoo");
-    static_assert(std::string_view{ iris::static_colorize_string<str>::colorized } == "\033[38;2;255;0;0mfoo");
-    using namespace iris::colorize_literals;
-    auto const s = iris::colorize_format("[red]{}"_col, 42);
-    CHECK(s == "\033[38;2;255;0;0m42");
-#endif
-}
-

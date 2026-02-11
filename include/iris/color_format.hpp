@@ -922,13 +922,13 @@ constexpr Out colorize_to(Out out, colorize_string col)
 [[nodiscard]] constexpr std::string colorize(colorize_string col)
 {
     std::string str;
-    colorize_to(std::back_inserter(str), col);
+    iris::colorize_to(std::back_inserter(str), col);
     return str;
 }
 
 [[nodiscard]] constexpr std::size_t colorized_size(colorize_string col)
 {
-    return colorize_to(detail::counting_iterator<char>{}, col).count;
+    return iris::colorize_to(detail::counting_iterator<char>{}, col).count;
 }
 
 template<basic_fixed_string Str>
