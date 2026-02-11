@@ -139,8 +139,9 @@ if(PROJECT_IS_TOP_LEVEL)
 
     set(
         IRIS_TEST_IRIS_TESTS
-        type_traits
         core
+        type_traits
+        enum
         indirect
     )
 
