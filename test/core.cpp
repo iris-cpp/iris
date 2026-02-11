@@ -5,10 +5,12 @@
 #include <iris/type_traits.hpp>
 #include <iris/requirements.hpp>
 #include <iris/compare.hpp>
+#include <iris/fixed_string.hpp>
 
 #include <concepts>
 #include <utility>
 #include <type_traits>
+#include <ranges>
 
 namespace unit_test {
 
@@ -429,6 +431,13 @@ TEST_CASE("synth_three_way")
     STATIC_CHECK(std::same_as<iris::cmp::synth_three_way_result<NoThreeWay>, std::weak_ordering>);
     STATIC_CHECK(noexcept(iris::cmp::synth_three_way{}(NoThreeWay{0}, NoThreeWay{1})));
     STATIC_CHECK(iris::cmp::synth_three_way{}(NoThreeWay{0}, NoThreeWay{1}) == std::weak_ordering::less);
+}
+
+TEST_CASE("fixed_string")
+{
+    using namespace std::string_view_literals;
+    constexpr iris::fixed_string str = "foobar";
+    CHECK((std::ranges::equal(str, "foobar"sv)));
 }
 
 } // unit_test
