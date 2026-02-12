@@ -13,15 +13,14 @@ namespace iris {
 template<class CharT, std::size_t N, class Traits = std::char_traits<CharT>>
 struct basic_fixed_string
 {
-    using storage_type = std::array<CharT, N + 1>;
-
-    storage_type data{};
-
     using traits_type = Traits;
     using value_type = CharT;
+    using storage_type = std::array<CharT, N + 1>;
     using iterator = storage_type::iterator;
     using const_iterator = storage_type::const_iterator;
     using string_view_type = std::basic_string_view<CharT, Traits>;
+
+    storage_type data{};
 
     constexpr basic_fixed_string() noexcept = default;
     constexpr basic_fixed_string(CharT const (&str)[N + 1]) { std::ranges::copy(str, data.begin()); }

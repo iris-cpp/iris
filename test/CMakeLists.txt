@@ -143,6 +143,7 @@ if(PROJECT_IS_TOP_LEVEL)
         type_traits
         enum
         indirect
+        colorize_format
     )
 
     iris_define_sub_tests(iris ${IRIS_TEST_IRIS_TESTS})
