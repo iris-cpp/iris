@@ -55,6 +55,8 @@ TEST_CASE("tuple", "[preprocess]")
         STATIC_CHECK(IRIS_PP_STRINGIZE(IRIS_PP_TUPLE_ELEM(1, (a, b, c))) == "b"sv);
         STATIC_CHECK(IRIS_PP_STRINGIZE(IRIS_PP_TUPLE_ELEM(2, (a, b, c))) == "c"sv);
     }
+
+    STATIC_CHECK(IRIS_PP_STRINGIZE(IRIS_PP_TUPLE_TO_SEQ((a, b))) == "(a)(b)"sv);
 }
 
 TEST_CASE("if", "[preprocess]")

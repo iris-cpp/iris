@@ -5,6 +5,7 @@
 
 #include <iris/pp/cat.hpp>
 #include <iris/pp/for.hpp>
+#include <iris/pp/increment.hpp>
 
 #define IRIS_PP_SEQ_ELEM(index, seq) IRIS_PP_SEQ_ELEM_I(IRIS_PP_CAT(IRIS_PP_SEQ_ELEM_I_, index) seq)
 #define IRIS_PP_SEQ_ELEM_I(intermediate) IRIS_PP_SEQ_ELEM_I_I(intermediate)
@@ -36,7 +37,7 @@
 #define IRIS_PP_SEQ_FOR_EACH_WITH_INDEX_I_PRED_I(index, seq, macro, data) IRIS_PP_SEQ_SIZE(seq)
 
 #define IRIS_PP_SEQ_FOR_EACH_WITH_INDEX_I_UPDATE(state) IRIS_PP_SEQ_FOR_EACH_WITH_INDEX_I_UPDATE_I state
-#define IRIS_PP_SEQ_FOR_EACH_WITH_INDEX_I_UPDATE_I(index, seq, macro, data) (index, IRIS_PP_SEQ_TAIL(seq), macro, data)
+#define IRIS_PP_SEQ_FOR_EACH_WITH_INDEX_I_UPDATE_I(index, seq, macro, data) (IRIS_PP_INCREMENT(index), IRIS_PP_SEQ_TAIL(seq), macro, data)
 
 #define IRIS_PP_SEQ_FOR_EACH_WITH_INDEX_I_EXEC(state) IRIS_PP_SEQ_FOR_EACH_WITH_INDEX_I_EXEC_I state
 #define IRIS_PP_SEQ_FOR_EACH_WITH_INDEX_I_EXEC_I(index, seq, macro, data) macro(index, IRIS_PP_SEQ_HEAD(seq), data)
