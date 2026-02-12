@@ -29,6 +29,18 @@
 #define IRIS_PP_SEQ_FOR_EACH_I_EXEC(state) IRIS_PP_SEQ_FOR_EACH_I_EXEC_I state
 #define IRIS_PP_SEQ_FOR_EACH_I_EXEC_I(seq, macro, data) macro(IRIS_PP_SEQ_HEAD(seq), data)
 
+#define IRIS_PP_SEQ_FOR_EACH_WITH_INDEX(seq, macro, data) \
+    IRIS_PP_FOR((0, seq, macro, data), IRIS_PP_SEQ_FOR_EACH_WITH_INDEX_I_PRED, IRIS_PP_SEQ_FOR_EACH_WITH_INDEX_I_UPDATE, IRIS_PP_SEQ_FOR_EACH_WITH_INDEX_I_EXEC)
+
+#define IRIS_PP_SEQ_FOR_EACH_WITH_INDEX_I_PRED(state) IRIS_PP_SEQ_FOR_EACH_WITH_INDEX_I_PRED_I state
+#define IRIS_PP_SEQ_FOR_EACH_WITH_INDEX_I_PRED_I(index, seq, macro, data) IRIS_PP_SEQ_SIZE(seq)
+
+#define IRIS_PP_SEQ_FOR_EACH_WITH_INDEX_I_UPDATE(state) IRIS_PP_SEQ_FOR_EACH_WITH_INDEX_I_UPDATE_I state
+#define IRIS_PP_SEQ_FOR_EACH_WITH_INDEX_I_UPDATE_I(index, seq, macro, data) (index, IRIS_PP_SEQ_TAIL(seq), macro, data)
+
+#define IRIS_PP_SEQ_FOR_EACH_WITH_INDEX_I_EXEC(state) IRIS_PP_SEQ_FOR_EACH_WITH_INDEX_I_EXEC_I state
+#define IRIS_PP_SEQ_FOR_EACH_WITH_INDEX_I_EXEC_I(index, seq, macro, data) macro(index, IRIS_PP_SEQ_HEAD(seq), data)
+
 #define IRIS_PP_SEQ_ELEM_I_0(seq) seq, dummy
 #define IRIS_PP_SEQ_ELEM_I_1(seq) IRIS_PP_SEQ_ELEM_I_0
 #define IRIS_PP_SEQ_ELEM_I_2(seq) IRIS_PP_SEQ_ELEM_I_1
