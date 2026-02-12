@@ -3,13 +3,16 @@
 set(
     IRIS_TEST_RVARIANT_TESTS
     rvariant
-    many_alternatives_32
     get_visit
     flexible
     recursive_wrapper
     truly_recursive
     io
 )
+
+if(IRIS_CI)
+    list(APPEND IRIS_TEST_RVARIANT_TESTS many_alternatives_32)
+endif()
 
 iris_define_sub_tests(rvariant ${IRIS_TEST_RVARIANT_TESTS})
 

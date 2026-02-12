@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-#if IRIS_CI
 #include "iris_rvariant_test.hpp"
-
 
 namespace unit_test {
 
@@ -97,5 +95,3 @@ TEST_CASE("many alternatives (32)")
 }
 
 } // unit_test
-
-#endif // IRIS_CI
