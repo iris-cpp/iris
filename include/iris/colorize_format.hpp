@@ -814,9 +814,12 @@ struct colorizing_scanner : scanner<CharT>
 template<class CharT>
 struct basic_dynamic_colorized_string
 {
-    constexpr explicit basic_dynamic_colorized_string(std::basic_string_view<CharT> str) noexcept
+    constexpr explicit basic_dynamic_colorized_string(std::basic_string_view<CharT> str)
         : str_(str)
-    {}
+    {
+        checking_scanner<CharT> scanner(str);
+        scanner.scan();
+    }
 
     std::basic_string_view<CharT> str_;
 };
@@ -828,9 +831,12 @@ using dynamic_colorized_string = basic_dynamic_colorized_string<char>;
 template<class CharT>
 struct basic_dynamic_colorized_format_string
 {
-    constexpr explicit basic_dynamic_colorized_format_string(std::basic_string_view<CharT> str) noexcept
+    constexpr explicit basic_dynamic_colorized_format_string(std::basic_string_view<CharT> str)
         : str_(str)
-    {}
+    {
+        checking_scanner<CharT> scanner(str);
+        scanner.scan();
+    }
 
     std::basic_string_view<CharT> str_;
 };
@@ -896,7 +902,8 @@ struct basic_colorized_string_view
 {
     template<class Str>
         requires StringLike<Str const&>
-    constexpr basic_colorized_string_view(Str const& str) : str_(str)
+    consteval basic_colorized_string_view(Str const& str)
+        : str_(str)
     {
         detail::checking_scanner<CharT> scanner(str);
         scanner.scan();
@@ -963,7 +970,7 @@ struct static_colorized_string
     }();
 };
 
-namespace colorize_literals {
+inline namespace colorize_literals {
 
 template<basic_fixed_string Str>
 [[nodiscard]] consteval static_colorized_string<Str> operator""_col()
@@ -1024,6 +1031,12 @@ constexpr Out colorize_format_to(Out out, colorized_format_string<Args...> fmt, 
 }
 
 } // ansi_colorize
+
+inline namespace colorize_literals {
+
+using namespace ansi_colorize::colorize_literals;
+
+} // colorize_literals
 
 using ansi_colorize::static_colorized_string;
 

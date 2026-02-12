@@ -23,13 +23,6 @@ TEST_CASE("colorized_string")
         test("[fg:red|bg:blue]");
     }
 
-    CHECK_THROWS_AS((void)iris::colorize("[]"), iris::colorize_error);
-    CHECK_THROWS_AS((void)iris::colorize("["), iris::colorize_error);
-    CHECK_THROWS_AS((void)iris::colorize("]"), iris::colorize_error);
-    CHECK_THROWS_AS((void)iris::colorize("[reset|red]"), iris::colorize_error);
-    CHECK_THROWS_AS((void)iris::colorize("[red|reset]"), iris::colorize_error);
-    CHECK_THROWS_AS((void)iris::colorize("[black|red]"), iris::colorize_error);
-
     CHECK_THROWS_AS((void)iris::colorize(iris::dynamic_colorize("[]")), iris::colorize_error);
     CHECK_THROWS_AS((void)iris::colorize(iris::dynamic_colorize("[")), iris::colorize_error);
     CHECK_THROWS_AS((void)iris::colorize(iris::dynamic_colorize("]")), iris::colorize_error);
@@ -163,9 +156,28 @@ TEST_CASE("colorize(fixed)")
     STATIC_CHECK(iris::colorize(str) == "\033[38;2;255;0;0mfoo");
 
     STATIC_CHECK(std::string_view{iris::ansi_colorize::static_colorized_string<str>::colorized} == "\033[38;2;255;0;0mfoo");
-    using namespace iris::ansi_colorize::colorize_literals;
-    auto const s = iris::colorize_format("[red]{}"_col, 42);
-    CHECK(s == "\033[38;2;255;0;0m42");
+
+    {
+        auto const s = iris::colorize_format("[red]{}", 42);
+        CHECK(s == "\033[38;2;255;0;0m42");
+    }
+    {
+        using namespace iris::colorize_literals;
+        auto const s = iris::colorize_format("[red]{}"_col, 42);
+        CHECK(s == "\033[38;2;255;0;0m42");
+    }
+
+    {
+        std::string s;
+        iris::colorize_format_to(std::back_inserter(s), "[red]{}", 42);
+        CHECK(s == "\033[38;2;255;0;0m42");
+    }
+    {
+        using namespace iris::colorize_literals;
+        std::string s;
+        iris::colorize_format_to(std::back_inserter(s), "[red]{}"_col, 42);
+        CHECK(s == "\033[38;2;255;0;0m42");
+    }
 }
 
 #endif
