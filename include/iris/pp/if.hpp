@@ -1,6 +1,8 @@
 #ifndef IRIS_PREPROCESS_IF_HPP
 #define IRIS_PREPROCESS_IF_HPP
 
+// SPDX-License-Identifier: MIT
+
 #include <iris/pp/bool.hpp>
 #include <iris/pp/cat.hpp>
 

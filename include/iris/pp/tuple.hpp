@@ -1,6 +1,8 @@
 #ifndef IRIS_PREPROCESS_TUPLE_HPP
 #define IRIS_PREPROCESS_TUPLE_HPP
 
+// SPDX-License-Identifier: MIT
+
 #include <iris/pp/cat.hpp>
 
 #define IRIS_PP_TUPLE_SIZE(tuple) IRIS_PP_TUPLE_SIZE_I tuple

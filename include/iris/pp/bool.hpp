@@ -1,6 +1,8 @@
 #ifndef IRIS_PREPROCESS_BOOL_HPP
 #define IRIS_PREPROCESS_BOOL_HPP
 
+// SPDX-License-Identifier: MIT
+
 #include <iris/pp/cat.hpp>
 
 #define IRIS_PP_BOOL(expr) IRIS_PP_CAT(IRIS_PP_BOOL_I_, expr)

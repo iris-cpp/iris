@@ -1,6 +1,8 @@
 #ifndef IRIS_PREPROCESS_FOR_HPP
 #define IRIS_PREPROCESS_FOR_HPP
 
+// SPDX-License-Identifier: MIT
+
 #include <iris/pp/if.hpp>
 
 #define IRIS_PP_FOR(state, pred, update, macro) IRIS_PP_FOR_I_0(state, pred, update, macro)

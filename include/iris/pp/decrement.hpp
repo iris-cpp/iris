@@ -1,6 +1,8 @@
 #ifndef IRIS_PREPROCESS_DECREMENT_HPP
 #define IRIS_PREPROCESS_DECREMENT_HPP
 
+// SPDX-License-Identifier: MIT
+
 #include <iris/pp/cat.hpp>
 
 #define IRIS_PP_DECREMENT(expr) IRIS_PP_CAT(IRIS_PP_DECREMENT_I_, expr)

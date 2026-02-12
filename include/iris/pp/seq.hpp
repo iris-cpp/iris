@@ -1,6 +1,8 @@
 #ifndef IRIS_PREPROCESS_SEQ_HPP
 #define IRIS_PREPROCESS_SEQ_HPP
 
+// SPDX-License-Identifier: MIT
+
 #include <iris/pp/cat.hpp>
 #include <iris/pp/for.hpp>
 
