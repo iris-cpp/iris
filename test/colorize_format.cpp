@@ -149,7 +149,7 @@ TEST_CASE("colorize_format")
     }
 }
 
-#if defined(__clang__) || _MSC_VER >= 1950 /* VS 2026 */
+#if IRIS_COLORIZE_HAS_STATIC
 
 TEST_CASE("colorize(fixed)")
 {
@@ -182,4 +182,4 @@ TEST_CASE("colorize(fixed)")
     }
 }
 
-#endif // clang or VS >= 2026
+#endif // IRIS_COLORIZE_HAS_STATIC

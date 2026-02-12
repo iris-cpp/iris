@@ -28,6 +28,12 @@
 #include <io.h>
 #endif
 
+#if defined(__clang__) || _MSC_VER >= 1950 /* VS 2026 */
+# define IRIS_COLORIZE_HAS_STATIC 1
+#else
+# define IRIS_COLORIZE_HAS_STATIC 0
+#endif
+
 namespace iris {
 
 class colorize_error : public std::invalid_argument
@@ -930,6 +936,26 @@ private:
 
 using colorized_string_view = basic_colorized_string_view<char>;
 
+
+template<int = 0>
+[[nodiscard]] constexpr detail::dynamic_colorized_string
+dynamic_colorize(std::string_view str)
+{
+    return detail::basic_dynamic_colorized_string{str};
+}
+
+#if __cpp_lib_format >= 202311L
+
+template<int = 0>
+[[nodiscard]] constexpr detail::dynamic_colorize_format_string
+dynamic_colorize_format(std::string_view str)
+{
+    return detail::basic_dynamic_colorize_format_string{str};
+}
+
+#endif
+
+
 template<class Out>
 constexpr Out colorize_to(Out out, colorized_string_view col)
 {
@@ -955,7 +981,7 @@ template<int = 0>
 }
 
 
-#if defined(__clang__) || _MSC_VER >= 1950 /* VS 2026 */
+#if IRIS_COLORIZE_HAS_STATIC
 
 template<basic_fixed_string Str>
 struct static_colorized_string
@@ -981,29 +1007,6 @@ template<basic_fixed_string Str>
 
 } // colorize_literals
 
-#endif // clang or VS >= 2026
-
-
-template<int = 0>
-[[nodiscard]] constexpr detail::dynamic_colorized_string
-dynamic_colorize(std::string_view str)
-{
-    return detail::basic_dynamic_colorized_string{str};
-}
-
-#if __cpp_lib_format >= 202311L
-
-template<int = 0>
-[[nodiscard]] constexpr detail::dynamic_colorize_format_string
-dynamic_colorize_format(std::string_view str)
-{
-    return detail::basic_dynamic_colorize_format_string{str};
-}
-
-#endif
-
-#if defined(__clang__) || _MSC_VER >= 1950 /* VS 2026 */
-
 template<basic_fixed_string Str, class... Args>
 [[nodiscard]] constexpr std::string colorize_format(static_colorized_string<Str>, Args&&... args)
 {
@@ -1016,7 +1019,7 @@ constexpr Out colorize_format_to(Out out, static_colorized_string<Str>, Args&&..
     return std::format_to(std::move(out), static_colorized_string<Str>::colorized, args...);
 }
 
-#endif // clang or VS >= 2026
+#endif // IRIS_COLORIZE_HAS_STATIC
 
 
 template<class... Args>
@@ -1042,7 +1045,7 @@ constexpr Out colorize_format_to(Out out, colorized_string_view str, Args&&... a
 } // ansi_colorize
 
 
-#if defined(__clang__) || _MSC_VER >= 1950 /* VS 2026 */
+#if IRIS_COLORIZE_HAS_STATIC
 
 inline namespace colorize_literals {
 using namespace ansi_colorize::colorize_literals;
@@ -1050,7 +1053,7 @@ using namespace ansi_colorize::colorize_literals;
 
 using ansi_colorize::static_colorized_string;
 
-#endif // clang or VS >= 2026
+#endif // IRIS_COLORIZE_HAS_STATIC
 
 
 using ansi_colorize::dynamic_colorize;
