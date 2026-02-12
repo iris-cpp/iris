@@ -1,7 +1,7 @@
 #ifndef IRIS_PREPROCESS_TUPLE_HPP
 #define IRIS_PREPROCESS_TUPLE_HPP
 
-#include <iris/preprocess/cat.hpp>
+#include <iris/pp/cat.hpp>
 
 #define IRIS_PP_TUPLE_SIZE(tuple) IRIS_PP_TUPLE_SIZE_I tuple
 #define IRIS_PP_TUPLE_SIZE_I(...)                                                                                                                         \

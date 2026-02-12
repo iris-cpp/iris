@@ -1,7 +1,7 @@
 #ifndef IRIS_PREPROCESS_INCREMENT_HPP
 #define IRIS_PREPROCESS_INCREMENT_HPP
 
-#include <iris/preprocess/cat.hpp>
+#include <iris/pp/cat.hpp>
 
 #define IRIS_PP_INCREMENT(expr) IRIS_PP_CAT(IRIS_PP_INCREMENT_I_, expr)
 

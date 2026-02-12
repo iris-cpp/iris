@@ -1,8 +1,8 @@
 #ifndef IRIS_PREPROCESS_SEQ_HPP
 #define IRIS_PREPROCESS_SEQ_HPP
 
-#include <iris/preprocess/cat.hpp>
-#include <iris/preprocess/for.hpp>
+#include <iris/pp/cat.hpp>
+#include <iris/pp/for.hpp>
 
 #define IRIS_PP_SEQ_ELEM(index, seq) IRIS_PP_SEQ_ELEM_I(IRIS_PP_CAT(IRIS_PP_SEQ_ELEM_I_, index) seq)
 #define IRIS_PP_SEQ_ELEM_I(intermediate) IRIS_PP_SEQ_ELEM_I_I(intermediate)

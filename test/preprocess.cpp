@@ -1,14 +1,14 @@
-#include <iris/preprocess/bool.hpp>
-#include <iris/preprocess/cat.hpp>
-#include <iris/preprocess/decrement.hpp>
-#include <iris/preprocess/for.hpp>
-#include <iris/preprocess/if.hpp>
-#include <iris/preprocess/increment.hpp>
-#include <iris/preprocess/not_equal.hpp>
-#include <iris/preprocess/repeat.hpp>
-#include <iris/preprocess/seq.hpp>
-#include <iris/preprocess/stringize.hpp>
-#include <iris/preprocess/tuple.hpp>
+#include <iris/pp/bool.hpp>
+#include <iris/pp/cat.hpp>
+#include <iris/pp/decrement.hpp>
+#include <iris/pp/for.hpp>
+#include <iris/pp/if.hpp>
+#include <iris/pp/increment.hpp>
+#include <iris/pp/not_equal.hpp>
+#include <iris/pp/repeat.hpp>
+#include <iris/pp/seq.hpp>
+#include <iris/pp/stringize.hpp>
+#include <iris/pp/tuple.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 

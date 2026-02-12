@@ -1,7 +1,7 @@
 #ifndef IRIS_PREPROCESS_NOT_EQUAL_HPP
 #define IRIS_PREPROCESS_NOT_EQUAL_HPP
 
-#include <iris/preprocess/cat.hpp>
+#include <iris/pp/cat.hpp>
 
 #define IRIS_PP_NOT_EQUAL(a, b) IRIS_PP_CAT(IRIS_PP_NOT_EQUAL_I_CHECK_, IRIS_PP_CAT(IRIS_PP_NOT_EQUAL_I_, a)(IRIS_PP_CAT(IRIS_PP_NOT_EQUAL_I_, b)))
 

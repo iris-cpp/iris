@@ -1,7 +1,7 @@
 #ifndef IRIS_PREPROCESS_REPEAT_HPP
 #define IRIS_PREPROCESS_REPEAT_HPP
 
-#include <iris/preprocess/cat.hpp>
+#include <iris/pp/cat.hpp>
 
 #define IRIS_PP_REPEAT(count, macro, data) IRIS_PP_CAT(IRIS_PP_REPEAT_I_, count)(macro, data)
 
