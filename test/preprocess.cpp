@@ -84,7 +84,7 @@ TEST_CASE("for", "[preprocess]")
   STATIC_CHECK(foo4 == 4);
 }
 
-#define IRIS_TEST_SEQ_EXEC(elem, data) elem
+#define IRIS_TEST_SEQ_EXEC(elem, data) constexpr int IRIS_PP_CAT(data, elem) = elem;
 
 TEST_CASE("seq", "[preprocess]")
 {
@@ -99,4 +99,10 @@ TEST_CASE("seq", "[preprocess]")
 
   STATIC_CHECK(IRIS_PP_STRINGIZE(IRIS_PP_SEQ_HEAD((a)(b)(c))) == "a"sv);
   STATIC_CHECK(IRIS_PP_STRINGIZE(IRIS_PP_SEQ_TAIL((a)(b)(c))) == "(b)(c)"sv);
+
+  IRIS_PP_SEQ_FOR_EACH((0)(1)(2), IRIS_TEST_SEQ_EXEC, foo)
+
+  STATIC_CHECK(foo0 == 0);
+  STATIC_CHECK(foo1 == 1);
+  STATIC_CHECK(foo2 == 2);
 }

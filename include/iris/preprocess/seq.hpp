@@ -2,6 +2,7 @@
 #define IRIS_PREPROCESS_SEQ_HPP
 
 #include <iris/preprocess/cat.hpp>
+#include <iris/preprocess/for.hpp>
 
 #define IRIS_PP_SEQ_ELEM(index, seq) IRIS_PP_SEQ_ELEM_I(IRIS_PP_CAT(IRIS_PP_SEQ_ELEM_I_, index) seq)
 #define IRIS_PP_SEQ_ELEM_I(intermediate) IRIS_PP_SEQ_ELEM_I_I(intermediate)
@@ -14,19 +15,17 @@
 
 #define IRIS_PP_SEQ_SIZE(seq) IRIS_PP_CAT(IRIS_PP_SEQ_SIZE_I_, IRIS_PP_SEQ_SIZE_I_0 seq)
 
-// TODO
-// #define IRIS_PP_SEQ_FOR_EACH(seq, macro, data) IRIS_PP_SEQ_FOR_EACH_I(seq, macro, data)
-// #define IRIS_PP_SEQ_FOR_EACH_I(seq, macro, data) \
-//   IRIS_PP_FOR((seq, macro, data), IRIS_PP_SEQ_FOR_EACH_I_PRED, IRIS_PP_SEQ_FOR_EACH_I_UPDATE, IRIS_PP_SEQ_FOR_EACH_I_EXEC)
+#define IRIS_PP_SEQ_FOR_EACH(seq, macro, data) \
+  IRIS_PP_FOR((seq, macro, data), IRIS_PP_SEQ_FOR_EACH_I_PRED, IRIS_PP_SEQ_FOR_EACH_I_UPDATE, IRIS_PP_SEQ_FOR_EACH_I_EXEC)
 
-// #define IRIS_PP_SEQ_FOR_EACH_I_PRED(state) IRIS_PP_SEQ_FOR_EACH_I_PRED_I state
-// #define IRIS_PP_SEQ_FOR_EACH_I_PRED_I(seq, macro, data) IRIS_PP_SEQ_SIZE(seq)
+#define IRIS_PP_SEQ_FOR_EACH_I_PRED(state) IRIS_PP_SEQ_FOR_EACH_I_PRED_I state
+#define IRIS_PP_SEQ_FOR_EACH_I_PRED_I(seq, macro, data) IRIS_PP_SEQ_SIZE(seq)
 
-// #define IRIS_PP_SEQ_FOR_EACH_I_UPDATE(state) IRIS_PP_SEQ_FOR_EACH_I_UPDATE_I state
-// #define IRIS_PP_SEQ_FOR_EACH_I_UPDATE_I(seq, macro, data) (IRIS_PP_SEQ_TAIL(seq), macro, data)
+#define IRIS_PP_SEQ_FOR_EACH_I_UPDATE(state) IRIS_PP_SEQ_FOR_EACH_I_UPDATE_I state
+#define IRIS_PP_SEQ_FOR_EACH_I_UPDATE_I(seq, macro, data) (IRIS_PP_SEQ_TAIL(seq), macro, data)
 
-// #define IRIS_PP_SEQ_FOR_EACH_I_EXEC(state) IRIS_PP_SEQ_FOR_EACH_I_EXEC_I state
-// #define IRIS_PP_SEQ_FOR_EACH_I_EXEC_I(seq, macro, data) macro(seq, data)
+#define IRIS_PP_SEQ_FOR_EACH_I_EXEC(state) IRIS_PP_SEQ_FOR_EACH_I_EXEC_I state
+#define IRIS_PP_SEQ_FOR_EACH_I_EXEC_I(seq, macro, data) macro(IRIS_PP_SEQ_HEAD(seq), data)
 
 #define IRIS_PP_SEQ_ELEM_I_0(seq) seq, dummy
 #define IRIS_PP_SEQ_ELEM_I_1(seq) IRIS_PP_SEQ_ELEM_I_0
