@@ -18,6 +18,9 @@
 
 using namespace std::string_view_literals;
 
+#define IRIS_TEST_REPEAT_INNER(j, i) constexpr int IRIS_PP_CAT(IRIS_PP_CAT(IRIS_PP_CAT(baz_, i), _), j) = i * 10 + j;
+#define IRIS_TEST_REPEAT_OUTER(i, d) IRIS_PP_REPEAT(i, IRIS_TEST_REPEAT_INNER, i)
+
 #define IRIS_TEST_REPEAT_DECLARE_VAR(index, name) constexpr int IRIS_PP_CAT(name, index) = index;
 
 TEST_CASE("repeat", "[preprocess]")
@@ -32,6 +35,11 @@ TEST_CASE("repeat", "[preprocess]")
     IRIS_PP_REPEAT_FROM_TO(3, 5, IRIS_TEST_REPEAT_DECLARE_VAR, bar)
     STATIC_CHECK(bar3 == 3);
     STATIC_CHECK(bar4 == 4);
+
+    IRIS_PP_REPEAT(3, IRIS_TEST_REPEAT_OUTER, data)
+    STATIC_CHECK(baz_1_0 == 10);
+    STATIC_CHECK(baz_2_0 == 20);
+    STATIC_CHECK(baz_2_1 == 21);
 }
 
 TEST_CASE("tuple", "[preprocess]")
@@ -138,5 +146,3 @@ TEST_CASE("sub", "[preprocess]")
 
     STATIC_CHECK(IRIS_PP_SUB(3, 2) == 1);
 }
-
-
