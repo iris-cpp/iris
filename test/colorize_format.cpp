@@ -154,6 +154,8 @@ TEST_CASE("colorize_format")
     }
 }
 
+#if defined(__clang__) || _MSC_VER >= 1950 /* VS 2026 */
+
 TEST_CASE("colorize(fixed)")
 {
     static constexpr iris::fixed_string str = "[red]foo";
@@ -165,3 +167,5 @@ TEST_CASE("colorize(fixed)")
     auto const s = iris::colorize_format("[red]{}"_col, 42);
     CHECK(s == "\033[38;2;255;0;0m42");
 }
+
+#endif
