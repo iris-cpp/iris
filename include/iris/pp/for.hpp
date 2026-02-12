@@ -43,37 +43,69 @@
 #define IRIS_PP_FOR_I_EAT_1(a1)
 #define IRIS_PP_FOR_I_EAT_4(a1, a2, a3, a4)
 
-#define IRIS_PP_FOR_I_I_0(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_1, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_1(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_2, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_2(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_3, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_3(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_4, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_4(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_5, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_5(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_6, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_6(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_7, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_7(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_8, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_8(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_9, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_9(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_10, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_10(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_11, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_11(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_12, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_12(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_13, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_13(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_14, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_14(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_15, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_15(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_16, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_16(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_17, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_17(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_18, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_18(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_19, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_19(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_20, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_20(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_21, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_21(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_22, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_22(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_23, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_23(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_24, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_24(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_25, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_25(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_26, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_26(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_27, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_27(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_28, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_28(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_29, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_29(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_30, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_30(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_31, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
-#define IRIS_PP_FOR_I_I_31(state, pred, op, macro) IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_32, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_0(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_1, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_1(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_2, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_2(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_3, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_3(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_4, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_4(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_5, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_5(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_6, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_6(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_7, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_7(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_8, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_8(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_9, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_9(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_10, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_10(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_11, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_11(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_12, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_12(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_13, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_13(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_14, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_14(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_15, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_15(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_16, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_16(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_17, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_17(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_18, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_18(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_19, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_19(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_20, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_20(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_21, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_21(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_22, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_22(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_23, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_23(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_24, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_24(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_25, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_25(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_26, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_26(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_27, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_27(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_28, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_28(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_29, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_29(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_30, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_30(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_31, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
+#define IRIS_PP_FOR_I_I_31(state, pred, op, macro) \
+    IRIS_PP_IF(pred(state), macro, IRIS_PP_FOR_I_EAT_1)(state) IRIS_PP_IF(pred(state), IRIS_PP_FOR_I_32, IRIS_PP_FOR_I_EAT_4)(op(state), pred, op, macro)
 
 #endif

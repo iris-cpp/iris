@@ -5,8 +5,10 @@
 
 #include <iris/pp/cat.hpp>
 
-#define IRIS_PP_DECREMENT(expr) IRIS_PP_CAT(IRIS_PP_DECREMENT_I_, expr)
+#define IRIS_PP_DECREMENT(expr) IRIS_PP_DECREMENT_I(expr)
+#define IRIS_PP_DECREMENT_I(expr) IRIS_PP_CAT(IRIS_PP_DECREMENT_I_, expr)
 
+#define IRIS_PP_DECREMENT_I_0 0
 #define IRIS_PP_DECREMENT_I_1 0
 #define IRIS_PP_DECREMENT_I_2 1
 #define IRIS_PP_DECREMENT_I_3 2

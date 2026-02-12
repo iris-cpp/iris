@@ -1,0 +1,6 @@
+#ifndef IRIS_PREPROCESS_COMMA_HPP
+#define IRIS_PREPROCESS_COMMA_HPP
+
+#define IRIS_PP_COMMA ,
+
+#endif

@@ -5,7 +5,24 @@
 
 #include <iris/pp/cat.hpp>
 
+#include <iris/pp/add.hpp>
+#include <iris/pp/sub.hpp>
+
 #define IRIS_PP_REPEAT(count, macro, data) IRIS_PP_CAT(IRIS_PP_REPEAT_I_, count)(macro, data)
+
+#define IRIS_PP_REPEAT_FROM_TO(from, to, macro, data) IRIS_PP_REPEAT(IRIS_PP_SUB(to, from), IRIS_PP_REPEAT_FROM_TO_I, (macro, from, data))
+
+#define IRIS_PP_REPEAT_FROM_TO_I_MACRO(state) IRIS_PP_REPEAT_FROM_TO_I_MACRO_I state
+#define IRIS_PP_REPEAT_FROM_TO_I_MACRO_I(macro, from, data) macro
+
+#define IRIS_PP_REPEAT_FROM_TO_I_FROM(state) IRIS_PP_REPEAT_FROM_TO_I_FROM_I state
+#define IRIS_PP_REPEAT_FROM_TO_I_FROM_I(macro, from, data) from
+
+#define IRIS_PP_REPEAT_FROM_TO_I_DATA(state) IRIS_PP_REPEAT_FROM_TO_I_DATA_I state
+#define IRIS_PP_REPEAT_FROM_TO_I_DATA_I(macro, from, data) data
+
+#define IRIS_PP_REPEAT_FROM_TO_I(index, state) \
+    IRIS_PP_REPEAT_FROM_TO_I_MACRO(state)(IRIS_PP_ADD(index, IRIS_PP_REPEAT_FROM_TO_I_FROM(state)), IRIS_PP_REPEAT_FROM_TO_I_DATA(state))
 
 #define IRIS_PP_REPEAT_I_32(macro, data) IRIS_PP_REPEAT_I_31(macro, data) macro(31, data)
 #define IRIS_PP_REPEAT_I_31(macro, data) IRIS_PP_REPEAT_I_30(macro, data) macro(30, data)
