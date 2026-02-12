@@ -3,6 +3,7 @@
 #include <iris/pp/add.hpp>
 #include <iris/pp/bool.hpp>
 #include <iris/pp/cat.hpp>
+#include <iris/pp/comma.hpp>
 #include <iris/pp/decrement.hpp>
 #include <iris/pp/for.hpp>
 #include <iris/pp/if.hpp>
@@ -145,4 +146,14 @@ TEST_CASE("sub", "[preprocess]")
     STATIC_CHECK(IRIS_PP_SUB(1, 1) == 0);
 
     STATIC_CHECK(IRIS_PP_SUB(3, 2) == 1);
+}
+
+#define IRIS_TEST_COMMA_IF(index, data) IRIS_PP_COMMA_IF(index) index
+
+TEST_CASE("comma_if", "[preprocess]")
+{
+    constexpr int arr[]{IRIS_PP_REPEAT(3, IRIS_TEST_COMMA_IF, data)};
+    STATIC_CHECK(arr[0] == 0);
+    STATIC_CHECK(arr[1] == 1);
+    STATIC_CHECK(arr[2] == 2);
 }
