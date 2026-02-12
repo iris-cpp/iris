@@ -2,26 +2,30 @@
 
 #include <iris/colorize_format.hpp>
 
+// TODO: `checking_scanner` leads to GCC ICE only on constexpr context
+#if defined(__GNUC__) && !defined(__clang__)
+# define IRIS_CONSTEXPR_WORKAROUND
+#else
+# define IRIS_CONSTEXPR_WORKAROUND constexpr
+#endif
+
 TEST_CASE("colorized_string")
 {
-    {
-        constexpr auto test = [](iris::ansi_colorize::colorized_string_view) {};
-        test("foo");
-        test("[reset]");
-        test("[fg:reset]");
-        test("[bg:reset]");
-        test("[black]");
-        test("[red]");
-        test("[green]");
-        test("[yellow]");
-        test("[blue]");
-        test("[magenta]");
-        test("[cyan]");
-        test("[white]");
-        test("[red|bold]");
-        test("[bold|italic]");
-        test("[fg:red|bg:blue]");
-    }
+    { [[maybe_unused]] IRIS_CONSTEXPR_WORKAROUND iris::ansi_colorize::colorized_string_view sv("foo"); }
+    { [[maybe_unused]] IRIS_CONSTEXPR_WORKAROUND iris::ansi_colorize::colorized_string_view sv("[reset]"); }
+    { [[maybe_unused]] IRIS_CONSTEXPR_WORKAROUND iris::ansi_colorize::colorized_string_view sv("[fg:reset]"); }
+    { [[maybe_unused]] IRIS_CONSTEXPR_WORKAROUND iris::ansi_colorize::colorized_string_view sv("[bg:reset]"); }
+    { [[maybe_unused]] IRIS_CONSTEXPR_WORKAROUND iris::ansi_colorize::colorized_string_view sv("[black]"); }
+    { [[maybe_unused]] IRIS_CONSTEXPR_WORKAROUND iris::ansi_colorize::colorized_string_view sv("[red]"); }
+    { [[maybe_unused]] IRIS_CONSTEXPR_WORKAROUND iris::ansi_colorize::colorized_string_view sv("[green]"); }
+    { [[maybe_unused]] IRIS_CONSTEXPR_WORKAROUND iris::ansi_colorize::colorized_string_view sv("[yellow]"); }
+    { [[maybe_unused]] IRIS_CONSTEXPR_WORKAROUND iris::ansi_colorize::colorized_string_view sv("[blue]"); }
+    { [[maybe_unused]] IRIS_CONSTEXPR_WORKAROUND iris::ansi_colorize::colorized_string_view sv("[magenta]"); }
+    { [[maybe_unused]] IRIS_CONSTEXPR_WORKAROUND iris::ansi_colorize::colorized_string_view sv("[cyan]"); }
+    { [[maybe_unused]] IRIS_CONSTEXPR_WORKAROUND iris::ansi_colorize::colorized_string_view sv("[white]"); }
+    { [[maybe_unused]] IRIS_CONSTEXPR_WORKAROUND iris::ansi_colorize::colorized_string_view sv("[red|bold]"); }
+    { [[maybe_unused]] IRIS_CONSTEXPR_WORKAROUND iris::ansi_colorize::colorized_string_view sv("[bold|italic]"); }
+    { [[maybe_unused]] IRIS_CONSTEXPR_WORKAROUND iris::ansi_colorize::colorized_string_view sv("[fg:red|bg:blue]"); }
 
     CHECK_THROWS_AS((void)iris::colorize(iris::dynamic_colorize("[]")), iris::colorize_error);
     CHECK_THROWS_AS((void)iris::colorize(iris::dynamic_colorize("[")), iris::colorize_error);
@@ -29,29 +33,27 @@ TEST_CASE("colorized_string")
     CHECK_THROWS_AS((void)iris::colorize(iris::dynamic_colorize("[reset|red]")), iris::colorize_error);
     CHECK_THROWS_AS((void)iris::colorize(iris::dynamic_colorize("[red|reset]")), iris::colorize_error);
     CHECK_THROWS_AS((void)iris::colorize(iris::dynamic_colorize("[black|red]")), iris::colorize_error);
-}
 
-TEST_CASE("colorized_format_string")
-{
-    {
-        constexpr auto test = [](iris::ansi_colorize::colorized_format_string<>) {};
-        test("foo");
-        test("[reset]");
-        test("[fg:reset]");
-        test("[bg:reset]");
-        test("[black]");
-        test("[red]");
-        test("[green]");
-        test("[yellow]");
-        test("[blue]");
-        test("[magenta]");
-        test("[cyan]");
-        test("[white]");
-        test("[red|bold]");
-        test("[bold|italic]");
-        test("[fg:red|bg:blue]");
-    }
+    // These can only be constexpr because `std::format_string` is consteval
+#if !(defined(__GNUC__) && !defined(__clang__))
+    { [[maybe_unused]] constexpr iris::ansi_colorize::colorized_format_string<> fmt("foo"); }
+    { [[maybe_unused]] constexpr iris::ansi_colorize::colorized_format_string<> fmt("[reset]"); }
+    { [[maybe_unused]] constexpr iris::ansi_colorize::colorized_format_string<> fmt("[fg:reset]"); }
+    { [[maybe_unused]] constexpr iris::ansi_colorize::colorized_format_string<> fmt("[bg:reset]"); }
+    { [[maybe_unused]] constexpr iris::ansi_colorize::colorized_format_string<> fmt("[black]"); }
+    { [[maybe_unused]] constexpr iris::ansi_colorize::colorized_format_string<> fmt("[red]"); }
+    { [[maybe_unused]] constexpr iris::ansi_colorize::colorized_format_string<> fmt("[green]"); }
+    { [[maybe_unused]] constexpr iris::ansi_colorize::colorized_format_string<> fmt("[yellow]"); }
+    { [[maybe_unused]] constexpr iris::ansi_colorize::colorized_format_string<> fmt("[blue]"); }
+    { [[maybe_unused]] constexpr iris::ansi_colorize::colorized_format_string<> fmt("[magenta]"); }
+    { [[maybe_unused]] constexpr iris::ansi_colorize::colorized_format_string<> fmt("[cyan]"); }
+    { [[maybe_unused]] constexpr iris::ansi_colorize::colorized_format_string<> fmt("[white]"); }
+    { [[maybe_unused]] constexpr iris::ansi_colorize::colorized_format_string<> fmt("[red|bold]"); }
+    { [[maybe_unused]] constexpr iris::ansi_colorize::colorized_format_string<> fmt("[bold|italic]"); }
+    { [[maybe_unused]] constexpr iris::ansi_colorize::colorized_format_string<> fmt("[fg:red|bg:blue]"); }
+#endif
 }
+#undef IRIS_CONSTEXPR_WORKAROUND
 
 TEST_CASE("colorize")
 {

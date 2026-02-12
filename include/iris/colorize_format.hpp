@@ -869,9 +869,8 @@ struct counting_iterator
 template<class CharT, class... Args>
 struct basic_colorized_format_string
 {
-    template<class Str>
-        requires StringLike<Str const&>
-    consteval basic_colorized_format_string(Str const& str)
+    // TODO: GCC emits ICE
+    consteval basic_colorized_format_string(StringLike auto const& str)
         : fmt_(str)
     {
         detail::checking_scanner<CharT> scanner(str);
@@ -900,9 +899,8 @@ using colorized_format_string = basic_colorized_format_string<char, std::type_id
 template<class CharT>
 struct basic_colorized_string_view
 {
-    template<class Str>
-        requires StringLike<Str const&>
-    consteval basic_colorized_string_view(Str const& str)
+    // TODO: This should be consteval, but GCC emits ICE
+    constexpr basic_colorized_string_view(StringLike auto const& str)
         : str_(str)
     {
         detail::checking_scanner<CharT> scanner(str);
@@ -1032,12 +1030,12 @@ template<class... Args>
 }
 
 template<class Out, class... Args>
-constexpr Out colorize_format_to(Out out, colorized_format_string<Args...> fmt, Args&&... args)
+constexpr Out colorize_format_to(Out out, colorized_string_view str, Args&&... args)
 {
 #if __cpp_lib_format >= 202311L
-    return std::format_to(std::move(out), std::runtime_format(ansi_colorize::colorize(fmt)), args...);
+    return std::format_to(std::move(out), std::runtime_format(ansi_colorize::colorize(str)), args...);
 #else
-    return std::vformat_to(std::move(out), ansi_colorize::colorize(fmt), std::make_format_args(args...));
+    return std::vformat_to(std::move(out), ansi_colorize::colorize(str), std::make_format_args(args...));
 #endif
 }
 
