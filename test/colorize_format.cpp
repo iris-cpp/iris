@@ -1,11 +1,11 @@
 #include "iris_test.hpp"
 
-#include <iris/color_format.hpp>
+#include <iris/colorize_format.hpp>
 
-TEST_CASE("colorize_string")
+TEST_CASE("colorized_string")
 {
     {
-        constexpr auto test = [](iris::colorize_string) {};
+        constexpr auto test = [](iris::ansi_colorize::colorized_string_view) {};
         test("foo");
         test("[reset]");
         test("[fg:reset]");
@@ -22,18 +22,26 @@ TEST_CASE("colorize_string")
         test("[bold|italic]");
         test("[fg:red|bg:blue]");
     }
-    CHECK_THROWS_AS((void)iris::colorize(iris::runtime_colorize("[]")), iris::colorize_error);
-    CHECK_THROWS_AS((void)iris::colorize(iris::runtime_colorize("[")), iris::colorize_error);
-    CHECK_THROWS_AS((void)iris::colorize(iris::runtime_colorize("]")), iris::colorize_error);
-    CHECK_THROWS_AS((void)iris::colorize(iris::runtime_colorize("[reset|red]")), iris::colorize_error);
-    CHECK_THROWS_AS((void)iris::colorize(iris::runtime_colorize("[red|reset]")), iris::colorize_error);
-    CHECK_THROWS_AS((void)iris::colorize(iris::runtime_colorize("[black|red]")), iris::colorize_error);
+
+    CHECK_THROWS_AS((void)iris::colorize("[]"), iris::colorize_error);
+    CHECK_THROWS_AS((void)iris::colorize("["), iris::colorize_error);
+    CHECK_THROWS_AS((void)iris::colorize("]"), iris::colorize_error);
+    CHECK_THROWS_AS((void)iris::colorize("[reset|red]"), iris::colorize_error);
+    CHECK_THROWS_AS((void)iris::colorize("[red|reset]"), iris::colorize_error);
+    CHECK_THROWS_AS((void)iris::colorize("[black|red]"), iris::colorize_error);
+
+    CHECK_THROWS_AS((void)iris::colorize(iris::dynamic_colorize("[]")), iris::colorize_error);
+    CHECK_THROWS_AS((void)iris::colorize(iris::dynamic_colorize("[")), iris::colorize_error);
+    CHECK_THROWS_AS((void)iris::colorize(iris::dynamic_colorize("]")), iris::colorize_error);
+    CHECK_THROWS_AS((void)iris::colorize(iris::dynamic_colorize("[reset|red]")), iris::colorize_error);
+    CHECK_THROWS_AS((void)iris::colorize(iris::dynamic_colorize("[red|reset]")), iris::colorize_error);
+    CHECK_THROWS_AS((void)iris::colorize(iris::dynamic_colorize("[black|red]")), iris::colorize_error);
 }
 
-TEST_CASE("colorize_format_string")
+TEST_CASE("colorized_format_string")
 {
     {
-        constexpr auto test = [](iris::colorize_format_string<>) {};
+        constexpr auto test = [](iris::ansi_colorize::colorized_format_string<>) {};
         test("foo");
         test("[reset]");
         test("[fg:reset]");
@@ -110,8 +118,8 @@ TEST_CASE("colorize")
         CHECK(s == "\033[38;2;12;34;56mfoo");
     }
 
-    CHECK_THROWS_AS((void)iris::colorize(iris::runtime_colorize("[rgb(256,34,56)]foo")), iris::colorize_error);
-    CHECK_THROWS_AS((void)iris::colorize(iris::runtime_colorize("[rgb(-1,34,56)]foo")), iris::colorize_error);
+    CHECK_THROWS_AS((void)iris::colorize(iris::dynamic_colorize("[rgb(256,34,56)]foo")), iris::colorize_error);
+    CHECK_THROWS_AS((void)iris::colorize(iris::dynamic_colorize("[rgb(-1,34,56)]foo")), iris::colorize_error);
 
     {
         auto const s = iris::colorize("[fg:rgb(12,34,56)]foo");
@@ -127,38 +135,33 @@ TEST_CASE("colorize")
         CHECK(s == "\033[38;2;12;34;56;48;2;78;90;12mfoo");
     }
 
-    CHECK_THROWS_AS((void)iris::colorize(iris::runtime_colorize("[fg:rgb(12,34,56)|fg:rgb(78,90,12)]foo")), iris::colorize_error);
-    CHECK_THROWS_AS((void)iris::colorize(iris::runtime_colorize("[bg:rgb(12,34,56)|bg:rgb(78,90,12)]foo")), iris::colorize_error);
+    CHECK_THROWS_AS((void)iris::colorize(iris::dynamic_colorize("[fg:rgb(12,34,56)|fg:rgb(78,90,12)]foo")), iris::colorize_error);
+    CHECK_THROWS_AS((void)iris::colorize(iris::dynamic_colorize("[bg:rgb(12,34,56)|bg:rgb(78,90,12)]foo")), iris::colorize_error);
 
-    CHECK(iris::colorized_size("[red]foo") == 18);
+    CHECK(iris::ansi_colorize::colorized_size("[red]foo") == 18);
 }
-
-TEST_CASE("format_colorize")
-{
-    {
-        std::string s;
-        iris::format_colorize_to(std::back_inserter(s), "[red]{}", 42);
-        CHECK(s == "\033[38;2;255;0;0m42");
-    }
-    {
-        auto const s = iris::format_colorize("[green]{}", 42);
-        CHECK(s == "\033[38;2;0;128;0m42");
-    }
-}
-
-#if __cpp_lib_format >= 202311L
 
 TEST_CASE("colorize_format")
 {
+    {
+        auto const s = iris::colorize_format("[red]{}", 42);
+        CHECK(s == "\033[38;2;255;0;0m42");
+    }
     {
         std::string s;
         iris::colorize_format_to(std::back_inserter(s), "[red]{}", 42);
         CHECK(s == "\033[38;2;255;0;0m42");
     }
-    {
-        auto const s = iris::colorize_format("[green]{}", 42);
-        CHECK(s == "\033[38;2;0;128;0m42");
-    }
 }
 
-#endif
+TEST_CASE("colorize(fixed)")
+{
+    static constexpr iris::fixed_string str = "[red]foo";
+    STATIC_CHECK(iris::ansi_colorize::colorized_size(str) == 18);
+    STATIC_CHECK(iris::colorize(str) == "\033[38;2;255;0;0mfoo");
+
+    STATIC_CHECK(std::string_view{iris::ansi_colorize::static_colorized_string<str>::colorized} == "\033[38;2;255;0;0mfoo");
+    using namespace iris::ansi_colorize::colorize_literals;
+    auto const s = iris::colorize_format("[red]{}"_col, 42);
+    CHECK(s == "\033[38;2;255;0;0m42");
+}

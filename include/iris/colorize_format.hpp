@@ -1,5 +1,5 @@
-#ifndef IRIS_COLOR_FORMAT_HPP
-#define IRIS_COLOR_FORMAT_HPP
+#ifndef IRIS_COLORIZE_FORMAT_HPP
+#define IRIS_COLORIZE_FORMAT_HPP
 
 #include <iris/string.hpp>
 #include <iris/enum_bitops.hpp>
@@ -15,6 +15,7 @@
 #include <ostream>
 #include <ranges>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <utility>
 
@@ -34,6 +35,8 @@ class colorize_error : public std::invalid_argument
 public:
     using invalid_argument::invalid_argument;
 };
+
+namespace ansi_colorize {
 
 template<class CharT>
 struct basic_colorize_parse_context
@@ -449,10 +452,14 @@ static constexpr std::uint8_t emphasis_to_value(emphasis em)
 
 } // detail
 
+} // ansi_colorize
+
 template<>
-struct bitops_enabled<detail::emphasis> : std::true_type {
+struct bitops_enabled<ansi_colorize::detail::emphasis> : std::true_type {
     static constexpr int max_bit = 7;
 };
+
+namespace ansi_colorize {
 
 template<class CharT = char>
 struct colorizer
@@ -647,12 +654,12 @@ private:
         return result;
     }
 
-  detail::color fg_color_;
-  detail::color bg_color_;
-  detail::emphasis emphasis_{};
-  bool reset_ = true;
-  bool fg_reset_ = true;
-  bool bg_reset_ = true;
+    detail::color fg_color_;
+    detail::color bg_color_;
+    detail::emphasis emphasis_{};
+    bool reset_ = true;
+    bool fg_reset_ = true;
+    bool bg_reset_ = true;
 };
 
 namespace detail {
@@ -803,19 +810,35 @@ struct colorizing_scanner : scanner<CharT>
     basic_colorize_context<Out, CharT>& cc;
 };
 
+
 template<class CharT>
-struct basic_runtime_colorize_string
+struct basic_dynamic_colorized_string
 {
-    constexpr explicit basic_runtime_colorize_string(std::basic_string_view<CharT> str) : str_(str) {}
+    constexpr explicit basic_dynamic_colorized_string(std::basic_string_view<CharT> str) noexcept
+        : str_(str)
+    {}
+
     std::basic_string_view<CharT> str_;
 };
 
+using dynamic_colorized_string = basic_dynamic_colorized_string<char>;
+
+#if __cpp_lib_format >= 202311L
+
 template<class CharT>
-struct basic_runtime_colorize_format_string
+struct basic_dynamic_colorized_format_string
 {
-    constexpr explicit basic_runtime_colorize_format_string(std::basic_string_view<CharT> str) : str_(str) {}
+    constexpr explicit basic_dynamic_colorized_format_string(std::basic_string_view<CharT> str) noexcept
+        : str_(str)
+    {}
+
     std::basic_string_view<CharT> str_;
 };
+
+using dynamic_colorized_format_string = basic_dynamic_colorized_format_string<char>;
+
+#endif
+
 
 template<class CharT>
 struct counting_iterator
@@ -837,22 +860,12 @@ struct counting_iterator
 
 } // detail
 
-[[nodiscard]] constexpr auto runtime_colorize(std::string_view str)
-{
-    return detail::basic_runtime_colorize_string{str};
-}
-
-[[nodiscard]] constexpr auto runtime_colorize_format(std::string_view str)
-{
-    return detail::basic_runtime_colorize_format_string{str};
-}
-
 template<class CharT, class... Args>
-struct basic_colorize_format_string
+struct basic_colorized_format_string
 {
     template<class Str>
         requires StringLike<Str const&>
-    consteval basic_colorize_format_string(Str const& str)
+    consteval basic_colorized_format_string(Str const& str)
         : fmt_(str)
     {
         detail::checking_scanner<CharT> scanner(str);
@@ -860,8 +873,8 @@ struct basic_colorize_format_string
     }
 
 #if __cpp_lib_format >= 202311L
-    explicit constexpr basic_colorize_format_string(detail::basic_runtime_colorize_format_string<CharT> runtime_str)
-        : fmt_(std::runtime_format(runtime_str.str_))
+    explicit constexpr basic_colorize_format_string(detail::basic_dynamic_colorized_format_string<CharT> dynamic_str)
+        : fmt_(std::runtime_format(dynamic_str.str_))
     {
     }
 #endif
@@ -876,26 +889,26 @@ private:
 };
 
 template<class... Args>
-using colorize_format_string = basic_colorize_format_string<char, std::type_identity_t<Args>...>;
+using colorized_format_string = basic_colorized_format_string<char, std::type_identity_t<Args>...>;
 
 template<class CharT>
-struct basic_colorize_string
+struct basic_colorized_string_view
 {
     template<class Str>
         requires StringLike<Str const&>
-    consteval basic_colorize_string(Str const& str) : str_(str)
+    constexpr basic_colorized_string_view(Str const& str) : str_(str)
     {
         detail::checking_scanner<CharT> scanner(str);
         scanner.scan();
     }
 
-    constexpr basic_colorize_string(detail::basic_runtime_colorize_string<CharT> runtime_str) noexcept
+    constexpr basic_colorized_string_view(detail::basic_dynamic_colorized_string<CharT> runtime_str) noexcept
         : str_(runtime_str.str_)
     {
     }
 
     template<class... Args>
-    constexpr basic_colorize_string(basic_colorize_format_string<CharT, Args...> fmt)
+    constexpr basic_colorized_string_view(basic_colorized_format_string<CharT, Args...> fmt) noexcept
         : str_(fmt.get().get())
     {}
 
@@ -908,10 +921,12 @@ private:
     std::basic_string_view<CharT> str_;
 };
 
-using colorize_string = basic_colorize_string<char>;
+// --------------------------------------------------
+
+using colorized_string_view = basic_colorized_string_view<char>;
 
 template<class Out>
-constexpr Out colorize_to(Out out, colorize_string col)
+constexpr Out colorize_to(Out out, colorized_string_view col)
 {
     basic_colorize_context<Out, char> ctx(std::move(out));
     detail::colorizing_scanner<Out, char> scanner(ctx, col.get());
@@ -919,24 +934,31 @@ constexpr Out colorize_to(Out out, colorize_string col)
     return ctx.out();
 }
 
-[[nodiscard]] constexpr std::string colorize(colorize_string col)
+template<int = 0>
+[[nodiscard]] constexpr std::basic_string<char>
+colorize(colorized_string_view col)
 {
-    std::string str;
-    iris::colorize_to(std::back_inserter(str), col);
+    std::basic_string<char> str;
+    ansi_colorize::colorize_to(std::back_inserter(str), col);
     return str;
 }
 
-[[nodiscard]] constexpr std::size_t colorized_size(colorize_string col)
+template<int = 0>
+[[nodiscard]] constexpr std::size_t colorized_size(colorized_string_view col)
 {
-    return iris::colorize_to(detail::counting_iterator<char>{}, col).count;
+    return ansi_colorize::colorize_to(detail::counting_iterator<char>{}, col).count;
 }
 
 template<basic_fixed_string Str>
-struct static_colorize_string
+struct static_colorized_string
 {
-    static constexpr auto colorized = [] {
-        basic_fixed_string<typename decltype(Str)::value_type, colorized_size(Str)> res;
-        iris::colorize_to(res.begin(), Str);
+    using value_type = decltype(Str)::value_type;
+    static constexpr std::size_t size = ansi_colorize::colorized_size(Str);
+
+    static constexpr basic_fixed_string<value_type, size> colorized = []
+    {
+        basic_fixed_string<value_type, size> res;
+        ansi_colorize::colorize_to(res.begin(), Str);
         return res;
     }();
 };
@@ -944,53 +966,78 @@ struct static_colorize_string
 namespace colorize_literals {
 
 template<basic_fixed_string Str>
-[[nodiscard]] constexpr static_colorize_string<Str> operator""_col()
+[[nodiscard]] consteval static_colorized_string<Str> operator""_col()
 {
     return {};
 }
 
 } // colorize_literals
 
-
-template<class Out, class... Args>
-constexpr Out format_colorize_to(Out out, colorize_format_string<Args...> fmt, Args&&... args)
+template<int = 0>
+[[nodiscard]] constexpr detail::dynamic_colorized_string
+dynamic_colorize(std::string_view str)
 {
-    return iris::colorize_to(std::move(out), iris::runtime_colorize(std::format(fmt.get(), std::forward<Args>(args)...)));
-}
-
-template<class... Args>
-[[nodiscard]] constexpr std::string format_colorize(colorize_format_string<Args...> fmt, Args&&... args)
-{
-    return iris::colorize(iris::runtime_colorize(std::format(fmt.get(), std::forward<Args>(args)...)));
-}
-
-template<class Out, basic_fixed_string Str, class... Args>
-constexpr Out colorize_format_to(Out out, static_colorize_string<Str>, Args&&... args)
-{
-    return std::format_to(std::move(out), static_colorize_string<Str>::colorized, std::forward<Args>(args)...);
-}
-
-template<basic_fixed_string Str, class... Args>
-[[nodiscard]] constexpr std::string colorize_format(static_colorize_string<Str>, Args&&... args)
-{
-    return std::format(static_colorize_string<Str>::colorized, std::forward<Args>(args)...);
+    return detail::basic_dynamic_colorized_string{str};
 }
 
 #if __cpp_lib_format >= 202311L
 
-template<class Out, class... Args>
-constexpr Out colorize_format_to(Out out, colorize_format_string<Args...> fmt, Args&&... args)
+template<int = 0>
+[[nodiscard]] constexpr detail::dynamic_colorize_format_string
+dynamic_colorize_format(std::string_view str)
 {
-    return std::format_to(std::move(out), std::runtime_format(colorize(fmt)), std::forward<Args>(args)...);
-}
-
-template<class... Args>
-[[nodiscard]] constexpr std::string colorize_format(colorize_format_string<Args...> fmt, Args&&... args)
-{
-  return std::format(std::runtime_format(colorize(fmt)), std::forward<Args>(args)...);
+    return detail::basic_dynamic_colorize_format_string{str};
 }
 
 #endif
+
+template<basic_fixed_string Str, class... Args>
+[[nodiscard]] constexpr std::string colorize_format(static_colorized_string<Str>, Args&&... args)
+{
+    return std::format(static_colorized_string<Str>::colorized, args...);
+}
+
+template<class... Args>
+[[nodiscard]] constexpr std::string colorize_format(colorized_string_view str, Args&&... args)
+{
+#if __cpp_lib_format >= 202311L
+    return std::format(std::runtime_format(ansi_colorize::colorize(str)), std::make_format_args(args...));
+#else
+    return std::vformat(ansi_colorize::colorize(str), std::make_format_args(args...));
+#endif
+}
+
+template<class Out, basic_fixed_string Str, class... Args>
+constexpr Out colorize_format_to(Out out, static_colorized_string<Str>, Args&&... args)
+{
+    return std::format_to(std::move(out), static_colorized_string<Str>::colorized, args...);
+}
+
+template<class Out, class... Args>
+constexpr Out colorize_format_to(Out out, colorized_format_string<Args...> fmt, Args&&... args)
+{
+#if __cpp_lib_format >= 202311L
+    return std::format_to(std::move(out), std::runtime_format(ansi_colorize::colorize(fmt)), args...);
+#else
+    return std::vformat_to(std::move(out), ansi_colorize::colorize(fmt), std::make_format_args(args...));
+#endif
+}
+
+} // ansi_colorize
+
+using ansi_colorize::static_colorized_string;
+
+using ansi_colorize::dynamic_colorize;
+
+#if __cpp_lib_format >= 202311L
+using ansi_colorize::dynamic_colorize_format;
+#endif
+
+using ansi_colorize::colorize;
+using ansi_colorize::colorize_to;
+
+using ansi_colorize::colorize_format;
+using ansi_colorize::colorize_format_to;
 
 } // iris
 
