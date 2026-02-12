@@ -180,4 +180,4 @@ TEST_CASE("colorize(fixed)")
     }
 }
 
-#endif
+#endif // clang or VS >= 2026

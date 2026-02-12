@@ -956,6 +956,9 @@ template<int = 0>
     return ansi_colorize::colorize_to(detail::counting_iterator<char>{}, col).count;
 }
 
+
+#if defined(__clang__) || _MSC_VER >= 1950 /* VS 2026 */
+
 template<basic_fixed_string Str>
 struct static_colorized_string
 {
@@ -980,6 +983,9 @@ template<basic_fixed_string Str>
 
 } // colorize_literals
 
+#endif // clang or VS >= 2026
+
+
 template<int = 0>
 [[nodiscard]] constexpr detail::dynamic_colorized_string
 dynamic_colorize(std::string_view str)
@@ -998,11 +1004,22 @@ dynamic_colorize_format(std::string_view str)
 
 #endif
 
+#if defined(__clang__) || _MSC_VER >= 1950 /* VS 2026 */
+
 template<basic_fixed_string Str, class... Args>
 [[nodiscard]] constexpr std::string colorize_format(static_colorized_string<Str>, Args&&... args)
 {
     return std::format(static_colorized_string<Str>::colorized, args...);
 }
+
+template<class Out, basic_fixed_string Str, class... Args>
+constexpr Out colorize_format_to(Out out, static_colorized_string<Str>, Args&&... args)
+{
+    return std::format_to(std::move(out), static_colorized_string<Str>::colorized, args...);
+}
+
+#endif // clang or VS >= 2026
+
 
 template<class... Args>
 [[nodiscard]] constexpr std::string colorize_format(colorized_string_view str, Args&&... args)
@@ -1012,12 +1029,6 @@ template<class... Args>
 #else
     return std::vformat(ansi_colorize::colorize(str), std::make_format_args(args...));
 #endif
-}
-
-template<class Out, basic_fixed_string Str, class... Args>
-constexpr Out colorize_format_to(Out out, static_colorized_string<Str>, Args&&... args)
-{
-    return std::format_to(std::move(out), static_colorized_string<Str>::colorized, args...);
 }
 
 template<class Out, class... Args>
@@ -1032,13 +1043,17 @@ constexpr Out colorize_format_to(Out out, colorized_format_string<Args...> fmt, 
 
 } // ansi_colorize
 
+
+#if defined(__clang__) || _MSC_VER >= 1950 /* VS 2026 */
+
 inline namespace colorize_literals {
-
 using namespace ansi_colorize::colorize_literals;
-
 } // colorize_literals
 
 using ansi_colorize::static_colorized_string;
+
+#endif // clang or VS >= 2026
+
 
 using ansi_colorize::dynamic_colorize;
 
