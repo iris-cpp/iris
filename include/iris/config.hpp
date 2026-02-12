@@ -5,13 +5,6 @@
 
 #include <version>
 
-#define IRIS_STRINGIZE_I(x) #x
-#define IRIS_STRINGIZE(x) IRIS_STRINGIZE_I(x)
-
-#define IRIS_CONCAT_I_I(a, b) a##b
-#define IRIS_CONCAT_I(a, b) IRIS_CONCAT_I_I(a, b)
-#define IRIS_CONCAT(a, b) IRIS_CONCAT_I(a, b)
-
 #if _MSC_VER
 # include <CppCoreCheck/warnings.h>
 # pragma warning(default: CPPCORECHECK_LIFETIME_WARNINGS)
