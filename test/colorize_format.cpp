@@ -2,11 +2,11 @@
 
 #include <iris/colorize_format.hpp>
 
-// TODO: `checking_scanner` leads to GCC ICE only on constexpr context
-#if defined(__GNUC__) && !defined(__clang__)
-# define IRIS_CONSTEXPR_WORKAROUND
-#else
+// TODO: `checking_scanner` leads to GCC ICE and MSVC compiler error, only on constexpr context
+#if IRIS_COLORIZE_HAS_STATIC
 # define IRIS_CONSTEXPR_WORKAROUND constexpr
+#else
+# define IRIS_CONSTEXPR_WORKAROUND
 #endif
 
 TEST_CASE("colorized_string")
@@ -35,7 +35,7 @@ TEST_CASE("colorized_string")
     CHECK_THROWS_AS((void)iris::colorize(iris::dynamic_colorize("[black|red]")), iris::colorize_error);
 
     // These can only be constexpr because `std::format_string` is consteval
-#if !(defined(__GNUC__) && !defined(__clang__))
+#if IRIS_COLORIZE_HAS_STATIC
     { [[maybe_unused]] constexpr iris::ansi_colorize::colorized_format_string<> fmt("foo"); }
     { [[maybe_unused]] constexpr iris::ansi_colorize::colorized_format_string<> fmt("[reset]"); }
     { [[maybe_unused]] constexpr iris::ansi_colorize::colorized_format_string<> fmt("[fg:reset]"); }
