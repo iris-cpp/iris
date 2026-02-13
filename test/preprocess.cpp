@@ -103,7 +103,8 @@ TEST_CASE("for", "[preprocess]")
     STATIC_CHECK(foo4 == 4);
 }
 
-#define IRIS_TEST_SEQ_EXEC(elem, data) constexpr int IRIS_PP_CAT(data, elem) = elem;
+#define IRIS_TEST_SEQ_EXEC(elem, data) constexpr std::string_view IRIS_PP_CAT(data, elem) = IRIS_PP_STRINGIZE(elem);
+#define IRIS_TEST_SEQ_EXEC2(index, elem, data) constexpr int IRIS_PP_CAT(data, elem) = index;
 
 TEST_CASE("seq", "[preprocess]")
 {
@@ -119,16 +120,24 @@ TEST_CASE("seq", "[preprocess]")
     STATIC_CHECK(IRIS_PP_STRINGIZE(IRIS_PP_SEQ_HEAD((a)(b)(c))) == "a"sv);
     STATIC_CHECK(IRIS_PP_STRINGIZE(IRIS_PP_SEQ_TAIL((a)(b)(c))) == "(b)(c)"sv);
 
-    IRIS_PP_SEQ_FOR_EACH((0)(1)(2), IRIS_TEST_SEQ_EXEC, foo)
+    IRIS_PP_SEQ_FOR_EACH((a)(b)(c), IRIS_TEST_SEQ_EXEC, foo)
 
-    STATIC_CHECK(foo0 == 0);
-    STATIC_CHECK(foo1 == 1);
-    STATIC_CHECK(foo2 == 2);
+    STATIC_CHECK(fooa == "a");
+    STATIC_CHECK(foob == "b");
+    STATIC_CHECK(fooc == "c");
+
+    IRIS_PP_SEQ_FOR_EACH_WITH_INDEX((a)(b)(c), IRIS_TEST_SEQ_EXEC2, bar)
+
+    STATIC_CHECK(bara == 0);
+    STATIC_CHECK(barb == 1);
+    STATIC_CHECK(barc == 2);
 }
+
+#define IRIS_TEST_WHILE_NEQ_5(expr) IRIS_PP_NOT_EQUAL(expr, 5)
 
 TEST_CASE("while", "[preprocess]")
 {
-    // TODO
+    STATIC_CHECK(IRIS_PP_WHILE(0, IRIS_TEST_WHILE_NEQ_5, IRIS_PP_INCREMENT) == 5);
 }
 
 TEST_CASE("add", "[preprocess]")
