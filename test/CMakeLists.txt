@@ -115,6 +115,14 @@ function(iris_define_test test_name)
 
     target_link_libraries(${test_name}_test PRIVATE Iris::Iris iris_cxx_test)
     add_test(NAME ${test_name}_test COMMAND ${test_name}_test --colour-mode=ansi)
+
+    if(MSVC)
+        get_property(IRIS_MSVC_ASAN_DIR GLOBAL PROPERTY IRIS_MSVC_ASAN_DIR)
+        set_tests_properties(
+            ${test_name}_test PROPERTIES
+            ENVIRONMENT "PATH=${IRIS_MSVC_ASAN_DIR};$ENV{PATH}"
+        )
+    endif()
 endfunction()
 
 function(iris_define_tests)

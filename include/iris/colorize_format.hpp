@@ -10,14 +10,15 @@
 #include <array>
 #include <charconv>
 #include <format>
-#include <iostream>
+#include <iterator>
 #include <optional>
-#include <ostream>
 #include <ranges>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <unordered_map>
+#include <ostream>
 
 #include <cstdint>
 
@@ -252,6 +253,7 @@ public:
     constexpr rgb_color get_rgb_color() const noexcept { return *value; }
 
     constexpr bool empty() const noexcept { return !value.has_value(); }
+    constexpr explicit operator bool() const noexcept { return value.has_value(); }
 
 private:
     std::optional<rgb_color> value;
@@ -467,28 +469,57 @@ struct bitops_enabled<ansi_colorize::detail::emphasis> : std::true_type {
 
 namespace ansi_colorize {
 
+struct colorize_style
+{
+    detail::color fg_color{};
+    detail::color bg_color{};
+    detail::emphasis emphasis{};
+    bool reset = false;
+    bool fg_reset = false;
+    bool bg_reset = false;
+
+    [[nodiscard]] constexpr colorize_style make_closing() const noexcept
+    {
+        colorize_style closing_style{};
+        if (emphasis != detail::emphasis{}) {
+            closing_style.reset = true;
+            return closing_style;
+        }
+
+        if (fg_color) closing_style.fg_reset = true;
+        if (bg_color) closing_style.bg_reset = true;
+        return closing_style;
+    }
+};
+
+struct colorize_style_pair
+{
+    colorize_style opening{}, closing{};
+};
+
+struct colorize_config
+{
+    using map_type = std::unordered_map<std::string_view, colorize_style_pair>;
+    map_type map;
+};
+
 template<class CharT = char>
 struct colorizer
 {
-    [[nodiscard]] constexpr auto parse(basic_colorize_parse_context<CharT>& pc)
+    [[nodiscard]] constexpr auto parse(basic_colorize_parse_context<CharT>& pc, colorize_config const* cfg = nullptr)
     {
-        auto const [it, fg_color, bg_color, emphasis, reset, fg_reset, bg_reset] = colorizer::do_parse(pc);
-        fg_color_ = fg_color;
-        bg_color_ = bg_color;
-        emphasis_ = emphasis;
-        reset_ = reset;
-        fg_reset_ = fg_reset;
-        bg_reset_ = bg_reset;
+        typename basic_colorize_parse_context<CharT>::iterator it;
+        std::tie(it, style_) = colorizer::do_parse(pc, cfg);
         return it;
     }
 
     template<class Out>
-    constexpr auto colorize(basic_colorize_context<Out, CharT>& cc) const
+    [[nodiscard]] constexpr auto colorize(basic_colorize_context<Out, CharT>& cc) const
     {
         using namespace std::string_view_literals;
 
         // shorthand for reset
-        if (reset_) return std::ranges::copy("\033[0m"sv, cc.out()).out;
+        if (style_.reset) return std::ranges::copy("\033[0m"sv, cc.out()).out;
 
         // write prefix
         auto it = std::ranges::copy("\033["sv, cc.out()).out;
@@ -508,20 +539,20 @@ struct colorizer
         };
 
         // write emphases
-        for (auto em : iris::each_bit(emphasis_)) {
+        for (auto em : iris::each_bit(style_.emphasis)) {
             it = append_u8_to(std::move(it), detail::emphasis_to_value(em));
         }
 
-        if (fg_reset_) {
+        if (style_.fg_reset) {
             it = append_u8_to(std::move(it), 39);
         }
-        if (bg_reset_) {
+        if (style_.bg_reset) {
             it = append_u8_to(std::move(it), 49);
         }
 
         // write foreground color
-        if (!fg_color_.empty()) {
-            detail::rgb_color rgb = fg_color_.get_rgb_color();
+        if (!style_.fg_color.empty()) {
+            detail::rgb_color rgb = style_.fg_color.get_rgb_color();
             auto [r, g, b] = detail::get_rgb(rgb);
             it = append_u8_to(std::move(it), 38);
             it = append_u8_to(std::move(it), 2);
@@ -531,8 +562,8 @@ struct colorizer
         }
 
         // write background color
-        if (!bg_color_.empty()) {
-            detail::rgb_color rgb = bg_color_.get_rgb_color();
+        if (!style_.bg_color.empty()) {
+            detail::rgb_color rgb = style_.bg_color.get_rgb_color();
             auto [r, g, b] = detail::get_rgb(rgb);
             it = append_u8_to(std::move(it), 48);
             it = append_u8_to(std::move(it), 2);
@@ -548,16 +579,38 @@ struct colorizer
         return it;
     }
 
+    static constexpr void parse_styles(colorize_style& style, std::string_view const style_text, colorize_config const* cfg = nullptr)
+    {
+        for (auto&& specifier : style_text | std::views::split('|')) {
+            colorizer::parse_style_impl(style, std::string_view{specifier}, cfg);
+        }
+    }
+
+    [[nodiscard]] static constexpr colorize_config make_config(std::vector<std::pair<std::string_view, std::string_view>> def)
+    {
+        std::ranges::sort(def, {}, &decltype(def)::value_type::first);
+        colorize_config cfg;
+        cfg.map.reserve(def.size());
+
+        for (auto const& [style_name, style_text] : def) {
+            if (!style_name.starts_with('$')) {
+                throw std::logic_error{"custom tag name must start with `$`"};
+            }
+
+            colorize_style_pair style_pair{};
+            colorizer::parse_styles(style_pair.opening, style_text);
+            style_pair.closing = style_pair.opening.make_closing();
+            cfg.map.emplace(style_name, std::move(style_pair));
+        }
+
+        return cfg;
+    }
+
 private:
-    struct do_parse_result
+    struct [[nodiscard]] do_parse_result
     {
         basic_colorize_parse_context<CharT>::iterator in;
-        detail::color fg_color;
-        detail::color bg_color;
-        detail::emphasis emphasis;
-        bool reset;
-        bool fg_reset;
-        bool bg_reset;
+        colorize_style style{};
     };
 
     [[nodiscard]] static constexpr detail::color parse_rgb(std::string_view spec)
@@ -580,92 +633,106 @@ private:
         return detail::rgb_color{std::uint32_t(r) << 16 | std::uint32_t(g) << 8 | std::uint32_t(b)};
     }
 
-    static constexpr do_parse_result do_parse(basic_colorize_parse_context<CharT>& pc)
+    static constexpr void parse_style_impl(colorize_style& style, std::string_view specifier, colorize_config const* cfg = nullptr)
     {
-        do_parse_result result{
-            pc.begin(), detail::color{}, detail::color{}, detail::emphasis{}, false, false, false,
-        };
+        if (specifier.starts_with('$')) {
+            if (!cfg) throw colorize_error(std::format("custom tag \"{}\" was found, but `cfg` was not specified", specifier));
 
-        auto& it = result.in;
+            auto const it = cfg->map.find(specifier);
+            if (it == cfg->map.end()) throw colorize_error(std::format("custom tag \"{}\" not found in `cfg`", specifier));
+            style = it->second.opening;
+
+        } else if (specifier.starts_with("/")) {
+            if (!cfg) throw colorize_error(std::format("custom tag \"{}\" was found, but `cfg` was not specified", specifier));
+
+            auto const it = cfg->map.find(specifier.substr(1));
+            if (it == cfg->map.end()) throw colorize_error(std::format("custom tag \"{}\" not found in `cfg`", specifier.substr(1)));
+            style = it->second.closing;
+
+        } else if (specifier == "reset") {
+            style.reset = true;
+
+        } else if (auto rgb_color = colorizer::parse_rgb(specifier); !rgb_color.empty()) {
+            if (!style.fg_color.empty()) throw colorize_error("multiple colors must not be specified");
+            style.fg_color = rgb_color;
+
+        } else if (auto color = detail::name_to_color(specifier); !color.empty()) {
+            if (!style.fg_color.empty()) throw colorize_error("multiple colors must not be specified");
+            style.fg_color = color;
+
+        } else if (auto emphasis = detail::name_to_emphasis(specifier); emphasis != detail::emphasis{}) {
+            using namespace bitops_operators;
+            style.emphasis |= emphasis;
+
+        } else if (specifier.starts_with("fg:")) {
+            auto const spec = specifier.substr(3);
+
+            if (spec == "reset") {
+                style.fg_reset = true;
+
+            } else if (auto fg_rgb_color = colorizer::parse_rgb(spec); !fg_rgb_color.empty()) {
+                if (!style.fg_color.empty()) throw colorize_error("multiple colors must not be specified");
+                style.fg_color = fg_rgb_color;
+
+            } else if (auto fg_color = detail::name_to_color(spec); !fg_color.empty()) {
+                if (!style.fg_color.empty()) throw colorize_error("multiple colors must not be specified");
+                style.fg_color = fg_color;
+
+            } else {
+                throw colorize_error("fg prefix must precede color name or reset");
+            }
+
+        } else if (specifier.starts_with("bg:")) {
+            auto const spec = specifier.substr(3);
+
+            if (spec == "reset") {
+                style.bg_reset = true;
+
+            } else if (auto bg_rgb_color = colorizer::parse_rgb(spec); !bg_rgb_color.empty()) {
+                if (!style.bg_color.empty()) throw colorize_error("multiple colors must not be specified");
+                style.bg_color = bg_rgb_color;
+
+            } else if (auto bg_color = detail::name_to_color(spec); !bg_color.empty()) {
+                if (!style.bg_color.empty()) throw colorize_error("multiple colors must not be specified");
+                style.bg_color = bg_color;
+
+            } else {
+                throw colorize_error("bg prefix must precede color name or reset");
+            }
+
+        } else {
+            throw colorize_error(std::format("invalid specifier: \"{}\"", specifier));
+        }
+    }
+
+    [[nodiscard]] static constexpr std::pair<
+        typename basic_colorize_parse_context<CharT>::iterator,
+        colorize_style
+    >
+    do_parse(basic_colorize_parse_context<CharT>& pc, colorize_config const* cfg)
+    {
+        typename basic_colorize_parse_context<CharT>::iterator it = pc.begin();
+        colorize_style style{};
+
         while (it != pc.end()) {
             if (*it == ']') break;
             if (*it == '|') pc.advance_to(++it);
 
             std::string_view const rest{it, pc.end()};
             auto const len = rest.find_first_of("|]");
-            std::string_view const specifier = rest.substr(0, len);
-
-            if (specifier == "reset") {
-                result.reset = true;
-
-            } else if (auto rgb_color = parse_rgb(specifier); !rgb_color.empty()) {
-                if (!result.fg_color.empty()) throw colorize_error("multiple colors must not be specified");
-                result.fg_color = rgb_color;
-
-            } else if (auto color = detail::name_to_color(specifier); !color.empty()) {
-                if (!result.fg_color.empty()) throw colorize_error("multiple colors must not be specified");
-                result.fg_color = color;
-
-            } else if (auto emphasis = detail::name_to_emphasis(specifier); emphasis != detail::emphasis{}) {
-                using namespace bitops_operators;
-                result.emphasis |= emphasis;
-
-            } else if (specifier.starts_with("fg:")) {
-                auto const spec = specifier.substr(3);
-
-                if (spec == "reset") {
-                    result.fg_reset = true;
-
-                } else if (auto fg_rgb_color = parse_rgb(spec); !fg_rgb_color.empty()) {
-                    if (!result.fg_color.empty()) throw colorize_error("multiple colors must not be specified");
-                    result.fg_color = fg_rgb_color;
-
-                } else if (auto fg_color = detail::name_to_color(spec); !fg_color.empty()) {
-                    if (!result.fg_color.empty()) throw colorize_error("multiple colors must not be specified");
-                    result.fg_color = fg_color;
-
-                } else {
-                    throw colorize_error("fg prefix must precede color name or reset");
-                }
-
-            } else if (specifier.starts_with("bg:")) {
-                auto const spec = specifier.substr(3);
-
-                if (spec == "reset") {
-                    result.bg_reset = true;
-
-                } else if (auto bg_rgb_color = parse_rgb(spec); !bg_rgb_color.empty()) {
-                    if (!result.bg_color.empty()) throw colorize_error("multiple colors must not be specified");
-                    result.bg_color = bg_rgb_color;
-
-                } else if (auto bg_color = detail::name_to_color(spec); !bg_color.empty()) {
-                    if (!result.bg_color.empty()) throw colorize_error("multiple colors must not be specified");
-                    result.bg_color = bg_color;
-
-                } else {
-                    throw colorize_error("bg prefix must precede color name or reset");
-                }
-
-            } else {
-                throw colorize_error("invalid specifier");
-            }
+            colorizer::parse_style_impl(style, rest.substr(0, len), cfg);
 
             pc.advance_to(it += len);
         }
 
-        if (result.reset && (!result.fg_color.empty() || result.emphasis != detail::emphasis{})) {
+        if (style.reset && (!style.fg_color.empty() || style.emphasis != detail::emphasis{})) {
             throw colorize_error("reset must be independently specified");
         }
 
-        return result;
+        return {it, style};
     }
 
-    detail::color fg_color_;
-    detail::color bg_color_;
-    detail::emphasis emphasis_{};
-    bool reset_ = true;
-    bool fg_reset_ = true;
-    bool bg_reset_ = true;
+    colorize_style style_{};
 };
 
 namespace detail {
@@ -757,8 +824,9 @@ struct scanner
 template<class CharT>
 struct checking_scanner : scanner<CharT>
 {
-    constexpr checking_scanner(std::basic_string_view<CharT> str)
+    constexpr explicit checking_scanner(std::basic_string_view<CharT> str, colorize_config const* cfg = nullptr)
         : scanner<CharT>(str)
+        , cfg(cfg)
     {}
 
     constexpr void colorize() override { this->parse_colorize_spec(); }
@@ -766,8 +834,10 @@ struct checking_scanner : scanner<CharT>
     constexpr void parse_colorize_spec()
     {
         colorizer<CharT> c;
-        this->pc.advance_to(c.parse(this->pc));
+        this->pc.advance_to(c.parse(this->pc, cfg));
     }
+
+    colorize_config const* cfg = nullptr;
 };
 
 template<class Out, class CharT>
@@ -795,8 +865,10 @@ struct colorizing_scanner : scanner<CharT>
 {
     using iterator = scanner<CharT>::iterator;
 
-    constexpr colorizing_scanner(basic_colorize_context<Out, CharT>& cc, std::basic_string_view<CharT> str)
-        : scanner<CharT>(str), cc(cc)
+    constexpr colorizing_scanner(basic_colorize_context<Out, CharT>& cc, std::basic_string_view<CharT> str, colorize_config const* cfg = nullptr)
+        : scanner<CharT>(str)
+        , cc(cc)
+        , cfg(cfg)
     {
     }
 
@@ -809,11 +881,12 @@ struct colorizing_scanner : scanner<CharT>
     constexpr void colorize() override
     {
         colorizer<CharT> c;
-        this->pc.advance_to(c.parse(this->pc));
+        this->pc.advance_to(c.parse(this->pc, cfg));
         cc.advance_to(c.colorize(cc));
     }
 
     basic_colorize_context<Out, CharT>& cc;
+    colorize_config const* cfg = nullptr;
 };
 
 
@@ -905,12 +978,13 @@ using colorized_format_string = basic_colorized_format_string<char, std::type_id
 template<class CharT>
 struct basic_colorized_string_view
 {
-    // TODO: This should be consteval, but GCC emits ICE
-    constexpr basic_colorized_string_view(StringLike auto const& str)
+    constexpr basic_colorized_string_view(StringLike auto const& str, colorize_config const* cfg = nullptr)
         : str_(str)
     {
-        detail::checking_scanner<CharT> scanner(str);
-        scanner.scan();
+        if consteval {
+            detail::checking_scanner<CharT> scanner(str, cfg);
+            scanner.scan();
+        }
     }
 
     constexpr basic_colorized_string_view(detail::basic_dynamic_colorized_string<CharT> runtime_str) noexcept
@@ -957,20 +1031,20 @@ dynamic_colorize_format(std::string_view str)
 
 
 template<class Out>
-constexpr Out colorize_to(Out out, colorized_string_view col)
+constexpr Out colorize_to(Out out, colorized_string_view col, colorize_config const* cfg = nullptr)
 {
     basic_colorize_context<Out, char> ctx(std::move(out));
-    detail::colorizing_scanner<Out, char> scanner(ctx, col.get());
+    detail::colorizing_scanner<Out, char> scanner(ctx, col.get(), cfg);
     scanner.scan();
     return ctx.out();
 }
 
 template<int = 0>
 [[nodiscard]] constexpr std::basic_string<char>
-colorize(colorized_string_view col)
+colorize(colorized_string_view col, colorize_config const* cfg = nullptr)
 {
     std::basic_string<char> str;
-    ansi_colorize::colorize_to(std::back_inserter(str), col);
+    ansi_colorize::colorize_to(std::back_inserter(str), col, cfg);
     return str;
 }
 
@@ -1013,7 +1087,7 @@ template<basic_fixed_string Str, class... Args>
     return std::format(static_colorized_string<Str>::colorized, args...);
 }
 
-template<class Out, basic_fixed_string Str, class... Args>
+template<std::output_iterator<char const&> Out, basic_fixed_string Str, class... Args>
 constexpr Out colorize_format_to(Out out, static_colorized_string<Str>, Args&&... args)
 {
     return std::format_to(std::move(out), static_colorized_string<Str>::colorized, args...);
@@ -1032,7 +1106,19 @@ template<class... Args>
 #endif
 }
 
-template<class Out, class... Args>
+template<class... Args>
+[[nodiscard]] constexpr std::string colorize_format(colorize_config const& cfg, std::string_view str, Args&&... args)
+{
+#if __cpp_lib_format >= 202311L
+    return std::format(std::runtime_format(ansi_colorize::colorize(colorized_string_view{str, &cfg}, &cfg)), std::make_format_args(args...));
+#else
+    return std::vformat(ansi_colorize::colorize(colorized_string_view{str, &cfg}, &cfg), std::make_format_args(args...));
+#endif
+}
+
+// --------------------------------------------------
+
+template<std::output_iterator<char const&> Out, class... Args>
 constexpr Out colorize_format_to(Out out, colorized_string_view str, Args&&... args)
 {
 #if __cpp_lib_format >= 202311L
@@ -1040,6 +1126,28 @@ constexpr Out colorize_format_to(Out out, colorized_string_view str, Args&&... a
 #else
     return std::vformat_to(std::move(out), ansi_colorize::colorize(str), std::make_format_args(args...));
 #endif
+}
+
+template<std::output_iterator<char const&> Out, class... Args>
+constexpr Out colorize_format_to(Out out, colorize_config const& cfg, std::string_view str, Args&&... args)
+{
+#if __cpp_lib_format >= 202311L
+    return std::format_to(std::move(out), std::runtime_format(ansi_colorize::colorize(colorized_string_view{str, &cfg}, &cfg)), args...);
+#else
+    return std::vformat_to(std::move(out), ansi_colorize::colorize(colorized_string_view{str, &cfg}, &cfg), std::make_format_args(args...));
+#endif
+}
+
+template<class... Args>
+constexpr auto colorize_format_to(std::ostream& os, colorized_string_view str, Args&&... args)
+{
+    return ansi_colorize::colorize_format_to(std::ostreambuf_iterator{os}, str, std::forward<Args>(args)...);
+}
+
+template<class... Args>
+constexpr auto colorize_format_to(std::ostream& os, colorize_config const& cfg, std::string_view str, Args&&... args)
+{
+    return ansi_colorize::colorize_format_to(std::ostreambuf_iterator{os}, cfg, str, std::forward<Args>(args)...);
 }
 
 } // ansi_colorize
