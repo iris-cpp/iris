@@ -1,0 +1,80 @@
+#ifndef IRIS_PREPROCESS_NOT_EQUAL_HPP
+#define IRIS_PREPROCESS_NOT_EQUAL_HPP
+
+// SPDX-License-Identifier: MIT
+
+#include <iris/pp/cat.hpp>
+
+#define IRIS_PP_NOT_EQUAL(a, b) IRIS_PP_CAT(IRIS_PP_NOT_EQUAL_I_CHECK_, IRIS_PP_CAT(IRIS_PP_NOT_EQUAL_I_, a)(IRIS_PP_CAT(IRIS_PP_NOT_EQUAL_I_, b)))
+
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_NIL(nil) 1
+
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_0(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_1(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_2(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_3(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_4(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_5(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_6(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_7(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_8(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_9(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_10(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_11(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_12(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_13(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_14(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_15(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_16(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_17(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_18(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_19(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_20(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_21(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_22(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_23(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_24(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_25(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_26(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_27(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_28(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_29(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_30(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_31(nil) 0
+#define IRIS_PP_NOT_EQUAL_I_CHECK_IRIS_PP_NOT_EQUAL_I_32(nil) 0
+
+#define IRIS_PP_NOT_EQUAL_I_0(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_1(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_2(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_3(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_4(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_5(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_6(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_7(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_8(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_9(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_10(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_11(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_12(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_13(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_14(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_15(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_16(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_17(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_18(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_19(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_20(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_21(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_22(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_23(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_24(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_25(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_26(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_27(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_28(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_29(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_30(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_31(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+#define IRIS_PP_NOT_EQUAL_I_32(possibly_self) possibly_self(IRIS_PP_NOT_EQUAL_I_NIL)
+
+#endif

@@ -152,6 +152,7 @@ if(PROJECT_IS_TOP_LEVEL)
         enum
         indirect
         colorize_format
+        preprocess
     )
 
     iris_define_sub_tests(iris ${IRIS_TEST_IRIS_TESTS})
