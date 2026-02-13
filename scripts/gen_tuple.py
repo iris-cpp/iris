@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 for i in range(1, 32 + 1):
     params = ", ".join(f"a{j}" for j in range(0, i))
     for j in range(0, i):

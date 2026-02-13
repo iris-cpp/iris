@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 for i in range(1, 8 + 1):
     print(f"#define IRIS_PP_REPEAT_{i}_I_0(macro, data)")
     print(f"#define IRIS_PP_REPEAT_{i}_I_1(macro, data) macro(0, data)")
