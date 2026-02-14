@@ -1061,6 +1061,24 @@ TEST_CASE("copy assignment")
         CHECK(a.valueless_by_exception() == true);
     }
 
+    {
+        // see https://github.com/microsoft/STL/issues/6085
+        struct S {
+            S() noexcept = default;
+
+            explicit S(S const&) noexcept(false) = default;
+            S(S&&) noexcept = default;
+
+            S& operator=(S const&) noexcept { return *this; }
+            S& operator=(S&&) noexcept = default;
+        };
+
+        iris::rvariant<int, S> a = 42;
+        iris::rvariant<int, S> b = S{};
+        a = b;
+        REQUIRE(a.index() == 1);
+    }
+
     // NOLINTEND(modernize-use-equals-default)
 }
 
