@@ -57,10 +57,6 @@ template<std::size_t I, class T>
 using at_c_t = at_c<I, T>::type;
 
 #if __cpp_pack_indexing >= 202311L // has native pack indexing
-# if defined(__clang__)
-#  pragma clang diagnostic push
-#  pragma clang diagnostic ignored "-Wc++26-extensions"
-# endif
 
 # define IRIS_CORE_PACK_INDEXING(I, Ts_ellipsis) Ts_ellipsis[I]
 
@@ -74,9 +70,7 @@ struct at_c<I, TT<Ts...>>
 {
     using type = Ts...[I];
 };
-# if defined(__clang__)
-#  pragma clang diagnostic pop
-# endif
+
 // ----------------------------------------------------------
 #else // no native pack indexing
 template<std::size_t I, class... Ts>

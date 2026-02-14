@@ -133,7 +133,12 @@ if(MSVC)
     )
 else()
     if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
-        target_compile_options(_iris_cxx_common INTERFACE -fno-builtin-std-forward_like)
+        target_compile_options(
+            _iris_cxx_common
+            INTERFACE
+                -fno-builtin-std-forward_like
+                -Wno-c++26-extensions # workaround for warnings emitted when using pack indexing
+        )
     endif()
     target_compile_options(
         _iris_cxx_common
