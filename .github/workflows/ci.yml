@@ -177,11 +177,11 @@ jobs:
         shell: bash
         run: |
           if [ -e build/.iris_catch2_build_stamp ]; then
-            echo "catch2_timestamp=$(stat -c %Y build/.iris_catch2_build_stamp)" >> $GITHUB_OUTPUT
-            echo "catch2_timestamp=$(stat -c %Y build/.iris_catch2_build_stamp)"
+            echo "catch2-timestamp=$(stat -c %Y build/.iris_catch2_build_stamp)" >> $GITHUB_OUTPUT
+            echo "catch2-timestamp=$(stat -c %Y build/.iris_catch2_build_stamp)"
           else
-            echo "catch2_timestamp=0" >> $GITHUB_OUTPUT
-            echo "catch2_timestamp=0"
+            echo "catch2-timestamp=0" >> $GITHUB_OUTPUT
+            echo "catch2-timestamp=0"
           fi
 
       - name: Try building Catch2
@@ -192,15 +192,20 @@ jobs:
       - name: Check Catch2 build time stamp (post-build)
         shell: bash
         run: |
-          echo "catch2_timestamp=$(stat -c %Y build/.iris_catch2_build_stamp)" >> $GITHUB_OUTPUT
-          echo "catch2_timestamp=$(stat -c %Y build/.iris_catch2_build_stamp)"
+          echo "catch2-timestamp=$(stat -c %Y build/.iris_catch2_build_stamp)" >> $GITHUB_OUTPUT
+          echo "catch2-timestamp=$(stat -c %Y build/.iris_catch2_build_stamp)"
 
       - name: Build Tests
         run: |
           cmake --build build --config ${{ matrix.build_type.name }} -j${{ env.IRIS_BUILD_JOBS }} ${{ matrix.compiler.builder_additional_args }}
 
+      - name: TEST
+        run: |
+          echo "steps.pre-build-check.outputs.catch2-timestamp == ${{ steps.pre-build-check.outputs.catch2-timestamp }}""
+          echo "steps.post-build-check.outputs.catch2-timestamp == ${{ steps.post-build-check.outputs.catch2-timestamp }}""
+
       - name: Cache CMake Dependencies (save)
-        if: steps.cache-deps.outputs.cache-hit != 'true' || steps.pre-build-check.outputs.catch2_timestamp != steps.post-build-check.outputs.catch2_timestamp
+        if: steps.cache-deps.outputs.cache-hit != 'true' || steps.pre-build-check.outputs.catch2-timestamp != steps.post-build-check.outputs.catch2-timestamp
         uses: actions/cache/save@v4
         with:
           key: ${{ steps.cache-deps.outputs.cache-primary-key }}
