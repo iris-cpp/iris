@@ -160,6 +160,11 @@ jobs:
             echo "IRIS_CMAKE_ARGS=" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Test
+        shell: bash
+        run: |
+          echo "" | sudo tee -a /usr/include/type_traits
+
       - name: Configure
         shell: bash
         run: |
