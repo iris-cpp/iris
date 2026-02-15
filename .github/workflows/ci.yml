@@ -178,8 +178,10 @@ jobs:
         run: |
           if [ -e build/.iris_catch2_build_stamp ]; then
             echo "catch2_timestamp=$(stat -c %Y build/.iris_catch2_build_stamp)" >> $GITHUB_OUTPUT
+            echo "catch2_timestamp=$(stat -c %Y build/.iris_catch2_build_stamp)"
           else
             echo "catch2_timestamp=0" >> $GITHUB_OUTPUT
+            echo "catch2_timestamp=0"
           fi
 
       - name: Try building Catch2
@@ -191,6 +193,7 @@ jobs:
         shell: bash
         run: |
           echo "catch2_timestamp=$(stat -c %Y build/.iris_catch2_build_stamp)" >> $GITHUB_OUTPUT
+          echo "catch2_timestamp=$(stat -c %Y build/.iris_catch2_build_stamp)"
 
       - name: Build Tests
         run: |
