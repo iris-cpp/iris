@@ -185,11 +185,11 @@ jobs:
           fi
 
       - name: Try building Catch2
-        id: post-build-check
         run: |
           cmake --build build --config ${{ matrix.build_type.name }} -j${{ env.IRIS_BUILD_JOBS }} --target iris_catch2_build_check ${{ matrix.compiler.builder_additional_args }}
 
       - name: Check Catch2 build time stamp (post-build)
+        id: post-build-check
         shell: bash
         run: |
           echo "catch2-timestamp=$(stat -c %Y build/.iris_catch2_build_stamp)" >> $GITHUB_OUTPUT
