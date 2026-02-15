@@ -40,7 +40,7 @@ if(MSVC)
 
     target_compile_options(
         iris_cxx_test_external
-        INTERFACE /analyze-
+        INTERFACE /analyze- /DFOO
     )
 
 else() # non-MSVC
@@ -53,6 +53,11 @@ else() # non-MSVC
         _iris_cxx_test_common
         INTERFACE
             -fsanitize=undefined,address
+    )
+
+    target_compile_options(
+        iris_cxx_test_external
+        INTERFACE -DFOO
     )
 
     target_compile_options(
