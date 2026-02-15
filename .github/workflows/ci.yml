@@ -172,12 +172,28 @@ jobs:
             -DIRIS_CI=ON \
             -S .
 
+      - name: Check Catch2 build time stamp (pre-build)
+        id: pre-build-check
+        run: |
+          echo "catch2_timestamp=" >> $GITHUB_OUTPUT
+          stat -c %Y build/.iris_catch2_build_stamp >> $GITHUB_OUTPUT
+
+      - name: Try building Catch2
+        id: post-build-check
+        run: |
+          cmake --build build --config ${{ matrix.build_type.name }} -j${{ env.IRIS_BUILD_JOBS }} ${{ matrix.compiler.builder_additional_args }} --target iris_catch2_build_check
+
+      - name: Check Catch2 build time stamp (post-build)
+        run: |
+          echo "catch2_timestamp=" >> $GITHUB_OUTPUT
+          stat -c %Y build/.iris_catch2_build_stamp >> $GITHUB_OUTPUT
+
       - name: Build Tests
         run: |
           cmake --build build --config ${{ matrix.build_type.name }} -j${{ env.IRIS_BUILD_JOBS }} ${{ matrix.compiler.builder_additional_args }}
 
       - name: Cache CMake Dependencies (save)
-        if: steps.cache-deps.outputs.cache-hit != 'true'
+        if: steps.cache-deps.outputs.cache-hit != 'true' && steps.pre-build-check.outputs.catch2_timestamp != steps.post-build-check.outputs.catch2_timestamp
         uses: actions/cache/save@v4
         with:
           key: ${{ steps.cache-deps.outputs.cache-primary-key }}
