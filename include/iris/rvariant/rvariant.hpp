@@ -139,7 +139,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
                     if constexpr (std::is_nothrow_copy_constructible_v<T> || !std::is_nothrow_move_constructible_v<T>) {
                         reset_construct<j>(rhs_alt);  // A
                     } else {
-                        auto tmp = rhs_alt;
+                        T tmp(rhs_alt);
                         reset_construct<j>(std::move(tmp)); // B
                     }
                 }
