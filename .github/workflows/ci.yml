@@ -176,8 +176,8 @@ jobs:
         id: pre-build-check
         shell: bash
         run: |
-          if [ -e build/.iris_deps_build_stamp ]; then
-            echo "deps-timestamp=$(stat -c %Y build/.iris_deps_build_stamp)" >> $GITHUB_OUTPUT
+          if [ -e build/_deps/.iris_deps_build_stamp ]; then
+            echo "deps-timestamp=$(stat -c %Y build/_deps/.iris_deps_build_stamp)" >> $GITHUB_OUTPUT
           else
             echo "deps-timestamp=0" >> $GITHUB_OUTPUT
           fi
@@ -190,7 +190,7 @@ jobs:
         id: post-build-check
         shell: bash
         run: |
-          echo "deps-timestamp=$(stat -c %Y build/.iris_deps_build_stamp)" >> $GITHUB_OUTPUT
+          echo "deps-timestamp=$(stat -c %Y build/_deps/.iris_deps_build_stamp)" >> $GITHUB_OUTPUT
 
       - name: Build Tests
         run: |
