@@ -201,8 +201,8 @@ jobs:
 
       - name: TEST
         run: |
-          echo "steps.pre-build-check.outputs.catch2-timestamp == ${{ steps.pre-build-check.outputs.catch2-timestamp }}""
-          echo "steps.post-build-check.outputs.catch2-timestamp == ${{ steps.post-build-check.outputs.catch2-timestamp }}""
+          echo "steps.pre-build-check.outputs.catch2-timestamp == ${{ steps.pre-build-check.outputs.catch2-timestamp }}"
+          echo "steps.post-build-check.outputs.catch2-timestamp == ${{ steps.post-build-check.outputs.catch2-timestamp }}"
 
       - name: Cache CMake Dependencies (save)
         if: steps.cache-deps.outputs.cache-hit != 'true' || steps.pre-build-check.outputs.catch2-timestamp != steps.post-build-check.outputs.catch2-timestamp
