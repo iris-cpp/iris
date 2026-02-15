@@ -188,8 +188,7 @@ jobs:
 
       - name: Check Catch2 build time stamp (post-build)
         run: |
-          echo "catch2_timestamp=" >> $GITHUB_OUTPUT
-          stat -c %Y build/.iris_catch2_build_stamp >> $GITHUB_OUTPUT
+          echo "catch2_timestamp=$(stat -c %Y build/.iris_catch2_build_stamp)" >> $GITHUB_OUTPUT
 
       - name: Build Tests
         run: |
