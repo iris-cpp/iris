@@ -176,7 +176,11 @@ jobs:
         id: pre-build-check
         run: |
           echo "catch2_timestamp=" >> $GITHUB_OUTPUT
-          stat -c %Y build/.iris_catch2_build_stamp >> $GITHUB_OUTPUT
+          if [ -e build/.iris_catch2_build_stamp ]; then
+            stat -c %Y build/.iris_catch2_build_stamp >> $GITHUB_OUTPUT
+          else
+            echo "0" >> $GITHUB_OUTPUT
+          fi
 
       - name: Try building Catch2
         id: post-build-check
@@ -186,11 +190,7 @@ jobs:
       - name: Check Catch2 build time stamp (post-build)
         run: |
           echo "catch2_timestamp=" >> $GITHUB_OUTPUT
-          if [ -e build/.iris_catch2_build_stamp ]; then
-            stat -c %Y build/.iris_catch2_build_stamp >> $GITHUB_OUTPUT
-          else
-            echo "0" >> $GITHUB_OUTPUT
-          fi
+          stat -c %Y build/.iris_catch2_build_stamp >> $GITHUB_OUTPUT
 
       - name: Build Tests
         run: |
