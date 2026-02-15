@@ -197,7 +197,7 @@ jobs:
           cmake --build build --config ${{ matrix.build_type.name }} -j${{ env.IRIS_BUILD_JOBS }} ${{ matrix.compiler.builder_additional_args }}
 
       - name: Cache CMake Dependencies (save)
-        if: steps.cache-deps.outputs.cache-hit != 'true' && steps.pre-build-check.outputs.catch2_timestamp != steps.post-build-check.outputs.catch2_timestamp
+        if: steps.cache-deps.outputs.cache-hit != 'true' || steps.pre-build-check.outputs.catch2_timestamp != steps.post-build-check.outputs.catch2_timestamp
         uses: actions/cache/save@v4
         with:
           key: ${{ steps.cache-deps.outputs.cache-primary-key }}
