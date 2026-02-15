@@ -146,7 +146,9 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           key: deps-${{ matrix.os.name }}-${{ matrix.os.version }}-${{ matrix.compiler.toolset }}-${{ steps.env-info.outputs.compiler-full-version }}-${{ matrix.cpp_version.name }}-${{ matrix.build_type.name }}
-          path: ${{ github.workspace }}/build/_deps
+          path: |
+            ${{ github.workspace }}/build/_deps
+            ${{ github.workspace }}/build/.iris_deps_build_stamp
 
       # Adapt CMP0168; enable caching in CI
       # https://cmake.org/cmake/help/latest/module/FetchContent.html#variable:FETCHCONTENT_FULLY_DISCONNECTED
@@ -172,16 +174,38 @@ jobs:
             -DIRIS_CI=ON \
             -S .
 
+      - name: Check Deps build time stamp (pre-build)
+        id: pre-build-check
+        shell: bash
+        run: |
+          if [ -e build/.iris_deps_build_stamp ]; then
+            echo "deps-timestamp=$(stat -c %Y build/.iris_deps_build_stamp)" >> $GITHUB_OUTPUT
+          else
+            echo "deps-timestamp=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Try building Deps
+        run: |
+          cmake --build build --config ${{ matrix.build_type.name }} -j${{ env.IRIS_BUILD_JOBS }} --target iris_deps_build_check ${{ matrix.compiler.builder_additional_args }}
+
+      - name: Check Deps build time stamp (post-build)
+        id: post-build-check
+        shell: bash
+        run: |
+          echo "deps-timestamp=$(stat -c %Y build/.iris_deps_build_stamp)" >> $GITHUB_OUTPUT
+
       - name: Build Tests
         run: |
           cmake --build build --config ${{ matrix.build_type.name }} -j${{ env.IRIS_BUILD_JOBS }} ${{ matrix.compiler.builder_additional_args }}
 
       - name: Cache CMake Dependencies (save)
-        if: steps.cache-deps.outputs.cache-hit != 'true'
+        if: steps.cache-deps.outputs.cache-hit != 'true' || steps.pre-build-check.outputs.deps-timestamp != steps.post-build-check.outputs.deps-timestamp
         uses: actions/cache/save@v4
         with:
           key: ${{ steps.cache-deps.outputs.cache-primary-key }}
-          path: ${{ github.workspace }}/build/_deps
+          path: |
+            ${{ github.workspace }}/build/_deps
+            ${{ github.workspace }}/build/.iris_deps_build_stamp
 
       - name: Test
         env:
