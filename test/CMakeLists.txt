@@ -40,7 +40,7 @@ if(MSVC)
 
     target_compile_options(
         iris_cxx_test_external
-        INTERFACE /analyze- /DFOO
+        INTERFACE /analyze-
     )
 
 else() # non-MSVC
@@ -53,11 +53,6 @@ else() # non-MSVC
         _iris_cxx_test_common
         INTERFACE
             -fsanitize=undefined,address
-    )
-
-    target_compile_options(
-        iris_cxx_test_external
-        INTERFACE -DFOO
     )
 
     target_compile_options(
@@ -93,14 +88,14 @@ target_link_libraries(Catch2WithMain PRIVATE iris_cxx_test_external)
 
 target_link_libraries(iris_cxx_test INTERFACE Catch2::Catch2WithMain)
 
-set(IRIS_CATCH2_STAMP "${CMAKE_BINARY_DIR}/.iris_catch2_build_stamp")
+set(IRIS_DEPS_STAMP "${CMAKE_BINARY_DIR}/.iris_deps_build_stamp")
 add_custom_command(
-  OUTPUT "${IRIS_CATCH2_STAMP}"
-  COMMAND touch "${IRIS_CATCH2_STAMP}"
+  OUTPUT "${IRIS_DEPS_STAMP}"
+  COMMAND touch "${IRIS_DEPS_STAMP}"
   DEPENDS Catch2::Catch2
-  COMMENT "Catch2 is rebuilt"
+  COMMENT "Deps is rebuilt"
 )
-add_custom_target(iris_catch2_build_check ALL DEPENDS "${IRIS_CATCH2_STAMP}")
+add_custom_target(iris_deps_build_check ALL DEPENDS "${IRIS_DEPS_STAMP}")
 
 # -----------------------------------------------------------------
 # Common CMake utilities for testing
