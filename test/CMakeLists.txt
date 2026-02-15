@@ -88,14 +88,16 @@ target_link_libraries(Catch2WithMain PRIVATE iris_cxx_test_external)
 
 target_link_libraries(iris_cxx_test INTERFACE Catch2::Catch2WithMain)
 
-set(IRIS_DEPS_STAMP "${CMAKE_BINARY_DIR}/.iris_deps_build_stamp")
-add_custom_command(
-    OUTPUT "${IRIS_DEPS_STAMP}"
-    COMMAND touch "${IRIS_DEPS_STAMP}"
-    DEPENDS Catch2::Catch2
-    COMMENT "Deps is rebuilt"
-)
-add_custom_target(iris_deps_build_check ALL DEPENDS "${IRIS_DEPS_STAMP}")
+if (IRIS_CI)
+    set(IRIS_DEPS_STAMP "${CMAKE_BINARY_DIR}/.iris_deps_build_stamp")
+    add_custom_command(
+        OUTPUT "${IRIS_DEPS_STAMP}"
+        COMMAND touch "${IRIS_DEPS_STAMP}"
+        DEPENDS Catch2::Catch2
+        COMMENT "Deps is rebuilt"
+    )
+    add_custom_target(iris_deps_build_check ALL DEPENDS "${IRIS_DEPS_STAMP}")
+endif()
 
 # -----------------------------------------------------------------
 # Common CMake utilities for testing
