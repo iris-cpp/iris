@@ -146,7 +146,9 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           key: deps-${{ matrix.os.name }}-${{ matrix.os.version }}-${{ matrix.compiler.toolset }}-${{ steps.env-info.outputs.compiler-full-version }}-${{ matrix.cpp_version.name }}-${{ matrix.build_type.name }}
-          path: ${{ github.workspace }}/build/_deps
+          path: |
+            ${{ github.workspace }}/build/_deps
+            ${{ github.workspace }}/build/.iris_deps_build_stamp
 
       # Adapt CMP0168; enable caching in CI
       # https://cmake.org/cmake/help/latest/module/FetchContent.html#variable:FETCHCONTENT_FULLY_DISCONNECTED
@@ -201,7 +203,9 @@ jobs:
         uses: actions/cache/save@v4
         with:
           key: ${{ steps.cache-deps.outputs.cache-primary-key }}
-          path: ${{ github.workspace }}/build/_deps
+          path: |
+            ${{ github.workspace }}/build/_deps
+            ${{ github.workspace }}/build/.iris_deps_build_stamp
 
       - name: Test
         env:
