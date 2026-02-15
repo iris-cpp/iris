@@ -185,7 +185,7 @@ jobs:
       - name: Try building Catch2
         id: post-build-check
         run: |
-          cmake --build build --config ${{ matrix.build_type.name }} -j${{ env.IRIS_BUILD_JOBS }} ${{ matrix.compiler.builder_additional_args }} --target iris_catch2_build_check
+          cmake --build build --config ${{ matrix.build_type.name }} -j${{ env.IRIS_BUILD_JOBS }} --target iris_catch2_build_check ${{ matrix.compiler.builder_additional_args }}
 
       - name: Check Catch2 build time stamp (post-build)
         shell: bash
