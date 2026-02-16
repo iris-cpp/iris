@@ -93,7 +93,7 @@ if (IRIS_CI)
     add_custom_command(
         OUTPUT "${IRIS_DEPS_STAMP}"
         COMMAND touch "${IRIS_DEPS_STAMP}"
-        DEPENDS Catch2::Catch2
+        DEPENDS Catch2::Catch2WithMain
         COMMENT "Deps is rebuilt"
     )
     add_custom_target(iris_deps_build_check ALL DEPENDS "${IRIS_DEPS_STAMP}")
