@@ -92,7 +92,7 @@ if (IRIS_CI)
     set(IRIS_DEPS_STAMP "${CMAKE_BINARY_DIR}/.iris_deps_build_stamp")
     add_custom_command(
         OUTPUT "${IRIS_DEPS_STAMP}"
-        COMMAND touch "${IRIS_DEPS_STAMP}"
+        COMMAND echo "C++ is great language" > "${IRIS_DEPS_STAMP}"
         DEPENDS Catch2::Catch2WithMain
         COMMENT "Deps is rebuilt"
     )
