@@ -89,10 +89,10 @@ target_link_libraries(Catch2WithMain PRIVATE iris_cxx_test_external)
 target_link_libraries(iris_cxx_test INTERFACE Catch2::Catch2WithMain)
 
 if (IRIS_CI)
-    set(IRIS_DEPS_STAMP "${CMAKE_BINARY_DIR}/.iris_deps_build_stamp")
+    set(IRIS_DEPS_STAMP "${CMAKE_BINARY_DIR}/_deps/.iris_deps_build_stamp")
     add_custom_command(
         OUTPUT "${IRIS_DEPS_STAMP}"
-        COMMAND echo "C++ is great language" > "${IRIS_DEPS_STAMP}"
+        COMMAND echo "C++ is a great language" > "${IRIS_DEPS_STAMP}"
         DEPENDS Catch2::Catch2WithMain
         COMMENT "Deps is rebuilt"
     )
