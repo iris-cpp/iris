@@ -172,32 +172,12 @@ jobs:
             -DIRIS_CI=ON \
             -S .
 
-      - name: Check Deps build time stamp (pre-build)
-        id: pre-build-check
-        shell: bash
-        run: |
-          if [ -e build/_deps/.iris_deps_build_stamp ]; then
-            echo "deps-timestamp=$(stat -c %Y build/_deps/.iris_deps_build_stamp)" >> $GITHUB_OUTPUT
-          else
-            echo "deps-timestamp=0" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Try building Deps
-        run: |
-          cmake --build build --config ${{ matrix.build_type.name }} -j${{ env.IRIS_BUILD_JOBS }} --target iris_deps_build_check ${{ matrix.compiler.builder_additional_args }}
-
-      - name: Check Deps build time stamp (post-build)
-        id: post-build-check
-        shell: bash
-        run: |
-          echo "deps-timestamp=$(stat -c %Y build/_deps/.iris_deps_build_stamp)" >> $GITHUB_OUTPUT
-
       - name: Build Tests
         run: |
           cmake --build build --config ${{ matrix.build_type.name }} -j${{ env.IRIS_BUILD_JOBS }} ${{ matrix.compiler.builder_additional_args }}
 
       - name: Cache CMake Dependencies (save)
-        if: steps.cache-deps.outputs.cache-hit != 'true' || steps.pre-build-check.outputs.deps-timestamp != steps.post-build-check.outputs.deps-timestamp
+        if: steps.cache-deps.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           key: ${{ steps.cache-deps.outputs.cache-primary-key }}
