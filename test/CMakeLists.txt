@@ -86,7 +86,7 @@ target_compile_definitions(Catch2 PUBLIC DO_NOT_USE_WMAIN)
 target_link_libraries(Catch2 PRIVATE iris_cxx_test_external)
 target_link_libraries(Catch2WithMain PRIVATE iris_cxx_test_external)
 
-target_link_libraries(iris_cxx_test INTERFACE Catch2::Catch2WithMain)
+target_link_libraries(iris_cxx_test INTERFACE Catch2::Catch2)
 
 # -----------------------------------------------------------------
 # Common CMake utilities for testing
@@ -95,7 +95,7 @@ function(iris_define_test_headers test_name)
     target_sources(${test_name}_test PRIVATE FILE_SET HEADERS FILES ${ARGN})
 endfunction()
 
-function(iris_define_test test_name)
+function(_iris_define_test_impl test_name libs)
     add_executable(${test_name}_test ${ARGN})
     target_include_directories(${test_name}_test PRIVATE ${CMAKE_CURRENT_FUNCTION_LIST_DIR})
     target_include_directories(${test_name}_test PRIVATE ${CMAKE_CURRENT_LIST_DIR})
@@ -112,7 +112,7 @@ function(iris_define_test test_name)
         target_sources(${test_name}_test PRIVATE "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/cpp.hint")
     endif()
 
-    target_link_libraries(${test_name}_test PRIVATE Iris::Iris iris_cxx_test)
+    target_link_libraries(${test_name}_test PRIVATE Iris::Iris iris_cxx_test ${libs})
     add_test(NAME ${test_name}_test COMMAND ${test_name}_test --colour-mode=ansi)
 
     if(MSVC)
@@ -122,6 +122,14 @@ function(iris_define_test test_name)
             ENVIRONMENT "PATH=${IRIS_MSVC_ASAN_DIR};$ENV{PATH}"
         )
     endif()
+endfunction()
+
+function(iris_define_test test_name)
+    _iris_define_test_impl(${test_name} Catch2::Catch2WithMain ${ARGN})
+endfunction()
+
+function(iris_define_test_no_main test_name)
+    _iris_define_test_impl(${test_name} "" ${ARGN})
 endfunction()
 
 function(iris_define_tests)
