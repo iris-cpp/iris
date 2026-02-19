@@ -70,6 +70,13 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Copy Local GitHub Actions
+        shell: bash
+        run: |
+          if [ -e modules/iris ]; then
+            cp -r modules/iris/.github/actions .github/
+          fi
+
       - name: Setup Toolchain
         id: setup
         uses: ./.github/actions/setup-cpp
