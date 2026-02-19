@@ -1,0 +1,198 @@
+# Copyright 2026 The Iris Project Contributors
+#
+# Distributed under the Boost Software License, Version 1.0.
+# https://www.boost.org/LICENSE_1_0.txt
+
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      os-name:
+        required: true
+        type: string
+      os-version:
+        required: true
+        type: string
+      build-type-name:
+        required: true
+        type: string
+      cpp-version-name:
+        required: true
+        type: string
+      cpp-version-number:
+        required: true
+        type: string
+      compiler-toolset:
+        required: true
+        type: string
+      compiler-version:
+        required: true
+        type: string
+      compiler-executable:
+        required: true
+        type: string
+      compiler-cxxflags:
+        required: false
+        type: string
+        default: ""
+      compiler-toolset-version:
+        required: false
+        type: string
+        default: ""
+      vs-path:
+        required: false
+        type: string
+        default: ""
+      cmake-config-additional-args:
+        required: false
+        type: string
+        default: ""
+      compiler-builder-additional-args:
+        required: false
+        type: string
+        default: ""
+      components:
+        required: true
+        type: string
+        description: 'JSON array of components to build (e.g. ["iris", "alloy","x4"])'
+
+env:
+  IRIS_CI_BUILD_JOBS: 4
+
+jobs:
+  prepare-deps:
+    name: "Dependencies"
+    runs-on: ${{ inputs.os-name }}-${{ inputs.os-version }}
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Setup Toolchain
+        id: setup
+        uses: ./.github/actions/setup-cpp
+        with:
+          os-name: ${{ inputs.os-name }}
+          os-version: ${{ inputs.os-version }}
+          compiler-toolset: ${{ inputs.compiler-toolset }}
+          compiler-version: ${{ inputs.compiler-version }}
+          compiler-executable: ${{ inputs.compiler-executable }}
+          compiler-toolset-version: ${{ inputs.compiler-toolset-version }}
+          vs-path: ${{ inputs.vs-path }}
+          cpp-version-name: ${{ inputs.cpp-version-name }}
+          build-type-name: ${{ inputs.build-type-name }}
+
+      - name: Cache CMake Dependencies (restore)
+        id: cache-deps
+        uses: actions/cache/restore@v5
+        with:
+          key: ${{ steps.setup.outputs.deps-cache-key }}
+          path: ${{ github.workspace }}/build/_deps
+
+      # Adapt CMP0168; enable caching in CI
+      # https://cmake.org/cmake/help/latest/module/FetchContent.html#variable:FETCHCONTENT_FULLY_DISCONNECTED
+      - name: Setup Cached CMake Dependencies
+        id: deps-info
+        shell: bash
+        run: |
+          if [ "${{ steps.cache-deps.outputs.cache-hit }}" = "true" ]; then
+            echo "IRIS_CI_CMAKE_ARGS=-DFETCHCONTENT_FULLY_DISCONNECTED=ON" >> "$GITHUB_OUTPUT"
+          else
+            echo "IRIS_CI_CMAKE_ARGS=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure
+        env:
+          CLICOLOR_FORCE: 1
+        shell: bash
+        run: |
+          set -xe
+          cmake ${{ steps.deps-info.outputs.IRIS_CI_CMAKE_ARGS }} -B build \
+            ${{ inputs.cmake-config-additional-args }} \
+            -DCMAKE_CXX_COMPILER=${{ inputs.compiler-executable }} \
+            -DCMAKE_CXX_FLAGS="${{ inputs.compiler-cxxflags }}" \
+            -DCMAKE_CXX_STANDARD=${{ inputs.cpp-version-number }} \
+            -DCMAKE_BUILD_TYPE=${{ inputs.build-type-name }} \
+            -DIRIS_CI=ON \
+            -S .
+
+      - name: Build Deps
+        env:
+          CLICOLOR_FORCE: 1
+        run: |
+          cmake --build build --config ${{ inputs.build-type-name }} -j${{ env.IRIS_CI_BUILD_JOBS }} --target Catch2WithMain ${{ inputs.compiler-builder-additional-args }}
+
+      - name: Cache CMake Dependencies (save)
+        # Due to some bogus "Unable to reserve cache with key" error, we *always* save the cache for now.
+        # See this page for the rate limit: https://docs.github.com/en/actions/reference/limits#existing-system-limits
+        # if: steps.cache-deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          key: ${{ steps.cache-deps.outputs.cache-primary-key }}
+          path: ${{ github.workspace }}/build/_deps
+
+  build:
+    name: ${{ matrix.component }}
+    needs: prepare-deps
+    runs-on: ${{ inputs.os-name }}-${{ inputs.os-version }}
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        component: ${{ fromJSON(inputs.components) }}
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Setup Toolchain
+        id: setup
+        uses: ./.github/actions/setup-cpp
+        with:
+          os-name: ${{ inputs.os-name }}
+          os-version: ${{ inputs.os-version }}
+          compiler-toolset: ${{ inputs.compiler-toolset }}
+          compiler-version: ${{ inputs.compiler-version }}
+          compiler-executable: ${{ inputs.compiler-executable }}
+          cpp-version-name: ${{ inputs.cpp-version-name }}
+          build-type-name: ${{ inputs.build-type-name }}
+
+      - name: Cache CMake Dependencies (restore)
+        id: cache-deps
+        uses: actions/cache/restore@v4
+        with:
+          key: ${{ steps.setup.outputs.deps-cache-key }}
+          path: ${{ github.workspace }}/build/_deps
+
+      - name: Configure
+        env:
+          CLICOLOR_FORCE: 1
+        shell: bash
+        run: |
+          set -xe
+          cmake -DFETCHCONTENT_FULLY_DISCONNECTED=ON -B build \
+            -DCMAKE_CXX_COMPILER=${{ inputs.compiler-executable }} \
+            -DCMAKE_CXX_FLAGS="${{ inputs.compiler-cxxflags }}" \
+            -DCMAKE_CXX_STANDARD=${{ inputs.cpp-version-number }} \
+            -DCMAKE_BUILD_TYPE=${{ inputs.build-type-name }} \
+            -DIRIS_CI_COMPONENT=${{ matrix.component }} \
+            -DIRIS_CI=ON \
+            -S .
+
+      - name: Build Tests
+        env:
+          CLICOLOR_FORCE: 1
+        shell: bash
+        run: |
+          echo "CPPWARNINGNOTIFIER_LOG_MARKER"
+          cmake --build build --config ${{ inputs.build-type-name }} -j${{ env.IRIS_CI_BUILD_JOBS }} ${{ inputs.compiler-builder-additional-args }}
+
+      - name: Test
+        env:
+          CLICOLOR_FORCE: 1
+        working-directory: ${{ github.workspace }}/build/test
+        run: ctest --output-on-failure -C ${{ inputs.build-type-name }}
