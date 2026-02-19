@@ -2,6 +2,9 @@
 
 name: CI
 
+permissions:
+  id-token: write
+
 on:
   pull_request:
   push:
@@ -12,14 +15,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  IRIS_BUILD_JOBS: 4
-
 jobs:
   changes:
     runs-on: ubuntu-latest
     outputs:
-      iris_component: ${{ steps.filter.outputs.changes }}
+      components: ${{ steps.filter.outputs.changes }}
     steps:
       - uses: actions/checkout@v5
       - uses: dorny/paths-filter@v3
@@ -27,19 +27,18 @@ jobs:
         with:
           filters: |
             iris:
-              - '.github/workflows/*.yml'
+              - '.github/workflows/**/*.yml'
+              - '.github/actions/**/*.yml'
               - 'CMakeLists.txt'
               - 'include/iris/**/*'
               - 'test/CMakeLists.txt'
               - 'test/**/*'
 
   build:
-    name: "[${{ matrix.cpp_version.name }}] ${{ matrix.iris_component }} | ${{ matrix.compiler.toolset }}-${{ matrix.compiler.version }} (${{ matrix.build_type.name }}) @ ${{ matrix.os.name }}-${{ matrix.os.version }}"
+    name: "[${{ matrix.cpp_version.name }}] ${{ matrix.compiler.name }} ${{ matrix.compiler.version }} (${{ matrix.build_type.name }})"
 
     needs: changes
-    if: ${{ needs.changes.outputs.iris_component != '[]' && needs.changes.outputs.iris_component != '' }}
-
-    runs-on: ${{ matrix.os.name }}-${{ matrix.os.version }}
+    if: ${{ needs.changes.outputs.components != '[]' && needs.changes.outputs.components != '' }}
 
     strategy:
       fail-fast: false
@@ -50,6 +49,8 @@ jobs:
             version: 24.04
           - name: windows
             version: 2022
+          - name: windows
+            version: 2025-vs2026
         build_type:
           - name: Debug
             lowercase: debug
@@ -74,13 +75,31 @@ jobs:
           - name: MSVC
             toolset: msvc
             version: 2022
+            toolset_version: 14.44
+            vs-path: C:\Program Files\Microsoft Visual Studio\2022\Enterprise
+            cmake_config_additional_args: -G "Visual Studio 17 2022"
+            builder_additional_args: -- "-consoleLoggerParameters:ForceConsoleColor"
+            executable: cl
+          - name: MSVC
+            toolset: msvc
+            version: 2026
+            toolset_version: 14.50
+            vs-path: C:\Program Files\Microsoft Visual Studio\18\Enterprise
+            cmake_config_additional_args: -G "Visual Studio 18 2026"
             builder_additional_args: -- "-consoleLoggerParameters:ForceConsoleColor"
             executable: cl
 
-        iris_component: ${{ fromJSON(needs.changes.outputs.iris_component) }}
-
         exclude:
-          # Blacklist all invalid combinations of environments
+          - os:
+              name: windows
+              version: 2022
+            compiler:
+              version: 2026
+          - os:
+              name: windows
+              version: 2025-vs2026
+            compiler:
+              version: 2022
           - os:
               name: windows
             compiler:
@@ -94,97 +113,35 @@ jobs:
             compiler:
               name: MSVC
 
+    uses: ./.github/workflows/build.yml
+    with:
+      os-name: ${{ matrix.os.name }}
+      os-version: ${{ matrix.os.version }}
+      build-type-name: ${{ matrix.build_type.name }}
+      cpp-version-name: ${{ matrix.cpp_version.name }}
+      cpp-version-number: ${{ matrix.cpp_version.number }}
+      compiler-toolset: ${{ matrix.compiler.toolset }}
+      compiler-version: ${{ matrix.compiler.version }}
+      compiler-executable: ${{ matrix.compiler.executable }}
+      compiler-cxxflags: ${{ matrix.compiler.cxxflags }}
+      compiler-toolset-version: ${{ matrix.compiler.toolset_version }}
+      vs-path: ${{ matrix.compiler.vs-path }}
+      cmake-config-additional-args: ${{ matrix.compiler.cmake_config_additional_args }}
+      compiler-builder-additional-args: ${{ matrix.compiler.builder_additional_args }}
+      components: ${{ needs.changes.outputs.components }}
+
+  run-notifier:
+    needs: build
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-
-      - name: Initialize Ubuntu
-        if: matrix.os.name == 'ubuntu'
-        run: |
-          sudo echo "set man-db/auto-update false" | sudo debconf-communicate
-          sudo dpkg-reconfigure man-db
-
-      - name: Setup GCC
-        if: matrix.compiler.toolset == 'gcc'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y g++-${{ matrix.compiler.version }}
-
-      - name: Setup Clang
-        if: matrix.compiler.toolset == 'clang'
-        run: |
-          wget https://apt.llvm.org/llvm.sh
-          chmod +x ./llvm.sh
-          sudo ./llvm.sh ${{ matrix.compiler.version }}
-          sudo apt-get install -y libc++-${{ matrix.compiler.version }}-dev libc++abi-${{ matrix.compiler.version }}-dev libunwind-${{ matrix.compiler.version }}-dev
-
-      - uses: TheMrMilchmann/setup-msvc-dev@v3
-        if: matrix.os.name == 'windows'
+      - uses: actions/checkout@v6
+      - uses: iris-cpp/cpp-warning-notifier@v0.7.0
         with:
-          arch: x64
-
-      - name: Fetch Environment Info
-        id: env-info
-        shell: bash
-        run: |
-          set -e
-          case "${{ matrix.compiler.toolset }}" in
-            "gcc")
-              COMPILER_FULL_VERSION=$(${{ matrix.compiler.executable }} -dumpfullversion -dumpversion)
-              ;;
-            "clang")
-              COMPILER_FULL_VERSION=$(${{ matrix.compiler.executable }} -dumpversion)
-              ;;
-            "msvc")
-              COMPILER_FULL_VERSION=$(powershell -NoProfile -Command "(Get-Command ${{ matrix.compiler.executable }}).FileVersionInfo.FileVersion")
-              ;;
-          esac
-          echo "COMPILER_FULL_VERSION=$COMPILER_FULL_VERSION"
-          echo "compiler-full-version=$COMPILER_FULL_VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Cache CMake Dependencies (restore)
-        id: cache-deps
-        uses: actions/cache/restore@v4
-        with:
-          key: deps-${{ matrix.os.name }}-${{ matrix.os.version }}-${{ matrix.compiler.toolset }}-${{ steps.env-info.outputs.compiler-full-version }}-${{ matrix.cpp_version.name }}-${{ matrix.build_type.name }}
-          path: ${{ github.workspace }}/build/_deps
-
-      # Adapt CMP0168; enable caching in CI
-      # https://cmake.org/cmake/help/latest/module/FetchContent.html#variable:FETCHCONTENT_FULLY_DISCONNECTED
-      - name: Setup Cached CMake Dependencies
-        id: deps-info
-        shell: bash
-        run: |
-          if [ "${{ steps.cache-deps.outputs.cache-hit }}" = "true" ]; then
-            echo "IRIS_CMAKE_ARGS=-DFETCHCONTENT_FULLY_DISCONNECTED=ON" >> "$GITHUB_OUTPUT"
-          else
-            echo "IRIS_CMAKE_ARGS=" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Configure
-        shell: bash
-        run: |
-          set -xe
-          cmake ${{ steps.deps-info.outputs.IRIS_CMAKE_ARGS }} -B build \
-            -DCMAKE_CXX_COMPILER=${{ matrix.compiler.executable }} \
-            -DCMAKE_CXX_FLAGS="${{ matrix.compiler.cxxflags }}" \
-            -DCMAKE_CXX_STANDARD=${{ matrix.cpp_version.number }} \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type.name }} \
-            -DIRIS_CI=ON \
-            -S .
-
-      - name: Build Tests
-        run: |
-          cmake --build build --config ${{ matrix.build_type.name }} -j${{ env.IRIS_BUILD_JOBS }} ${{ matrix.compiler.builder_additional_args }}
-
-      - name: Cache CMake Dependencies (save)
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          key: ${{ steps.cache-deps.outputs.cache-primary-key }}
-          path: ${{ github.workspace }}/build/_deps
-
-      - name: Test
-        env:
-          CLICOLOR_FORCE: 1
-        working-directory: ${{ github.workspace }}/build
-        run: ctest --output-on-failure -C ${{ matrix.build_type.name }}
+          IGNORE_NO_MARKER: true
+          RUN_ID: ${{ github.run_id }}
+          JOB_ID: ${{ job.check_run_id }}
+          WORKER_URL: https://cpp-warning-notifier.iris-cpp.org
+          STEP_REGEX: Build .+
+          JOB_REGEX: '\[C\+\+(?<cppVersion>\d+)\] (?<vendorName>.+) (?<vendorVersion>.+) \((?<config>.+)\) / (?<component>.+)'
+          ROW_HEADERS: '["component", "vendorName", "vendorVersion", "config"]'
+          COLUMN_HEADER: cppVersion

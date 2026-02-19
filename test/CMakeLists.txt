@@ -150,21 +150,23 @@ endfunction()
 # Iris tests
 
 if(PROJECT_IS_TOP_LEVEL)
-    add_subdirectory(rvariant)
+    if(IRIS_CI_COMPONENT STREQUAL iris)
+        add_subdirectory(rvariant)
 
-    set(
-        IRIS_TEST_IRIS_TESTS
-        core
-        type_traits
-        enum
-        indirect
-        colorize_format
-        preprocess
-    )
+        set(
+            IRIS_TEST_IRIS_TESTS
+            core
+            type_traits
+            enum
+            indirect
+            colorize_format
+            preprocess
+        )
 
-    iris_define_sub_tests(iris ${IRIS_TEST_IRIS_TESTS})
+        iris_define_sub_tests(iris ${IRIS_TEST_IRIS_TESTS})
 
-    foreach(test_name IN LISTS IRIS_TEST_IRIS_TESTS)
-        iris_define_test_headers(iris_${test_name} iris_test.hpp)
-    endforeach()
+        foreach(test_name IN LISTS IRIS_TEST_IRIS_TESTS)
+            iris_define_test_headers(iris_${test_name} iris_test.hpp)
+        endforeach()
+    endif()
 endif()

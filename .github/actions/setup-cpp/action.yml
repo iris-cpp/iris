@@ -1,0 +1,92 @@
+# Copyright 2026 The Iris Project Contributors
+#
+# Distributed under the Boost Software License, Version 1.0.
+# https://www.boost.org/LICENSE_1_0.txt
+
+name: Setup Toolchain
+description: Checkout, install compiler, and fetch environment info
+
+inputs:
+  os-name:
+    required: true
+  os-version:
+    required: true
+  compiler-toolset:
+    required: true
+  compiler-version:
+    required: true
+  compiler-executable:
+    required: true
+  compiler-toolset-version:
+    required: false
+    type: string
+    default: ''
+  vs-path:
+    required: false
+    type: string
+    default: ''
+  cpp-version-name:
+    required: true
+  build-type-name:
+    required: true
+
+outputs:
+  compiler-full-version:
+    description: Full version string of the compiler
+    value: ${{ steps.env-info.outputs.compiler-full-version }}
+  deps-cache-key:
+    description: Cache key for CMake dependencies
+    value: ${{ steps.env-info.outputs.deps-cache-key }}
+
+runs:
+  using: composite
+  steps:
+    - name: Initialize Ubuntu
+      if: inputs.os-name == 'ubuntu'
+      shell: bash
+      run: |
+        sudo echo "set man-db/auto-update false" | sudo debconf-communicate
+        sudo dpkg-reconfigure man-db
+
+    - name: Setup GCC
+      if: inputs.compiler-toolset == 'gcc'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y g++-${{ inputs.compiler-version }}
+
+    - name: Setup Clang
+      if: inputs.compiler-toolset == 'clang'
+      shell: bash
+      run: |
+        wget https://apt.llvm.org/llvm.sh
+        chmod +x ./llvm.sh
+        sudo ./llvm.sh ${{ inputs.compiler-version }}
+        sudo apt-get install -y libc++-${{ inputs.compiler-version }}-dev libc++abi-${{ inputs.compiler-version }}-dev libunwind-${{ inputs.compiler-version }}-dev
+
+    - uses: TheMrMilchmann/setup-msvc-dev@v3
+      if: inputs.os-name == 'windows'
+      with:
+        arch: x64
+        vs-path: ${{ inputs.vs-path }}
+        toolset: ${{ inputs.compiler-toolset-version }}
+
+    - name: Fetch Environment Info
+      id: env-info
+      shell: bash
+      run: |
+        set -e
+        case "${{ inputs.compiler-toolset }}" in
+          "gcc")
+            COMPILER_FULL_VERSION=$(${{ inputs.compiler-executable }} -dumpfullversion -dumpversion)
+            ;;
+          "clang")
+            COMPILER_FULL_VERSION=$(${{ inputs.compiler-executable }} -dumpversion)
+            ;;
+          "msvc")
+            COMPILER_FULL_VERSION=$(powershell -NoProfile -Command "(Get-Command ${{ inputs.compiler-executable }}).FileVersionInfo.FileVersion")
+            ;;
+        esac
+        echo "COMPILER_FULL_VERSION=$COMPILER_FULL_VERSION"
+        echo "compiler-full-version=$COMPILER_FULL_VERSION" >> "$GITHUB_OUTPUT"
+        echo "deps-cache-key=deps4-${{ inputs.os-name }}-${{ inputs.os-version }}-${{ inputs.compiler-toolset }}-${COMPILER_FULL_VERSION}-${{ inputs.cpp-version-name }}-${{ inputs.build-type-name }}" >> "$GITHUB_OUTPUT"
