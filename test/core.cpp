@@ -323,6 +323,11 @@ TEST_CASE("Cpp17CopyAssignable")
     }
 }
 
+template<class T>
+concept Cpp17Destructible_expr = requires(T a) {
+    a.~T();
+};
+
 TEST_CASE("Cpp17Destructible")
 {
     STATIC_REQUIRE(iris::req::Cpp17Destructible<int>);
@@ -368,6 +373,13 @@ TEST_CASE("Cpp17Destructible")
         STATIC_REQUIRE( std::destructible<int[1]>);
         STATIC_REQUIRE(!std::destructible<void>);
         STATIC_REQUIRE( std::destructible<int&>);
+    }
+    {
+        // Pointer types *should* be destructible
+        STATIC_REQUIRE(iris::req::Cpp17Destructible<int*>);
+
+        struct Class;
+        STATIC_REQUIRE(iris::req::Cpp17Destructible<Class*>);
     }
 }
 

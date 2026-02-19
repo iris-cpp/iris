@@ -1,4 +1,4 @@
-﻿#ifndef IRIS_REQUIREMENTS_HPP
+#ifndef IRIS_REQUIREMENTS_HPP
 #define IRIS_REQUIREMENTS_HPP
 
 // SPDX-License-Identifier: MIT
@@ -87,9 +87,8 @@ concept Cpp17CopyAssignable = Cpp17MoveAssignable<T> && requires {
 
 // https://eel.is/c++draft/utility.requirements#tab:cpp17.destructible
 template<class T>
-concept Cpp17Destructible = (!std::is_array_v<T>) && std::is_object_v<T> && requires(T u) {
-    { u.~T() };
-};
+concept Cpp17Destructible = std::is_object_v<T> && !std::is_array_v<T> && std::is_destructible_v<T>;
+// MSVC 2026 cannot compile `a.~T()` for pointer-to-class types (needs upstream bugfix)
 
 // https://eel.is/c++draft/swappable.requirements#5
 template<class X>
