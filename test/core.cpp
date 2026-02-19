@@ -6,6 +6,7 @@
 #include <iris/requirements.hpp>
 #include <iris/compare.hpp>
 #include <iris/fixed_string.hpp>
+#include <iris/exception.hpp>
 
 #include <concepts>
 #include <utility>
@@ -450,6 +451,75 @@ TEST_CASE("fixed_string")
     using namespace std::string_view_literals;
     constexpr iris::fixed_string str = "foobar";
     CHECK((std::ranges::equal(str, "foobar"sv)));
+}
+
+
+#define IRIS_TEST_THROWF(expected, E, ...) \
+    CHECK_THROWS_AS( \
+        ([]{ \
+            try { \
+                iris::throwf<E>(__VA_ARGS__); \
+            } catch (std::exception const& e) { \
+                CHECK(e.what() == std::string_view{expected}); \
+                throw; \
+            } \
+        })(), \
+        E \
+    )
+
+TEST_CASE("throwf")
+{
+    class my_exception : public std::runtime_error
+    {
+    public:
+        my_exception(std::string const& name, std::string const& message)
+            : runtime_error(name + ": " + message)
+        {}
+    };
+
+    IRIS_TEST_THROWF("foo", std::runtime_error, "foo");
+    IRIS_TEST_THROWF("foo", std::runtime_error, std::string{"foo"});
+    IRIS_TEST_THROWF("foo", std::runtime_error, std::string{"foo"}.c_str());
+    IRIS_TEST_THROWF("foo", std::runtime_error, std::string_view{"foo"});
+    IRIS_TEST_THROWF("{}", std::runtime_error, "{}");
+    IRIS_TEST_THROWF("42", std::runtime_error, "{}", 42);
+    IRIS_TEST_THROWF("foo", std::runtime_error, "{}", "foo");
+    IRIS_TEST_THROWF("foo", std::runtime_error, "{}", std::string{"foo"});
+    IRIS_TEST_THROWF("foo", std::runtime_error, "{}", std::string{"foo"}.c_str());
+    IRIS_TEST_THROWF("foo", std::runtime_error, "{}", std::string_view{"foo"});
+
+    IRIS_TEST_THROWF("{}: bar", my_exception, "{}", "bar");
+    IRIS_TEST_THROWF("foo: bar", my_exception, "foo", "bar");
+
+    // constructible with argument
+    IRIS_TEST_THROWF("foobar", std::runtime_error, "foobar");
+
+    // constructible with format string
+    IRIS_TEST_THROWF("33 - 4", std::runtime_error, "{} - {}", 33, 4);
+
+    CHECK_THROWS_AS(
+        ([]{
+            try {
+                iris::throwf<std::system_error>(std::make_error_code(std::errc::invalid_argument), "{}", 42);
+            } catch (std::system_error const& e) {
+                CHECK(e.code() == std::make_error_code(std::errc::invalid_argument));
+                throw;
+            }
+        })(),
+        std::system_error
+    );
+
+    CHECK_THROWS_AS(
+        ([]{
+            try {
+                iris::throwf<std::system_error>(33 - 4, std::generic_category(), "{}", 42);
+            } catch (std::system_error const& e) {
+                CHECK((e.code() == std::error_code{33 - 4, std::generic_category()}));
+                throw;
+            }
+        })(),
+        std::system_error
+    );
 }
 
 } // unit_test

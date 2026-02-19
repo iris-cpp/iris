@@ -13,6 +13,9 @@ concept StringLike = requires(T t) {
     std::basic_string_view{t};
 };
 
+template<class T>
+concept NotStringLike = !StringLike<T>;
+
 } // iris
 
 #endif

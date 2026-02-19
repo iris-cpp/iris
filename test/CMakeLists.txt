@@ -150,7 +150,7 @@ endfunction()
 # Iris tests
 
 if(PROJECT_IS_TOP_LEVEL)
-    if(IRIS_CI_COMPONENT STREQUAL iris)
+    if(NOT DEFINED IRIS_CI_COMPONENT OR IRIS_CI_COMPONENT STREQUAL iris)
         add_subdirectory(rvariant)
 
         set(
