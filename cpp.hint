@@ -17,3 +17,6 @@
 
 #define IRIS_FORCEINLINE
 #define IRIS_LIFETIMEBOUND
+
+#define IRIS_THROW_NORETURN [[noreturn]]
+
