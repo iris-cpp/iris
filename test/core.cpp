@@ -7,11 +7,13 @@
 #include <iris/compare.hpp>
 #include <iris/fixed_string.hpp>
 #include <iris/exception.hpp>
+#include <iris/hash.hpp>
 
 #include <concepts>
 #include <utility>
 #include <type_traits>
 #include <ranges>
+#include <vector>
 
 namespace unit_test {
 
@@ -520,6 +522,26 @@ TEST_CASE("throwf")
         })(),
         std::system_error
     );
+}
+
+TEST_CASE("hash")
+{
+    static_assert(iris::hash_all(std::vector<int>{}) == 0);
+    {
+        int const value = 0;
+        CHECK(iris::hash_all(value) == iris::hash_value(value));
+        CHECK(iris::hash_all(value) == std::hash<int>{}(value));
+    }
+    {
+        std::vector<int> const vec{1};
+        CHECK(iris::hash_all(vec) == iris::hash_combine(0, iris::hash_value(1)));
+        CHECK(iris::hash_all(vec) == iris::hash_combine(0, std::hash<int>{}(1)));
+    }
+    {
+        std::vector<int> const vec{1, 2};
+        CHECK(iris::hash_all(vec) == iris::hash_combine(iris::hash_combine(0, iris::hash_value(1)), iris::hash_value(2)));
+        CHECK(iris::hash_all(vec) == iris::hash_combine(iris::hash_combine(0, std::hash<int>{}(1)), std::hash<int>{}(2)));
+    }
 }
 
 } // unit_test
