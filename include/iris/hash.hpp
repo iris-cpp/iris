@@ -1,4 +1,4 @@
-﻿#ifndef IRIS_HASH_HPP
+#ifndef IRIS_HASH_HPP
 #define IRIS_HASH_HPP
 
 // SPDX-License-Identifier: MIT
@@ -7,7 +7,7 @@
 #include <iris/type_traits.hpp>
 
 #include <functional>
-#include <bit>
+#include <ranges>
 
 #include <cstddef>
 
@@ -111,16 +111,48 @@ template<>
 
 } // detail
 
+template<class T>
+[[nodiscard]] constexpr std::size_t hash_combine(std::size_t const seed, T const& v) noexcept;
+
+template<class T>
+[[nodiscard]] constexpr std::size_t hash_value(T const& var) noexcept
+{
+    static_assert(is_hash_enabled_v<T>);
+    return std::hash<T>{}(var);
+}
+
+template<std::ranges::input_range R>
+[[nodiscard]] constexpr std::size_t hash_value(R const& r)
+    noexcept(
+        noexcept(++std::ranges::begin(r)) &&
+        noexcept(std::ranges::end(r)) &&
+        std::is_nothrow_copy_assignable_v<std::ranges::iterator_t<R>>
+    )
+{
+    std::size_t seed = 0;
+    for (auto it = std::ranges::begin(r), se = std::ranges::end(r); it != se; ++it) {
+        seed = iris::hash_combine(seed, iris::hash_value(*it));
+    }
+    return seed;
+}
+
 // https://github.com/boostorg/container_hash/blob/5d8b8ac2b9d9d7cb3818f88fd7e6372e5f072ff5/include/boost/container_hash/hash.hpp#L472C53-L472C63
 // https://softwareengineering.stackexchange.com/questions/402542/where-do-magic-hashing-constants-like-0x9e3779b9-and-0x9e3779b1-come-from
 
 template<class T>
 [[nodiscard]] constexpr std::size_t hash_combine(std::size_t const seed, T const& v) noexcept
 {
-    static_assert(is_hash_enabled_v<T>);
     return detail::hash_mix<sizeof(std::size_t)>(
-        seed + 0x9e3779b97f4a7c55uz + std::hash<T>{}(v)
+        seed + 0x9e3779b97f4a7c55uz + iris::hash_value(v)
     );
+}
+
+template<class T, class... Ts>
+[[nodiscard]] constexpr std::size_t hash_all(T const& first, Ts const&... rest) noexcept
+{
+    std::size_t seed = iris::hash_value(first);
+    ((seed = iris::hash_combine(seed, rest)), ...);
+    return seed;
 }
 
 } // iris
