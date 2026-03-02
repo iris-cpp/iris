@@ -8,7 +8,6 @@
 #include <iris/bits/specialization_of.hpp>
 
 #include <concepts>
-#include <iosfwd>
 #include <type_traits>
 #include <utility>
 
