@@ -4,7 +4,6 @@
 // SPDX-License-Identifier: MIT
 
 #include <iris/rvariant/detail/rvariant_fwd.hpp>
-#include <iris/rvariant/detail/variant_requirements.hpp>
 #include <iris/rvariant/detail/variant_storage.hpp>
 #include <iris/rvariant/detail/visit.hpp>
 #include <iris/rvariant/detail/recursive_traits.hpp>
@@ -18,6 +17,7 @@
 #include <iris/type_traits.hpp>
 #include <iris/hash.hpp>
 
+#include <concepts>
 #include <functional>
 #include <initializer_list>
 #include <type_traits>
@@ -31,6 +31,103 @@
 namespace iris {
 
 namespace detail {
+
+template<class T, class U>
+struct check_recursive_wrapper_duplicate_impl : std::true_type {};
+
+template<class T, class U>
+    requires
+        (!std::same_as<T, U>) &&
+        (is_recursive_wrapper_like_v<T> || is_recursive_wrapper_like_v<U>) &&
+        std::same_as<unwrap_recursive_type<T>, unwrap_recursive_type<U>>
+struct check_recursive_wrapper_duplicate_impl<T, U>
+    : std::false_type
+{
+    // ReSharper disable once CppStaticAssertFailure
+    static_assert(
+        false,
+        "rvariant cannot contain both `T` and `recursive_wrapper` of `T` "
+        "([rvariant.rvariant.general])."
+    );
+};
+
+template<class T, class... Ts>
+struct check_recursive_wrapper_duplicate : std::true_type {};
+
+template<class T, class... Ts> requires (sizeof...(Ts) > 0)
+struct check_recursive_wrapper_duplicate<T, T, Ts...>
+    : std::conjunction<check_recursive_wrapper_duplicate_impl<T, Ts>...>
+{};
+
+template<class T, class List>
+struct non_wrapped_exactly_once : exactly_once<T, List>
+{
+    static_assert(
+        !is_ttp_specialization_of_v<T, recursive_wrapper> &&
+        !is_ttp_specialization_of_v<T, recursive_wrapper_alloca>,
+        "Constructing a `recursive_wrapper` alternative with its full type as the tag is "
+        "prohibited to avoid confusion; just specify `T` instead."
+    );
+};
+
+template<class T, class List>
+constexpr bool non_wrapped_exactly_once_v = non_wrapped_exactly_once<T, List>::value;
+
+
+template<class T, class Variant>
+struct exactly_once_index
+{
+    static_assert(exactly_once_v<T, typename Variant::unwrapped_types>, "T or recursive_wrapper<T> must occur exactly once in Ts...");
+    static constexpr std::size_t value = find_index_v<T, typename Variant::unwrapped_types>;
+};
+
+template<class T, class Variant>
+inline constexpr std::size_t exactly_once_index_v = exactly_once_index<T, Variant>::value;
+
+
+template<class T, class U = T const&>
+struct variant_copy_assignable : std::conjunction<std::is_constructible<T, U>, std::is_assignable<T&, U>>
+{
+    static_assert(!std::is_reference_v<T>);
+    static_assert(std::is_lvalue_reference_v<U>);
+};
+
+template<class T, class U = T const&>
+struct variant_nothrow_copy_assignable : std::conjunction<std::is_nothrow_constructible<T, U>, std::is_nothrow_assignable<T&, U>>
+{
+    static_assert(!std::is_reference_v<T>);
+    static_assert(std::is_lvalue_reference_v<U>);
+    static_assert(variant_copy_assignable<T, U>::value);
+};
+
+template<class T, class U = T&&>
+struct variant_move_assignable : std::conjunction<std::is_constructible<T, U>, std::is_assignable<T&, U>>
+{
+    static_assert(!std::is_reference_v<T>);
+    static_assert(std::is_rvalue_reference_v<U>);
+};
+
+template<class T, class U = T&&>
+struct variant_nothrow_move_assignable : std::conjunction<std::is_nothrow_constructible<T, U>, std::is_nothrow_assignable<T&, U>>
+{
+    static_assert(!std::is_reference_v<T>);
+    static_assert(std::is_rvalue_reference_v<U>);
+    static_assert(variant_move_assignable<T, U>::value);
+};
+
+template<class T, class U>
+struct variant_assignable : std::conjunction<std::is_constructible<T, U>, std::is_assignable<T&, U>>
+{
+    static_assert(!std::is_reference_v<T>);
+};
+
+template<class T, class U>
+struct variant_nothrow_assignable : std::conjunction<std::is_nothrow_constructible<T, U>, std::is_nothrow_assignable<T&, U>>
+{
+    static_assert(!std::is_reference_v<T>);
+    static_assert(variant_assignable<T, U>::value);
+};
+
 
 template<class R, class Compare, class... Ts>
 struct relops_visitor;

@@ -75,8 +75,14 @@ struct unwrap_recursive_type_impl
     using type = T;
 };
 
+template<class T>
+struct unwrap_recursive_type_impl<recursive_wrapper<T>>
+{
+    using type = T;
+};
+
 template<class T, class Allocator>
-struct unwrap_recursive_type_impl<recursive_wrapper<T, Allocator>>
+struct unwrap_recursive_type_impl<recursive_wrapper_alloca<T, Allocator>>
 {
     using type = T;
 };
@@ -132,20 +138,40 @@ template<class VT, class RHS>
 struct forward_maybe_wrapped_impl; // [rvariant.rvariant.general]: different allocators are not allowed
 
 // recursive_wrapper<int> val = recursive_wrapper<int>{42};
-template<class T, class Allocator>
-struct forward_maybe_wrapped_impl<recursive_wrapper<T, Allocator>, recursive_wrapper<T, Allocator>>
+template<class T>
+struct forward_maybe_wrapped_impl<recursive_wrapper<T>, recursive_wrapper<T>>
 {
     template<class Wrapped>
     [[nodiscard]] static constexpr auto&& apply(Wrapped&& wrapped IRIS_LIFETIMEBOUND) noexcept
     {
-        static_assert(std::is_same_v<std::remove_cvref_t<Wrapped>, recursive_wrapper<T, Allocator>>);
+        static_assert(std::is_same_v<std::remove_cvref_t<Wrapped>, recursive_wrapper<T>>);
+        return std::forward<Wrapped>(wrapped);
+    }
+};
+template<class T, class Allocator>
+struct forward_maybe_wrapped_impl<recursive_wrapper_alloca<T, Allocator>, recursive_wrapper_alloca<T, Allocator>>
+{
+    template<class Wrapped>
+    [[nodiscard]] static constexpr auto&& apply(Wrapped&& wrapped IRIS_LIFETIMEBOUND) noexcept
+    {
+        static_assert(std::is_same_v<std::remove_cvref_t<Wrapped>, recursive_wrapper_alloca<T, Allocator>>);
         return std::forward<Wrapped>(wrapped);
     }
 };
 
 // recursive_wrapper<int> val = 42;
+template<class T>
+struct forward_maybe_wrapped_impl<recursive_wrapper<T>, T>
+{
+    template<class Value>
+    [[nodiscard]] static constexpr auto&& apply(Value&& value IRIS_LIFETIMEBOUND) noexcept
+    {
+        static_assert(std::is_same_v<std::remove_cvref_t<Value>, T>);
+        return std::forward<Value>(value);
+    }
+};
 template<class T, class Allocator>
-struct forward_maybe_wrapped_impl<recursive_wrapper<T, Allocator>, T>
+struct forward_maybe_wrapped_impl<recursive_wrapper_alloca<T, Allocator>, T>
 {
     template<class Value>
     [[nodiscard]] static constexpr auto&& apply(Value&& value IRIS_LIFETIMEBOUND) noexcept

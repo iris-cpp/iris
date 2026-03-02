@@ -30,7 +30,7 @@ TEST_CASE("relational operators", "[wrapper]")
         CHECK((a <=> b) == std::strong_ordering::greater);
     }
     {
-        iris::recursive_wrapper<int> a(33);
+        iris::recursive_wrapper a(33);
         int b = 4;
 
         CHECK(a == a);
@@ -62,8 +62,8 @@ TEST_CASE("relational operators", "[wrapper]")
     {
         struct MyAllocator : std::allocator<int> {};
 
-        iris::recursive_wrapper<int> a(33);
-        iris::recursive_wrapper<int, MyAllocator> b(4);
+        iris::recursive_wrapper_alloca<int> a(33);
+        iris::recursive_wrapper_alloca<int, MyAllocator> b(4);
 
         CHECK(a == a);
         CHECK(a != b);

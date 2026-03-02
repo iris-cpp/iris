@@ -1,4 +1,4 @@
-﻿#ifndef IRIS_RVARIANT_DETAIL_RECURSIVE_TRAITS_HPP
+#ifndef IRIS_RVARIANT_DETAIL_RECURSIVE_TRAITS_HPP
 #define IRIS_RVARIANT_DETAIL_RECURSIVE_TRAITS_HPP
 
 // SPDX-License-Identifier: MIT
@@ -10,6 +10,12 @@
 
 namespace iris::detail {
 
+template<class T>
+constexpr bool is_recursive_wrapper_like_v =
+    is_ttp_specialization_of_v<T, recursive_wrapper> ||
+    is_ttp_specialization_of_v<T, recursive_wrapper_alloca>;
+
+
 template<bool Found, std::size_t I, class U, class... Ts>
 struct select_maybe_wrapped_impl;
 
@@ -20,10 +26,17 @@ struct select_maybe_wrapped_impl<false, I, U, U, Rest...>
     static constexpr std::size_t index = I;
 };
 
-template<std::size_t I, class U, class Allocator, class... Rest>
-struct select_maybe_wrapped_impl<false, I, U, recursive_wrapper<U, Allocator>, Rest...>
+template<std::size_t I, class U, class... Rest>
+struct select_maybe_wrapped_impl<false, I, U, recursive_wrapper<U>, Rest...>
 {
-    using type = recursive_wrapper<U, Allocator>;
+    using type = recursive_wrapper<U>;
+    static constexpr std::size_t index = I;
+};
+
+template<std::size_t I, class U, class Allocator, class... Rest>
+struct select_maybe_wrapped_impl<false, I, U, recursive_wrapper_alloca<U, Allocator>, Rest...>
+{
+    using type = recursive_wrapper_alloca<U, Allocator>;
     static constexpr std::size_t index = I;
 };
 
