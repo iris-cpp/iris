@@ -3,6 +3,8 @@
 
 // SPDX-License-Identifier: MIT
 
+#include <iris/bits/specialization_of.hpp>
+
 #include <iris/hash.hpp>
 #include <iris/indirect.hpp>
 
@@ -13,13 +15,22 @@
 
 namespace iris {
 
+template<class T>
+class recursive_wrapper;
+
+template<class T, class Allocator>
+class recursive_wrapper_alloca;
+
 // recursive_wrapper (fixed to `std::allocator<T>`)
 // This class covers 99.99% of recursive-variant use cases.
 template<class T>
 class recursive_wrapper
     : private detail::indirect_base<T, std::allocator<T>>
 {
-    static_assert(!detail::is_recursive_wrapper_like_v<T>, "recursive wrapper of recursive wrapper is not allowed");
+    static_assert(
+        !is_ttp_specialization_of_v<T, recursive_wrapper> && !is_ttp_specialization_of_v<T, recursive_wrapper_alloca>,
+        "recursive wrapper of recursive wrapper is not allowed"
+    );
 
     // Note: this implementation is copied from `recursive_wrapper_alloca` below.
     // If any changes are required, modify `recursive_wrapper_alloca` first.
@@ -116,7 +127,10 @@ template<class T, class Allocator = std::allocator<T>>
 class recursive_wrapper_alloca
     : private detail::indirect_base<T, Allocator>
 {
-    static_assert(!detail::is_recursive_wrapper_like_v<T>, "recursive wrapper of recursive wrapper is not allowed");
+    static_assert(
+        !is_ttp_specialization_of_v<T, recursive_wrapper> && !is_ttp_specialization_of_v<T, recursive_wrapper_alloca>,
+        "recursive wrapper of recursive wrapper is not allowed"
+    );
 
     using base_type = detail::indirect_base<T, Allocator>;
 
