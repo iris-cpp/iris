@@ -695,7 +695,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
                 using maybe_wrapped = detail::select_maybe_wrapped<unwrap_recursive_type<Uj>, Ts...>;
                 using VT = maybe_wrapped::type;
                 static_assert(std::is_same_v<unwrap_recursive_type<VT>, unwrap_recursive_type<Uj>>);
-                base_type::template construct_on_valueless<maybe_wrapped::index>(detail::forward_maybe_wrapped<VT>(uj));
+                base_type::template construct_on_valueless<maybe_wrapped::index>(uj);
             }
         });
     }
@@ -718,7 +718,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
                 using VT = maybe_wrapped::type;
                 static_assert(std::is_same_v<unwrap_recursive_type<VT>, unwrap_recursive_type<Uj>>);
                 static_assert(std::is_rvalue_reference_v<Uj&&>);
-                base_type::template construct_on_valueless<maybe_wrapped::index>(detail::forward_maybe_wrapped<VT>(std::move(uj))); // NOLINT(bugprone-move-forwarding-reference)
+                base_type::template construct_on_valueless<maybe_wrapped::index>(std::move(uj)); // NOLINT(bugprone-move-forwarding-reference)
             }
         });
     }
@@ -751,16 +751,16 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
                 {
                     constexpr std::size_t VTi = maybe_wrapped::index;
                     if constexpr (i == std::variant_npos) { // this is valueless, rhs holds value
-                        base_type::template construct_on_valueless<VTi>(detail::forward_maybe_wrapped<VT>(uj));
+                        base_type::template construct_on_valueless<VTi>(uj);
 
                     } else if constexpr (std::is_same_v<unwrap_recursive_type<Ti>, unwrap_recursive_type<Uj>>) {
-                        ti = detail::forward_maybe_wrapped<Ti>(uj);
+                        ti = uj;
 
                     } else if constexpr (std::is_nothrow_constructible_v<VT, Uj const&> || !std::is_nothrow_move_constructible_v<VT>) {
-                        base_type::template reset_construct<i, VTi>(detail::forward_maybe_wrapped<VT>(uj));
+                        base_type::template reset_construct<i, VTi>(uj);
 
                     } else {
-                        VT tmp = detail::forward_maybe_wrapped<VT>(uj); // may throw
+                        VT tmp(uj); // may throw
                         base_type::template reset_construct<i, VTi>(std::move(tmp));
                     }
                 });
@@ -796,13 +796,13 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
                     static_assert(std::is_rvalue_reference_v<Uj&&>);
                     constexpr std::size_t VTi = maybe_wrapped::index;
                     if constexpr (i == std::variant_npos) { // this is valueless, rhs holds value
-                        base_type::template construct_on_valueless<VTi>(detail::forward_maybe_wrapped<VT>(std::move(uj)));  // NOLINT(bugprone-move-forwarding-reference)
+                        base_type::template construct_on_valueless<VTi>(std::move(uj));  // NOLINT(bugprone-move-forwarding-reference)
 
                     } else if constexpr (std::is_same_v<unwrap_recursive_type<Ti>, unwrap_recursive_type<Uj>>) {
-                        ti = detail::forward_maybe_wrapped<Ti>(std::move(uj)); // NOLINT(bugprone-move-forwarding-reference)
+                        ti = std::move(uj); // NOLINT(bugprone-move-forwarding-reference)
 
                     } else {
-                        base_type::template reset_construct<i, VTi>(detail::forward_maybe_wrapped<VT>(std::move(uj)));  // NOLINT(bugprone-move-forwarding-reference)
+                        base_type::template reset_construct<i, VTi>(std::move(uj));  // NOLINT(bugprone-move-forwarding-reference)
                     }
                 });
             }
