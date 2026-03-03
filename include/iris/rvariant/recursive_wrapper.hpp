@@ -17,14 +17,13 @@ namespace iris {
 // This class covers 99.99% of recursive-variant use cases.
 template<class T>
 class recursive_wrapper
-    : private iris::detail::indirect_base<T, std::allocator<T>>
+    : private detail::indirect_base<T, std::allocator<T>>
 {
     // Note: this implementation is copied from `recursive_wrapper_alloca` below.
     // If any changes are required, modify `recursive_wrapper_alloca` first.
     // See https://github.com/iris-cpp/iris/issues/43 for rationale
 
-    using Allocator = std::allocator<T>;
-    using base_type = iris::detail::indirect_base<T, Allocator>;
+    using base_type = detail::indirect_base<T, std::allocator<T>>;
 
 public:
     using typename base_type::allocator_type;
@@ -35,35 +34,17 @@ public:
     // Don't do this; it breaks third-party analyzer like ReSharper on MSVC
     //using base_type::base_type;
 
-    constexpr /* not explicit */ recursive_wrapper()
-        requires std::is_default_constructible_v<Allocator>
-    = default;
+    constexpr /* not explicit */ recursive_wrapper() = default;
 
     // Required for combination with defaulted assignment operators
     constexpr recursive_wrapper(recursive_wrapper const&) = default;
     constexpr recursive_wrapper(recursive_wrapper&&) noexcept = default;
-
-    constexpr explicit recursive_wrapper(std::allocator_arg_t, Allocator const& a)
-        noexcept(noexcept(base_type(std::allocator_arg, a)))
-        : base_type(std::allocator_arg, a)
-    {}
-
-    constexpr recursive_wrapper(std::allocator_arg_t, Allocator const& a, recursive_wrapper const& other)
-        noexcept(noexcept(base_type(std::allocator_arg, a, other)))
-        : base_type(std::allocator_arg, a, other)
-    {}
-
-    constexpr recursive_wrapper(std::allocator_arg_t, Allocator const& a, recursive_wrapper&& other)
-        noexcept(noexcept(base_type(std::allocator_arg, a, std::move(other))))
-        : base_type(std::allocator_arg, a, std::move(other))
-    {}
 
     // Converting constructor
     template<class U = T>
         requires
             (!std::is_same_v<std::remove_cvref_t<U>, recursive_wrapper>) &&
             (!std::is_same_v<std::remove_cvref_t<U>, std::in_place_t>) &&
-            std::is_default_constructible_v<Allocator> &&
             //std::is_constructible_v<T, U> // UNIMPLEMENTABLE for recursive types; instantiates infinitely
             std::is_convertible_v<U, T>
     constexpr /* not explicit */ recursive_wrapper(U&& u)
@@ -73,46 +54,20 @@ public:
         : base_type(std::forward<U>(u))
     {}
 
-    template<class U = T>
-        requires
-            (!std::is_same_v<std::remove_cvref_t<U>, recursive_wrapper>) &&
-            (!std::is_same_v<std::remove_cvref_t<U>, std::in_place_t>) &&
-            std::is_constructible_v<T, U>
-    constexpr explicit recursive_wrapper(std::allocator_arg_t, Allocator const& a, U&& u)
-        noexcept(noexcept(base_type(std::allocator_arg, a, std::forward<U>(u))))
-        : base_type(std::allocator_arg, a, std::forward<U>(u))
-    {}
-
     template<class... Us>
         requires
-            std::is_constructible_v<T, Us...> &&
-            std::is_default_constructible_v<Allocator>
+            std::is_constructible_v<T, Us...>
     constexpr explicit recursive_wrapper(std::in_place_t, Us&&... us)
         noexcept(noexcept(base_type(std::in_place, std::forward<Us>(us)...)))
         : base_type(std::in_place, std::forward<Us>(us)...)
     {}
 
-    template<class... Us>
-        requires std::is_constructible_v<T, Us...>
-    constexpr explicit recursive_wrapper(std::allocator_arg_t, Allocator const& a, std::in_place_t, Us&&... us)
-        noexcept(noexcept(base_type(std::allocator_arg, a, std::in_place, std::forward<Us>(us)...)))
-        : base_type(std::allocator_arg, a, std::in_place, std::forward<Us>(us)...)
-    {}
-
     template<class I, class... Us>
         requires
-            std::is_constructible_v<T, std::initializer_list<I>&, Us...> &&
-            std::is_default_constructible_v<Allocator>
+            std::is_constructible_v<T, std::initializer_list<I>&, Us...>
     constexpr explicit recursive_wrapper(std::in_place_t, std::initializer_list<I> il, Us&&... us)
         noexcept(noexcept(base_type(std::in_place, il, std::forward<Us>(us)...)))
         : base_type(std::in_place, il, std::forward<Us>(us)...)
-    {}
-
-    template<class I, class... Us>
-        requires std::is_constructible_v<T, std::initializer_list<I>&, Us...>
-    constexpr explicit recursive_wrapper(std::allocator_arg_t, Allocator const& a, std::in_place_t, std::initializer_list<I> il, Us&&... us)
-        noexcept(noexcept(base_type(std::allocator_arg, a, std::in_place, il, std::forward<Us>(us)...)))
-        : base_type(std::allocator_arg, a, std::in_place, il, std::forward<Us>(us)...)
     {}
 
     constexpr ~recursive_wrapper() = default;
@@ -126,10 +81,7 @@ public:
 
     constexpr recursive_wrapper& operator=(recursive_wrapper const&) = default;
 
-    constexpr recursive_wrapper& operator=(recursive_wrapper&&) noexcept(
-        std::allocator_traits<Allocator>::propagate_on_container_move_assignment::value ||
-        std::allocator_traits<Allocator>::is_always_equal::value
-    ) = default;
+    constexpr recursive_wrapper& operator=(recursive_wrapper&&) noexcept = default;
 
     // This is required for proper delegation; otherwise constructor will be called
     template<class U = T>
@@ -160,9 +112,9 @@ public:
 // "Allocator-aware" recursive_wrapper
 template<class T, class Allocator = std::allocator<T>>
 class recursive_wrapper_alloca
-    : private iris::detail::indirect_base<T, Allocator>
+    : private detail::indirect_base<T, Allocator>
 {
-    using base_type = iris::detail::indirect_base<T, Allocator>;
+    using base_type = detail::indirect_base<T, Allocator>;
 
 public:
     using typename base_type::allocator_type;
