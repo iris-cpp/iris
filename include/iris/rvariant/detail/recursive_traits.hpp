@@ -1,4 +1,4 @@
-﻿#ifndef IRIS_RVARIANT_DETAIL_RECURSIVE_TRAITS_HPP
+#ifndef IRIS_RVARIANT_DETAIL_RECURSIVE_TRAITS_HPP
 #define IRIS_RVARIANT_DETAIL_RECURSIVE_TRAITS_HPP
 
 // SPDX-License-Identifier: MIT
@@ -6,7 +6,6 @@
 // IWYU pragma: private, include <iris/rvariant.hpp>
 
 #include <iris/rvariant/detail/rvariant_fwd.hpp>
-#include <iris/type_traits.hpp>
 
 namespace iris::detail {
 
@@ -20,10 +19,17 @@ struct select_maybe_wrapped_impl<false, I, U, U, Rest...>
     static constexpr std::size_t index = I;
 };
 
-template<std::size_t I, class U, class Allocator, class... Rest>
-struct select_maybe_wrapped_impl<false, I, U, recursive_wrapper<U, Allocator>, Rest...>
+template<std::size_t I, class U, class... Rest>
+struct select_maybe_wrapped_impl<false, I, U, recursive_wrapper<U>, Rest...>
 {
-    using type = recursive_wrapper<U, Allocator>;
+    using type = recursive_wrapper<U>;
+    static constexpr std::size_t index = I;
+};
+
+template<std::size_t I, class U, class Allocator, class... Rest>
+struct select_maybe_wrapped_impl<false, I, U, recursive_wrapper_alloca<U, Allocator>, Rest...>
+{
+    using type = recursive_wrapper_alloca<U, Allocator>;
     static constexpr std::size_t index = I;
 };
 
@@ -37,7 +43,7 @@ struct select_maybe_wrapped : select_maybe_wrapped_impl<false, 0, U, Ts...>
 {
     // Precondition: either T or recursive_wrapper<T> occurs at least once in Ts...
     static_assert(sizeof...(Ts) > 0);
-    static_assert(!is_ttp_specialization_of_v<U, recursive_wrapper>);
+    static_assert(!detail::is_recursive_wrapper_like_v<U>);
 };
 
 template<class U, class... Ts>

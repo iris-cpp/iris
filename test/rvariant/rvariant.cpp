@@ -1597,7 +1597,7 @@ TEST_CASE("recursive_wrapper") // not [recursive]
         iris::rvariant<iris::recursive_wrapper<int>> b(std::in_place_index<0>, 42);
         iris::rvariant<iris::recursive_wrapper<int>> c(std::in_place_index<0>, std::in_place);
         iris::rvariant<iris::recursive_wrapper<int>> d(std::in_place_index<0>, std::in_place, 42);
-        iris::rvariant<iris::recursive_wrapper<int>> e(std::in_place_index<0>, std::allocator_arg, std::allocator<int>{});
+        iris::rvariant<iris::recursive_wrapper_alloca<int>> e(std::in_place_index<0>, std::allocator_arg, std::allocator<int>{});
     }
 }
 
