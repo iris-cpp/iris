@@ -25,6 +25,7 @@ Yaito Kakeyama; Nana Sakisaka
 :unwrap_recursive_type: <<rvariant.recursive.helper,unwrap_recursive_type>>
 :unwrap_recursive: pass:quotes[xref:#rvariant.recursive.helper[unwrap_recursive]]
 :recursive_wrapper: pass:macros[xref:#rvariant.recursive[recursive_wrapper]]
+:recursive_wrapper_alloca: pass:macros[xref:#rvariant.recursive[recursive_wrapper_alloca]]
 
 :subset_of: <<rvariant.flex,rvariant_set::subset_of>>
 :equivalent_to: <<rvariant.flex,rvariant_set::equivalent_to>>
@@ -301,8 +302,10 @@ template<class... Ts>
 class rvariant;
 
 // <<rvariant.recursive,[rvariant.recursive]>>, class template pass:quotes[`recursive_wrapper`]
-template<class T, class Allocator = std::allocator<T>>
+template<class T>
 class recursive_wrapper;
+template<class T, class Allocator = std::allocator<T>>
+class recursive_wrapper_alloca;
 
 /* all features commented below defined as per https://eel.is/c+\+draft/variant[[variant\]] */
     // variant_size, variant_size_v
@@ -376,8 +379,10 @@ template<class... Ts>
   /* constexpr */ std::size_t hash_value(rvariant<Ts...> const&);
 
 // <<rvariant.hash,[rvariant.hash]>>, hash support
+template<class T>
+  /* constexpr */ std::size_t hash_value(recursive_wrapper<T> const&);
 template<class T, class Allocator>
-  /* constexpr */ std::size_t hash_value(recursive_wrapper<T, Allocator> const&);
+  /* constexpr */ std::size_t hash_value(recursive_wrapper_alloca<T, Allocator> const&);
 
 // <<rvariant.recursive.helper,[rvariant.recursive.helper]>>, pass:quotes[`recursive_wrapper`] helper classes
 template<class T> using unwrap_recursive_type = {see-below};
@@ -499,9 +504,9 @@ NOTE: See also: spec of https://eel.is/c++draft/variant[`std::variant`] and http
 
 * All types in `Ts` must satisfy all requirements on the corresponding parameter in `std::variant`, unless otherwise noted.
 
-* [.underline]#Let `T` and `A` denote arbitrary types. For the template parameter of `rvariant`, if a user provides both `T` and `{recursive_wrapper}<T, A>` , the program is ill-formed.#
+* [.underline]#Let `T` denote an arbitrary type. For the template parameter of `rvariant`, if a user provides both `T` and any instantiation of `{recursive_wrapper}` or `{recursive_wrapper_alloca}` that has the `value_type` of `T`, the program is ill-formed.#
 
-* [.underline]#Let `T` denote an arbitrary type. For the template parameter of `rvariant`, if a user provides multiple different specializations of `{recursive_wrapper}` such that the first template parameter is `T`, the program is ill-formed.#
+* [.underline]#Let `T` denote an arbitrary type. For the template parameter of `rvariant`, if a user provides multiple different instantiations of `{recursive_wrapper_alloca}` such that the first template parameter is `T`, the program is ill-formed.#
 
 [WARNING]
 --
@@ -510,13 +515,14 @@ Although `rvariant` is normally capable of holding duplicate alternatives, the a
 [,cpp,subs="+macros,+attributes"]
 ----
 rvariant<
-  int, recursive_wrapper<int>, recursive_wrapper<int, MyAllocator<int>>
+  int, recursive_wrapper<int>, recursive_wrapper_alloca<int, MyAllocator<int>>
 > v(42); // error-prone; not allowed
 ----
 --
 
-* Let `VT~_i_~` denote `{recursive_wrapper}<T~_i_~, A>` (for any type `A`) if such a specialization occurs anywhere in `Ts\...`; otherwise, let `VT~_i_~` denote `T~_i_~`. Let `U~_j_~` denote the _j_^th^ type of the template parameter pack having the name `Us` on each flexibility-related functions. [.underline]#The _corresponding alternative_ for `rvariant` is the first type for which `std::is_same_v<{unwrap_recursive_type}<VT~_i_~>, {unwrap_recursive_type}<U~_j_~>>` is `true`#.
+* If `{recursive_wrapper}<T~_i_~>` or `{recursive_wrapper_alloca}<T~_i_~, A>` (with any type `A`) occurs anywhere in `Ts\...`, let `VT~_i_~` denote that type; otherwise, let `VT~_i_~` denote `T~_i_~`. Let `U~_j_~` denote the _j_^th^ type of the template parameter pack having the name `Us` on each flexibility-related functions. [.underline]#The _corresponding alternative_ for `rvariant` is the first type for which `std::is_same_v<{unwrap_recursive_type}<VT~_i_~>, {unwrap_recursive_type}<U~_j_~>>` is `true`#.
 
+* For the function that has the formal template parameter named `T`: if `{recursive_wrapper}<T>` or `{recursive_wrapper_alloca}<T, A>` (with any type `A`) occurs anywhere in `Ts\...`, let `VT` denote that type; otherwise, let `VT` denote `T`.
 
 [[rvariant.ctor]]
 === Constructors [.slug]##<<rvariant.ctor,[rvariant.ctor]>>##
@@ -563,9 +569,7 @@ include::_std-variant-proxy.adoc[]
 +
 *_Postconditions:_* `holds_alternative[.underline]##<{unwrap_recursive_type}<T~_j_~>>##(*this)` is `true`.
 
-* [.candidate]#5)# *_Mandates:_* [.underline]#`T` is not a specialization of `{recursive_wrapper}`#.
-+
-[.underline]#Let `VT` denote `{recursive_wrapper}<T, A>` (for any type `A`) if such a specialization occurs anywhere in `Ts\...`; otherwise, let `VT` denote `T`#.
+* [.candidate]#5)# *_Mandates:_* [.underline]#`T` is not a specialization of `{recursive_wrapper}` or `{recursive_wrapper_alloca}`#.
 +
 *_Constraints:_*
 +
@@ -583,9 +587,7 @@ include::_std-variant-proxy.adoc[]
 +
 *_Remarks:_*  If [.underline]#`VT`#'s selected constructor is a constexpr constructor, this constructor is a constexpr constructor.
 
-* [.candidate]#6)# *_Mandates:_* [.underline]#`T` is not a specialization of `{recursive_wrapper}`#.
-+
-[.underline]#Let `VT` denote `{recursive_wrapper}<T, A>` (for any type `A`) if such a specialization occurs anywhere in `Ts\...`; otherwise, let `VT` denote `T`.#
+* [.candidate]#6)# *_Mandates:_* [.underline]#`T` is not a specialization of `{recursive_wrapper}` or `{recursive_wrapper_alloca}`#.
 +
 *_Constraints:_*
 +
@@ -785,9 +787,7 @@ constexpr variant_alternative_t<I, rvariant<Ts...>>&
 [.candidates]
 :spec-url: https://eel.is/c++draft/variant.mod
 
-* [.candidate]#1)# [.underline]#Let `VT` denote `{recursive_wrapper}<T, A>` (for any type `A`) if such a specialization occurs anywhere in `Ts\...`; otherwise, let `VT` denote `T`.#
-+
-*_Mandates:_* [.underline]#`T` is not a specialization of `{recursive_wrapper}`.#
+* [.candidate]#1)# *_Mandates:_* [.underline]#`T` is not a specialization of `{recursive_wrapper}` or `{recursive_wrapper_alloca}`.#
 +
 *_Constraints:_* `std::is_constructible_v<[.underline]##VT##, Args\...>` is `true`, and `T` occurs exactly once in [.underline]#`{unwrap_recursive_type}<Ts>`#.
 +
@@ -795,9 +795,7 @@ constexpr variant_alternative_t<I, rvariant<Ts...>>&
 pass:quotes[&nbsp;&nbsp;]`return emplace<__I__>(std::forward<Args>(args)\...);` +
 where `_I_` is the zero-based index of `T` in [.underline]#`{unwrap_recursive_type}<Ts>`#.
 
-* [.candidate]#2)# [.underline]#Let `VT` denote `{recursive_wrapper}<T, A>` (for any type `A`) if such a specialization occurs anywhere in `Ts\...`; otherwise, let `VT` denote `T`.#
-+
-*_Mandates:_* [.underline]#`T` is not a specialization of `{recursive_wrapper}`.#
+* [.candidate]#2)# *_Mandates:_* [.underline]#`T` is not a specialization of `{recursive_wrapper}` or `{recursive_wrapper_alloca}`.#
 +
 *_Constraints:_* `std::is_constructible_v<[.underline]##VT##, std::initializer_list<U>&, Args\...>` is `true`, and `T` occurs exactly once in [.underline]#`{unwrap_recursive_type}<Ts>`#.
 +
@@ -809,13 +807,13 @@ where `_I_` is the zero-based index of `T` in [.underline]#`{unwrap_recursive_ty
 +
 *_Returns:_* [.underline]#Let `o` denote# a reference to the new contained value. [.underline]#Returns `{unwrap_recursive}(o)`.#
 +
-*_Remarks:_* [.underline]#If `T~_I_~` is a specialization of `{recursive_wrapper}`, this function is permitted to construct an intermediate variable `tmp` as if by passing `std::forward<Args>(args)\...` to ``T~_I_~``'s constructor. Then `rvariant` direct-non-list-initializes the contained value of `T~_I_~` with the argument `std::move(tmp)`. (_Note:_ This allows optimization where `rvariant` can be assumed to become never valueless on certain cases.)#
+*_Remarks:_* [.underline]#If `T~_I_~` is a specialization of `{recursive_wrapper}` or `{recursive_wrapper_alloca}`, this function is permitted to construct an intermediate variable `tmp` as if by passing `std::forward<Args>(args)\...` to ``T~_I_~``'s constructor. Then `rvariant` direct-non-list-initializes the contained value of `T~_I_~` with the argument `std::move(tmp)`. (_Note:_ This allows optimization where `rvariant` can be assumed to become never valueless on certain cases.)#
 
 * [.candidate]#4)# Equivalent to the `std::variant` counterpart, ^https://eel.is/c++draft/variant.mod[[spec\]]^ except:
 +
 *_Returns:_* [.underline]#Let `o` denote# a reference to the new contained value. [.underline]#Returns `{unwrap_recursive}(o)`.#
 +
-*_Remarks:_* [.underline]#If `T~_I_~` is a specialization of `{recursive_wrapper}`, this function is permitted to construct an intermediate variable `tmp` as if by passing `il, std::forward<Args>(args)\...` to ``T~_I_~``'s constructor. Then `rvariant` direct-non-list-initializes the contained value of `T~_I_~` with the argument `std::move(tmp)`. (_Note:_ This allows optimization where `rvariant` can be assumed to become never valueless on certain cases.)#
+*_Remarks:_* [.underline]#If `T~_I_~` is a specialization of `{recursive_wrapper}` or `{recursive_wrapper_alloca}`, this function is permitted to construct an intermediate variable `tmp` as if by passing `il, std::forward<Args>(args)\...` to ``T~_I_~``'s constructor. Then `rvariant` direct-non-list-initializes the contained value of `T~_I_~` with the argument `std::move(tmp)`. (_Note:_ This allows optimization where `rvariant` can be assumed to become never valueless on certain cases.)#
 
 [[rvariant.status]]
 === Value status [.slug]##<<rvariant.status,[rvariant.status]>>##
@@ -987,7 +985,7 @@ constexpr bool holds_alternative(rvariant<Ts...> const& v) noexcept;
 +
 *_Returns:_* `true` if `v.index()` is equal to the zero-based index of `T` in [.underline]#`{unwrap_recursive_type}<Ts>`#.
 +
-*_Remarks:_* [.underline]#This function is defined as deleted if `T` is a specialization of `{recursive_wrapper}`.#
+*_Remarks:_* [.underline]#This function is defined as deleted if `T` is a specialization of `{recursive_wrapper}` or `{recursive_wrapper_alloca}`.#
 
 
 [,cpp,subs="+macros,+attributes"]
@@ -1010,7 +1008,7 @@ constexpr {see-below} const&& pass:quotes[_GET_](rvariant<Ts...> const&& v); // 
 +
 *_Preconditions:_* `v.index()` is `I`.
 +
-*_Returns:_* [.underline]#`o`, where `o` denotes a reference to the object stored in `v`, if the type of the expression's receiver is a specialization of `{recursive_wrapper}`; otherwise, returns `{unwrap_recursive}(o)`#.
+*_Returns:_* [.underline]#`o`, where `o` denotes a reference to the object stored in `v`, if the type of the expression's receiver is a specialization of `{recursive_wrapper}` or `{recursive_wrapper_alloca}`; otherwise, returns `{unwrap_recursive}(o)`#.
 
 
 [,cpp,subs="+macros,+attributes"]
@@ -1059,7 +1057,7 @@ template<class T, class... Ts> constexpr T const&& get(rvariant<Ts...> const&& v
 +
 *_Effects:_* [.underline]#Let `VT` denote the type of the alternative held by `v`. If `{unwrap_recursive_type}<VT>` is the same type as `T`#, returns [.underline]#`{unwrap_recursive}(o)`, where `o` denotes a reference to the object stored in the `rvariant`#. Otherwise, throws an exception of type {bad-variant-access}.
 +
-*_Remarks:_* [.underline]#This function is defined as deleted if `T` is a specialization of `{recursive_wrapper}`.#
+*_Remarks:_* [.underline]#This function is defined as deleted if `T` is a specialization of `{recursive_wrapper}` or `{recursive_wrapper_alloca}`.#
 
 
 [,cpp,subs="+macros,+attributes"]
@@ -1103,7 +1101,7 @@ constexpr std::add_pointer_t<T const>
 +
 *_Effects:_* Equivalent to: `return get_if<__i__>(v);` with _i_ being the zero-based index of `T` in [.underline]#`{unwrap_recursive_type}<Ts>`#.
 +
-*_Remarks:_* [.underline]#This function is defined as deleted if `T` is a specialization of `{recursive_wrapper}`.#
+*_Remarks:_* [.underline]#This function is defined as deleted if `T` is a specialization of `{recursive_wrapper}` or `{recursive_wrapper_alloca}`.#
 
 
 [[rvariant.visit]]
@@ -1149,23 +1147,13 @@ namespace std {
 template<class... Ts>
 struct hash<::temp_ns::rvariant<Ts...>>;pass:quotes[[.candidate\]#// 1#]
 
+template<class T>
+struct hash<::temp_ns::recursive_wrapper<T>>;pass:quotes[[.candidate\]#// 2#]
+
 template<class T, class Allocator>
-struct hash<::temp_ns::recursive_wrapper<T, Allocator>>;pass:quotes[[.candidate\]#// 2#]
+struct hash<::temp_ns::recursive_wrapper_alloca<T, Allocator>>;pass:quotes[[.candidate\]#// 3#]
 
 } // std
-----
-
-[,cpp,subs="+macros,+attributes"]
-----
-namespace temp_ns {
-
-template<class... Ts>
-/* constexpr */ std::size_t hash_value(rvariant<Ts...> const& v);pass:quotes[[.candidate\]#// 3#]
-
-template<class T, class Allocator>
-/* constexpr */ std::size_t hash_value(recursive_wrapper<T, Allocator> const& rw);pass:quotes[[.candidate\]#// 4#]
-
-} // temp_ns
 ----
 
 [.candidates]
@@ -1175,12 +1163,33 @@ template<class T, class Allocator>
 include::_std-variant-proxy.adoc[]
 
 :spec-url: https://eel.is/c++draft/indirect.hash
-* [.candidate]#2)#
+* [.candidate]#2-3)#
 include::_std-indirect-proxy.adoc[]
+--
 
-* [.candidate]#3)# *_Effects:_* Equivalent to `std::hash<rvariant<Ts\...>>{}(v)`.
+[,cpp,subs="+macros,+attributes"]
+----
+namespace temp_ns {
 
-* [.candidate]#4)# *_Effects:_* Equivalent to `std::hash<recursive_wrapper<T, Allocator>>{}(rw)`.
+template<class... Ts>
+/* constexpr */ std::size_t hash_value(rvariant<Ts...> const& v);pass:quotes[[.candidate\]#// 1#]
+
+template<class T>
+/* constexpr */ std::size_t hash_value(recursive_wrapper<T> const& rw);pass:quotes[[.candidate\]#// 2#]
+
+template<class T, class Allocator>
+/* constexpr */ std::size_t hash_value(recursive_wrapper_alloca<T, Allocator> const& rw);pass:quotes[[.candidate\]#// 3#]
+
+} // temp_ns
+----
+
+[.candidates]
+--
+* [.candidate]#1)# *_Effects:_* Equivalent to `std::hash<rvariant<Ts\...>>{}(v)`.
+
+* [.candidate]#2)# *_Effects:_* Equivalent to `std::hash<recursive_wrapper<T>>{}(rw)`.
+
+* [.candidate]#3)# *_Effects:_* Equivalent to `std::hash<recursive_wrapper_alloca<T, Allocator>>{}(rw)`.
 --
 
 
@@ -1357,31 +1366,44 @@ format_by(VFormat&& v_fmt, Variant&& v) noexcept;pass:quotes[[.candidate\]#// 1#
 
 [,cpp,subs="+macros,+attributes"]
 ----
-#include <compare>
-#include <memory>
+namespace temp_ns {
 
+template<class T>
+class recursive_wrapper
+{
+  {see-below}
+};
+
+} // temp_ns
+----
+
+Class template `recursive_wrapper` behaves like `recursive_wrapper_alloca` instantiated with `std::allocator<T>`, except that the allocator-related member functions (that is, member functions that take allocator-specific arguments) are omitted.
+(_Note:_ this is a QoL feature to discard the rarely used `std::allocator<T>` type parameter from diagnostic messages; see https://github.com/iris-cpp/iris/issues/43[iris-cpp/iris#43].)
+
+[,cpp,subs="+macros,+attributes"]
+----
 namespace temp_ns {
 
 template<class T, class Allocator = std::allocator<T>>
-class recursive_wrapper
+class recursive_wrapper_alloca
 {
   // provides the same functionality as https://eel.is/c+\+draft/indirect[pass:quotes[`std::indirect`]], unless otherwise noted
 
   // <<rvariant.recursive.ctor,[rvariant.recursive.ctor]>>, constructors
-  constexpr pass:quotes[[.underline\]#/* not explicit */#] recursive_wrapper();
+  constexpr pass:quotes[[.underline\]#/* not explicit */#] recursive_wrapper_alloca();
 
   template<class U = T>
-  constexpr pass:quotes[[.underline\]#/* not explicit */#] recursive_wrapper(U&& x);
+  constexpr pass:quotes[[.underline\]#/* not explicit */#] recursive_wrapper_alloca(U&& x);
 };
 
 // equivalent to the https://eel.is/c+\+draft/indirect[pass:quotes[`std::indirect`]] counterpart
 template<class Value>
-  recursive_wrapper(Value) -> recursive_wrapper<Value>;
+  recursive_wrapper_alloca(Value) -> recursive_wrapper_alloca<Value>;
 
 // equivalent to the https://eel.is/c++draft/indirect[pass:quotes[`std::indirect`]] counterpart
 template<class Allocator, class Value>
-  recursive_wrapper(std::allocator_arg_t, Allocator, Value)
-    -> recursive_wrapper<
+  recursive_wrapper_alloca(std::allocator_arg_t, Allocator, Value)
+    -> recursive_wrapper_alloca<
       Value,
       typename std::allocator_traits<Allocator>::template rebind_alloc<Value>
     >;
@@ -1398,7 +1420,9 @@ template<class Allocator, class Value>
 namespace temp_ns::pmr {
 
 template<class T>
-using recursive_wrapper = ::temp_ns::recursive_wrapper<T, std::pmr::polymorphic_allocator<T>>;
+using recursive_wrapper = ::temp_ns::recursive_wrapper_alloca<
+  T, std::pmr::polymorphic_allocator<T>
+>;
 
 } // temp_ns::pmr
 ----
@@ -1406,15 +1430,11 @@ using recursive_wrapper = ::temp_ns::recursive_wrapper<T, std::pmr::polymorphic_
 [[rvariant.recursive.general]]
 === General [.slug]##<<rvariant.recursive.general,[rvariant.recursive.general]>>##
 
-Unless otherwise noted, the class template `temp_ns::recursive_wrapper` and relevant components in the namespace scope provide same functionality and have equivalent requirements as `std::indirect`, except that:
+Unless otherwise noted, the class template `recursive_wrapper_alloca` and relevant components in the namespace scope provide same functionality and have equivalent requirements as `std::indirect`.
 
-[none]
-* -- The class name is `recursive_wrapper`.
-* -- `std::indirect` and `temp_ns::recursive_wrapper` are distinguishable in type level.
+WARNING: `recursive_wrapper` and `recursive_wrapper_alloca` are *not* type alias of `std::indirect` and do *not* publicly derive from it.
 
-WARNING: `temp_ns::recursive_wrapper` is *not* a type alias of `std::indirect` and does *not* publicly derive from it.
-
-NOTE: Although `std::indirect` is a {cpp}26 feature, `temp_ns::recursive_wrapper` can be used in {cpp}23.
+NOTE: Although `std::indirect` is a {cpp}26 feature, `recursive_wrapper` and `recursive_wrapper_alloca` can be used in {cpp}23.
 
 
 [[rvariant.recursive.ctor]]
@@ -1423,10 +1443,10 @@ Effectively overrides only the ones listed below; rest are the same as `std::ind
 
 [,cpp,subs="+macros,+attributes"]
 ----
-constexpr pass:quotes[[.underline\]#/* not explicit */#] recursive_wrapper();pass:quotes[[.candidate\]#// 1#]
+constexpr pass:quotes[[.underline\]#/* not explicit */#] recursive_wrapper_alloca();pass:quotes[[.candidate\]#// 1#]
 
 template<class U = T>
-constexpr pass:quotes[[.underline\]#/* not explicit */#] recursive_wrapper(U&& u);pass:quotes[[.candidate\]#// 2#]
+constexpr pass:quotes[[.underline\]#/* not explicit */#] recursive_wrapper_alloca(U&& u);pass:quotes[[.candidate\]#// 2#]
 ----
 
 [.candidates]
@@ -1436,7 +1456,7 @@ constexpr pass:quotes[[.underline\]#/* not explicit */#] recursive_wrapper(U&& u
 +
 --
 [none]
-** -- `std::is_same_v<std::remove_cvref_t<U>, recursive_wrapper>` is `false`, and
+** -- `std::is_same_v<std::remove_cvref_t<U>, recursive_wrapper_alloca>` is `false`, and
 ** -- `std::is_same_v<std::remove_cvref_t<U>, std::in_place_t>` is `false`, and
 ** -- `std::is_default_constructible_v<Allocator>` is `true`, and
 ** -- [.underline]#`std::is_convertible_v<U, T>` is `true`#.
@@ -1445,7 +1465,7 @@ constexpr pass:quotes[[.underline\]#/* not explicit */#] recursive_wrapper(U&& u
 _Note 1:_ [.underline]#This prevents recursive instantiation of `std::is_constructible`#, even for recursive types, while preserving SFINAE-friendliness. This specification is technically viable only because the class template `rvariant` never uses `std::is_convertible` in any of its constructor overloads. As a result, the atomic constraints of `rvariant` and `recursive_wrapper` remain mutually exclusive. However, if a user-defined class depends on _both_ `std::is_constructible` and `std::is_convertible` (for the same `rvariant` specialization), it may trigger recursive instantiation.
 
 +
-_Note 2:_ It is currently unknown whether the recursive instantiation scenario described in _Note 1_ can be technically avoided. This note is provided for informational purposes only and does not specify the semantics of `recursive_wrapper`.
+_Note 2:_ It is currently unknown whether the recursive instantiation scenario described in _Note 1_ can be technically avoided without depending on the fragile mutual-exclusiveness on `std::is_constructible` and `std::is_convertible`. If you are aware of any technical insights, please contact us at https://github.com/iris-cpp/iris/issues[iris-cpp/iris].
 --
 +
 *_Effects:_* Equivalent to the `std::indirect` counterpart. ^link:pass:[https://eel.is/c++draft/indirect.ctor#lib:indirect,constructor______][[spec\]]^
@@ -1465,7 +1485,7 @@ using unwrap_recursive_type = {see-below};
 ----
 
 [.candidates]
-* [.candidate]#{empty}# Denotes `T::value_type` if `T` is a specialization of `{recursive_wrapper}`. Otherwise, denotes `T`.
+* [.candidate]#{empty}# Denotes `T::value_type` if `T` is a specialization of `{recursive_wrapper}` or `{recursive_wrapper_alloca}`. Otherwise, denotes `T`.
 
 [,cpp,subs="+macros,+attributes"]
 ----
@@ -1478,7 +1498,7 @@ constexpr auto&& unwrap_recursive(T&& o) noexcept;
 ----
 
 [.candidates]
-* [.candidate]#{empty}# *_Returns:_* `*o`, if cv-unqualified non-reference type for `T` is a specialization of `{recursive_wrapper}`. Otherwise, returns `o`.
+* [.candidate]#{empty}# *_Returns:_* `*o`, if cv-unqualified non-reference type for `T` is a specialization of `{recursive_wrapper}` or `{recursive_wrapper_alloca}`. Otherwise, returns `o`.
 +
 *_Remarks:_* `unwrap_recursive` is an _algorithm function object_ (link:https://eel.is/c++draft/alg.func.obj[[alg.func.obj\],window=_blank]).
 
@@ -1506,7 +1526,7 @@ struct compact_alternative;
 A variant with a single alternative may introduce unnecessary overhead when used in many places where only the underlying type is actually needed. In such cases, the variant can be _unwrapped_ using `compact_alternative`. This is useful for resolving issues such as https://github.com/boostorg/spirit/issues/610[boostorg/spirit#610].
 
 [WARNING]
-`compact_alternative` does not unwrap `{recursive_wrapper}`. This is intentional, because doing so could lead to instantiating incomplete type on undesired timings. You may apply `{unwrap_recursive_type}` manually.
+`compact_alternative` does not unwrap `{recursive_wrapper}` or `{recursive_wrapper_alloca}`. This is intentional, because doing so could lead to instantiating incomplete type on undesired timings. You may apply `{unwrap_recursive_type}` manually.
 
 
 [[rvariant.xo]]
