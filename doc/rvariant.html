@@ -1243,13 +1243,7 @@ std::size_t _ = <a href="#rvariant.hash">hash_value</a>(ab); // compatibility wi
 <div class="sectionbody">
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">#include &lt;compare&gt;
-#include &lt;memory&gt;      // for <code>std::allocator</code>, etc.
-#include &lt;type_traits&gt; // for <code>std::add_pointer</code>, etc.
-#include &lt;utility&gt;     // for <code>std::in_place_type</code>, etc.
-#include &lt;variant&gt;     // for compatibility with <a href="https://eel.is/c++draft/variant.bad.access"><code>std::bad_variant_access</code></a>, etc.
-
-namespace iris {
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace iris {
 
 // <a href="#rvariant.rvariant">[rvariant.rvariant]</a>, class template <code>rvariant</code>
 template&lt;class... Ts&gt;
@@ -2454,8 +2448,6 @@ template&lt;class T, class Allocator&gt;
 <div class="content">
 <pre class="highlight"><code class="language-cpp" data-lang="cpp">// &lt;iris/rvariant/rvariant_io.hpp&gt;
 
-#include &lt;ostream&gt;
-
 namespace iris {
 
 template&lt;class T&gt;
@@ -2607,8 +2599,6 @@ using <em>select-char-t</em> = <span class="see-below">see below</span>; // <spa
 <div class="content">
 <pre class="highlight"><code class="language-cpp" data-lang="cpp">// &lt;iris/rvariant/rvariant_io.hpp&gt;
 
-#include &lt;format&gt;
-
 template&lt;class charT, class... Ts&gt;
 struct <em>variant_format_string</em> // <span class="exposition-only">exposition only</span>
 {
@@ -2652,8 +2642,6 @@ constexpr <em>variant_format_string</em>&lt;<span class="see-below">see below</s
 <div class="listingblock">
 <div class="content">
 <pre class="highlight"><code class="language-cpp" data-lang="cpp">// &lt;iris/rvariant/rvariant_io.hpp&gt;
-
-#include &lt;format&gt;
 
 template&lt;class VFormat, class Variant&gt;
 struct <em>variant_format_proxy</em> // <span class="exposition-only">exposition only</span>
@@ -2738,8 +2726,6 @@ template&lt;class Allocator, class Value&gt;
 <div class="listingblock">
 <div class="content">
 <pre class="highlight"><code class="language-cpp" data-lang="cpp">// &lt;iris/rvariant/recursive_wrapper_pmr.hpp&gt;
-
-#include &lt;memory_resource&gt;
 
 namespace iris::pmr {
 

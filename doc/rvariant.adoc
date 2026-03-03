@@ -289,12 +289,6 @@ std::size_t _ = <<rvariant.hash,hash_value>>(ab); // compatibility with boost
 
 [,cpp,subs="+macros,+attributes"]
 ----
-#include <compare>
-#include <memory>      // for pass:quotes[`std::allocator`], etc.
-#include <type_traits> // for pass:quotes[`std::add_pointer`], etc.
-#include <utility>     // for pass:quotes[`std::in_place_type`], etc.
-#include <variant>     // for compatibility with {bad-variant-access}, etc.
-
 namespace iris {
 
 // <<rvariant.rvariant,[rvariant.rvariant]>>, class template pass:quotes[`rvariant`]
@@ -1198,8 +1192,6 @@ I/O components are _not_ included by the global convenience header (`<iris/rvari
 ----
 // <iris/rvariant/rvariant_io.hpp>
 
-#include <ostream>
-
 namespace iris {
 
 template<class T>
@@ -1293,8 +1285,6 @@ using pass:quotes[_select-char-t_] = {see-below}; // {exposition-only}
 ----
 // <iris/rvariant/rvariant_io.hpp>
 
-#include <format>
-
 template<class charT, class... Ts>
 struct {variant-format-string} // {exposition-only}
 {
@@ -1330,8 +1320,6 @@ Let `charT` denote `_select-char-t_<Fmts\...>`.
 [,cpp,subs="+macros,+attributes"]
 ----
 // <iris/rvariant/rvariant_io.hpp>
-
-#include <format>
 
 template<class VFormat, class Variant>
 struct {variant-format-proxy} // {exposition-only}
@@ -1408,8 +1396,6 @@ template<class Allocator, class Value>
 [,cpp,subs="+macros,+attributes"]
 ----
 // <iris/rvariant/recursive_wrapper_pmr.hpp>
-
-#include <memory_resource>
 
 namespace iris::pmr {
 
