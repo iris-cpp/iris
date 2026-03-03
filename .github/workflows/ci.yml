@@ -72,6 +72,11 @@ jobs:
             version: 21
             executable: clang++-21
             cxxflags: -stdlib=libc++ -fcolor-diagnostics
+          - name: Clang
+            toolset: clang
+            version: 22
+            executable: clang++-22
+            cxxflags: -stdlib=libc++ -fcolor-diagnostics
           - name: MSVC
             toolset: msvc
             version: 2022
