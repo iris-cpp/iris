@@ -70,6 +70,11 @@ struct variant_size<rvariant<Ts...>> : std::integral_constant<std::size_t, sizeo
 namespace detail {
 
 template<class T>
+constexpr bool is_recursive_wrapper_like_v =
+    is_ttp_specialization_of_v<T, recursive_wrapper> ||
+    is_ttp_specialization_of_v<T, recursive_wrapper_alloca>;
+
+template<class T>
 struct unwrap_recursive_type_impl
 {
     using type = T;
@@ -93,7 +98,7 @@ struct unwrap_recursive_fn
     [[nodiscard]] IRIS_FORCEINLINE static constexpr auto&&
     operator()(T&& o IRIS_LIFETIMEBOUND) noexcept
     {
-        if constexpr (is_ttp_specialization_of_v<std::remove_cvref_t<T>, recursive_wrapper>) {
+        if constexpr (is_recursive_wrapper_like_v<std::remove_cvref_t<T>>) {
             return *std::forward<T>(o);
         } else {
             return std::forward<T>(o);

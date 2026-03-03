@@ -63,8 +63,7 @@ template<class T, class List>
 struct non_wrapped_exactly_once : exactly_once<T, List>
 {
     static_assert(
-        !is_ttp_specialization_of_v<T, recursive_wrapper> &&
-        !is_ttp_specialization_of_v<T, recursive_wrapper_alloca>,
+        !detail::is_recursive_wrapper_like_v<T>,
         "Constructing a `recursive_wrapper` alternative with its full type as the tag is "
         "prohibited to avoid confusion; just specify `T` instead."
     );
@@ -77,7 +76,7 @@ constexpr bool non_wrapped_exactly_once_v = non_wrapped_exactly_once<T, List>::v
 template<class T, class Variant>
 struct exactly_once_index
 {
-    static_assert(exactly_once_v<T, typename Variant::unwrapped_types>, "T or recursive_wrapper<T> must occur exactly once in Ts...");
+    static_assert(exactly_once_v<T, typename Variant::unwrapped_types>, "`T` or `recursive_wrapper<T>` or `recursive_wrapper_alloca<T, A>` must occur exactly once in Ts...");
     static constexpr std::size_t value = find_index_v<T, typename Variant::unwrapped_types>;
 };
 
@@ -468,7 +467,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                 } else if constexpr (std::is_same_v<T_old_i, T>) { // NOT type-changing
                     if constexpr (
                         (sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_move_assignable_v<T>) ||
-                        is_ttp_specialization_of_v<T, recursive_wrapper>
+                        detail::is_recursive_wrapper_like_v<T>
                     ) {
                         T tmp{std::forward<Args>(args)...}; // may throw
                         static_assert(noexcept(t_old_i = std::move(tmp)));
@@ -491,7 +490,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                 } else { // type-changing
                     if constexpr (
                         (sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_move_constructible_v<T>) ||
-                        is_ttp_specialization_of_v<T, recursive_wrapper>
+                        detail::is_recursive_wrapper_like_v<T>
                     ) {
                         T tmp{std::forward<Args>(args)...}; // may throw
                         t_old_i.~T_old_i();
@@ -1192,7 +1191,7 @@ private:
 // -------------------------------------------------
 
 template<class T, class... Ts>
-    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires detail::is_recursive_wrapper_like_v<T>
 [[nodiscard]] constexpr bool holds_alternative(rvariant<Ts...> const& v) noexcept = delete;
 
 template<class T, class... Ts>
@@ -1293,19 +1292,19 @@ get(rvariant<Ts...> const&& v IRIS_LIFETIMEBOUND)
 }
 
 template<class T, class... Ts>
-    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires detail::is_recursive_wrapper_like_v<T>
 constexpr T& get(rvariant<Ts...>&) = delete;
 
 template<class T, class... Ts>
-    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires detail::is_recursive_wrapper_like_v<T>
 constexpr T&& get(rvariant<Ts...>&&) = delete;
 
 template<class T, class... Ts>
-    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires detail::is_recursive_wrapper_like_v<T>
 constexpr T const& get(rvariant<Ts...> const&) = delete;
 
 template<class T, class... Ts>
-    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires detail::is_recursive_wrapper_like_v<T>
 constexpr T const&& get(rvariant<Ts...> const&&) = delete;
 
 // -------------------------------------------------
@@ -1374,19 +1373,19 @@ unsafe_get(rvariant<Ts...> const&& v IRIS_LIFETIMEBOUND) noexcept
 }
 
 template<class T, class... Ts>
-    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires detail::is_recursive_wrapper_like_v<T>
 constexpr T& unsafe_get(rvariant<Ts...>&) = delete;
 
 template<class T, class... Ts>
-    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires detail::is_recursive_wrapper_like_v<T>
 constexpr T&& unsafe_get(rvariant<Ts...>&&) = delete;
 
 template<class T, class... Ts>
-    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires detail::is_recursive_wrapper_like_v<T>
 constexpr T const& unsafe_get(rvariant<Ts...> const&) = delete;
 
 template<class T, class... Ts>
-    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires detail::is_recursive_wrapper_like_v<T>
 constexpr T const&& unsafe_get(rvariant<Ts...> const&&) = delete;
 
 // ---------------------------------------------

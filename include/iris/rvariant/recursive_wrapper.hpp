@@ -19,6 +19,8 @@ template<class T>
 class recursive_wrapper
     : private detail::indirect_base<T, std::allocator<T>>
 {
+    static_assert(!detail::is_recursive_wrapper_like_v<T>, "recursive wrapper of recursive wrapper is not allowed");
+
     // Note: this implementation is copied from `recursive_wrapper_alloca` below.
     // If any changes are required, modify `recursive_wrapper_alloca` first.
     // See https://github.com/iris-cpp/iris/issues/43 for rationale
@@ -114,6 +116,8 @@ template<class T, class Allocator = std::allocator<T>>
 class recursive_wrapper_alloca
     : private detail::indirect_base<T, Allocator>
 {
+    static_assert(!detail::is_recursive_wrapper_like_v<T>, "recursive wrapper of recursive wrapper is not allowed");
+
     using base_type = detail::indirect_base<T, Allocator>;
 
 public:

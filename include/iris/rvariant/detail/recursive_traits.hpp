@@ -6,15 +6,8 @@
 // IWYU pragma: private, include <iris/rvariant.hpp>
 
 #include <iris/rvariant/detail/rvariant_fwd.hpp>
-#include <iris/type_traits.hpp>
 
 namespace iris::detail {
-
-template<class T>
-constexpr bool is_recursive_wrapper_like_v =
-    is_ttp_specialization_of_v<T, recursive_wrapper> ||
-    is_ttp_specialization_of_v<T, recursive_wrapper_alloca>;
-
 
 template<bool Found, std::size_t I, class U, class... Ts>
 struct select_maybe_wrapped_impl;
@@ -50,7 +43,7 @@ struct select_maybe_wrapped : select_maybe_wrapped_impl<false, 0, U, Ts...>
 {
     // Precondition: either T or recursive_wrapper<T> occurs at least once in Ts...
     static_assert(sizeof...(Ts) > 0);
-    static_assert(!is_ttp_specialization_of_v<U, recursive_wrapper>);
+    static_assert(!detail::is_recursive_wrapper_like_v<U>);
 };
 
 template<class U, class... Ts>
