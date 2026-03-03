@@ -874,7 +874,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 <li><a href="#rvariant">Reference <span class="slug">[rvariant]</span></a>
 <ul class="sectlevel1">
 <li><a href="#rvariant.general">General <span class="slug">[rvariant.general]</span></a></li>
-<li><a href="#rvariant.syn">Header &lt;temp_ns/rvariant.hpp&gt; synopsis <span class="slug">[rvariant.syn]</span></a></li>
+<li><a href="#rvariant.syn">Header &lt;iris/rvariant.hpp&gt; synopsis <span class="slug">[rvariant.syn]</span></a></li>
 <li><a href="#rvariant.rvariant">Class template <code>rvariant</code> <span class="slug">[rvariant.rvariant]</span></a>
 <ul class="sectlevel2">
 <li><a href="#rvariant.rvariant.general">General <span class="slug">[rvariant.rvariant.general]</span></a></li>
@@ -926,12 +926,12 @@ document.addEventListener('DOMContentLoaded', (event) => {
 <div class="content">
 <pre class="highlight"><code class="language-cpp" data-lang="cpp">// A common pattern for representing recursive ASTs using recursive variants.
 struct BinaryExpr;
-using Expr = temp_ns::<a href="#rvariant.rvariant">rvariant</a>&lt;int, double, temp_ns::<a href="#rvariant.recursive">recursive_wrapper</a>&lt;BinaryExpr&gt;&gt;;
+using Expr = iris::<a href="#rvariant.rvariant">rvariant</a>&lt;int, double, iris::<a href="#rvariant.recursive">recursive_wrapper</a>&lt;BinaryExpr&gt;&gt;;
 enum class Op;
 struct BinaryExpr { Expr lhs, rhs; Op op{}; };
 
 Expr expr{BinaryExpr{Expr{42}, Expr{3.14}}};
-expr.visit(temp_ns::overloaded{
+expr.visit(iris::overloaded{
     [](int const&amp;) { /* ... */ },
     [](double const&amp;) { /* ... */ },
     [](BinaryExpr const&amp;) { /* ... */ },
@@ -1127,9 +1127,9 @@ expr.visit(temp_ns::overloaded{
 using B = double;
 struct C {};
 
-using AB  = temp_ns::<a href="#rvariant.rvariant">rvariant</a>&lt;A, B&gt;;
-using BA  = temp_ns::rvariant&lt;B, A&gt;;
-using ABC = temp_ns::rvariant&lt;A, B, C&gt;;
+using AB  = iris::<a href="#rvariant.rvariant">rvariant</a>&lt;A, B&gt;;
+using BA  = iris::rvariant&lt;B, A&gt;;
+using ABC = iris::rvariant&lt;A, B, C&gt;;
 
 // <a href="#rvariant.ctor">constructor</a>
 AB ab{42};
@@ -1144,30 +1144,30 @@ ab<a href="#rvariant.mod">.emplace</a>&lt;0&gt;(123);
 // <a href="#rvariant.assign">assignment</a>
 ab = AB{123};
 
-A&amp; a = temp_ns::<a href="#rvariant.get">get</a>&lt;0&gt;(ab);
-A&amp; a = temp_ns::get&lt;A&gt;(ab);
-C&amp; c = temp_ns::get&lt;C&gt;(ab);     // throws <a href="https://eel.is/c++draft/variant.bad.access"><code>std::bad_variant_access</code></a>
+A&amp; a = iris::<a href="#rvariant.get">get</a>&lt;0&gt;(ab);
+A&amp; a = iris::get&lt;A&gt;(ab);
+C&amp; c = iris::get&lt;C&gt;(ab);     // throws <a href="https://eel.is/c++draft/variant.bad.access"><code>std::bad_variant_access</code></a>
 
-A* a = temp_ns::<a href="#rvariant.get">get_if</a>&lt;0&gt;(&amp;ab);
-A* a = temp_ns::get_if&lt;A&gt;(&amp;ab);
-C* c = temp_ns::get_if&lt;C&gt;(&amp;ab); // <code>nullptr</code>
+A* a = iris::<a href="#rvariant.get">get_if</a>&lt;0&gt;(&amp;ab);
+A* a = iris::get_if&lt;A&gt;(&amp;ab);
+C* c = iris::get_if&lt;C&gt;(&amp;ab); // <code>nullptr</code>
 
 // compatibility with boost; same effect as <code>get_if</code>
-A* a = temp_ns::<a href="#rvariant.get">get</a>&lt;0&gt;(&amp;ab);
-A* a = temp_ns::get&lt;A&gt;(&amp;ab);
-C* c = temp_ns::get&lt;C&gt;(&amp;ab);    // <code>nullptr</code>
+A* a = iris::<a href="#rvariant.get">get</a>&lt;0&gt;(&amp;ab);
+A* a = iris::get&lt;A&gt;(&amp;ab);
+C* c = iris::get&lt;C&gt;(&amp;ab);    // <code>nullptr</code>
 
 <a href="https://eel.is/c++draft/variant.relops#lib:operator==,variant">ab == ab</a>;
 <a href="https://eel.is/c++draft/variant.relops#lib:operator&lt;,variant">ab &lt; ab</a>;
 <a href="https://eel.is/c++draft/variant.relops#lib:operator&lt;=&gt;,variant">ab &lt;=&gt; ab</a>; // <code>requires (<a href="https://en.cppreference.com/w/cpp/utility/compare/three_way_comparable">std::three_way_comparable</a>&lt;Ts&gt; &amp;&amp; ...)</code>
 
-auto visitor = temp_ns::overloaded {
+auto visitor = iris::overloaded {
     [](A const&amp; a) {},
     [](B const&amp; b) {},
 };
 
 ab<a href="#rvariant.visit">.visit</a>(visitor);           // member visit
-temp_ns::<a href="#rvariant.visit">visit</a>(visitor, ab); // function visit</code></pre>
+iris::<a href="#rvariant.visit">visit</a>(visitor, ab); // function visit</code></pre>
 </div>
 </div>
 </div>
@@ -1187,9 +1187,9 @@ temp_ns::<a href="#rvariant.visit">visit</a>(visitor, ab); // function visit</co
     abc = AB{};    // subset assignment
 }
 
-static_assert(temp_ns::<a href="#rvariant.syn">variant_size_v</a>&lt;AB&gt; == 2);
-static_assert(std::same_as&lt;temp_ns::<a href="#rvariant.helper">variant_alternative_t</a>&lt;0, AB&gt;, A&gt;);
-static_assert(temp_ns::<a href="#rvariant.get">holds_alternative</a>&lt;A&gt;(ab));
+static_assert(iris::<a href="#rvariant.syn">variant_size_v</a>&lt;AB&gt; == 2);
+static_assert(std::same_as&lt;iris::<a href="#rvariant.helper">variant_alternative_t</a>&lt;0, AB&gt;, A&gt;);
+static_assert(iris::<a href="#rvariant.get">holds_alternative</a>&lt;A&gt;(ab));
 
 static_assert(!ab<a href="#rvariant.status">.valueless_by_exception</a>());
 static_assert(ab<a href="#rvariant.status">.index</a>() != <a href="https://eel.is/c++draft/variant.syn">std::variant_npos</a>);
@@ -1209,7 +1209,7 @@ std::size_t _ = <a href="#rvariant.hash">hash_value</a>(ab); // compatibility wi
 
 // <a href="#rvariant.io">I/O support</a>
 {
-    using V = ::temp_ns::rvariant&lt;int, double&gt;;
+    using V = ::iris::rvariant&lt;int, double&gt;;
 
     // <a href="#rvariant.io.ostream"><code>operator&lt;&lt;</code> support</a>
     std::cout &lt;&lt; V{42} &lt;&lt; '\n';  // prints <code>42</code>
@@ -1217,9 +1217,9 @@ std::size_t _ = <a href="#rvariant.hash">hash_value</a>(ab); // compatibility wi
     // <a href="#rvariant.io.format"><code>std::formatter</code> support</a>
     std::println("{}", V{42});   // prints <code>42</code>
 
-    constexpr auto v_fmt = temp_ns::variant_format_for&lt;V&gt;("{:04d}", "{:.1f}");
-    std::println("foo{}bar", temp_ns::format_by(v_fmt, V(42)); // prints <code>foo0042bar</code>
-    std::println("foo{}bar", temp_ns::format_by(v_fmt, V(3.14)); // prints <code>foo3.1bar</code>
+    constexpr auto v_fmt = iris::variant_format_for&lt;V&gt;("{:04d}", "{:.1f}");
+    std::println("foo{}bar", iris::format_by(v_fmt, V(42)); // prints <code>foo0042bar</code>
+    std::println("foo{}bar", iris::format_by(v_fmt, V(3.14)); // prints <code>foo3.1bar</code>
 }</code></pre>
 </div>
 </div>
@@ -1239,7 +1239,7 @@ std::size_t _ = <a href="#rvariant.hash">hash_value</a>(ab); // compatibility wi
 </div>
 </div>
 <div class="sect1">
-<h2 id="rvariant.syn"><a class="anchor" href="#rvariant.syn"></a>Header &lt;temp_ns/rvariant.hpp&gt; synopsis <span class="slug"><a href="#rvariant.syn">[rvariant.syn]</a></span></h2>
+<h2 id="rvariant.syn"><a class="anchor" href="#rvariant.syn"></a>Header &lt;iris/rvariant.hpp&gt; synopsis <span class="slug"><a href="#rvariant.syn">[rvariant.syn]</a></span></h2>
 <div class="sectionbody">
 <div class="listingblock">
 <div class="content">
@@ -1249,7 +1249,7 @@ std::size_t _ = <a href="#rvariant.hash">hash_value</a>(ab); // compatibility wi
 #include &lt;utility&gt;     // for <code>std::in_place_type</code>, etc.
 #include &lt;variant&gt;     // for compatibility with <a href="https://eel.is/c++draft/variant.bad.access"><code>std::bad_variant_access</code></a>, etc.
 
-namespace temp_ns {
+namespace iris {
 
 // <a href="#rvariant.rvariant">[rvariant.rvariant]</a>, class template <code>rvariant</code>
 template&lt;class... Ts&gt;
@@ -1342,7 +1342,7 @@ template&lt;class T, class Allocator&gt;
 template&lt;class T&gt; using unwrap_recursive_type = <span class="see-below">see below</span>;
 template&lt;class T&gt; constexpr auto&amp;&amp; unwrap_recursive(T&amp;&amp; o) noexcept;
 
-} // temp_ns</code></pre>
+} // iris</code></pre>
 </div>
 </div>
 <div class="listingblock">
@@ -1350,10 +1350,10 @@ template&lt;class T&gt; constexpr auto&amp;&amp; unwrap_recursive(T&amp;&amp; o)
 <pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace std {
 
 // <a href="#rvariant.hash">[rvariant.hash]</a>, hash support
-template&lt;class... Ts&gt; struct hash&lt;::temp_ns::rvariant&lt;Ts...&gt;&gt;;
+template&lt;class... Ts&gt; struct hash&lt;::iris::rvariant&lt;Ts...&gt;&gt;;
 
 // <a href="#rvariant.hash">[rvariant.hash]</a>, hash support
-template&lt;class T, class Allocator&gt; struct hash&lt;::temp_ns::recursive_wrapper&lt;T, Allocator&gt;&gt;;
+template&lt;class T, class Allocator&gt; struct hash&lt;::iris::recursive_wrapper&lt;T, Allocator&gt;&gt;;
 
 } // std</code></pre>
 </div>
@@ -1365,7 +1365,7 @@ template&lt;class T, class Allocator&gt; struct hash&lt;::temp_ns::recursive_wra
 <div class="sectionbody">
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace temp_ns {
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace iris {
 
 template&lt;class... Ts&gt;
 class rvariant
@@ -1440,7 +1440,7 @@ public:
     constexpr R visit(this Self&amp;&amp;, Visitor&amp;&amp;);
 };
 
-} // temp_ns</code></pre>
+} // iris</code></pre>
 </div>
 </div>
 <div class="sect2">
@@ -2081,7 +2081,7 @@ constexpr rvariant&lt;Us...&gt; subset() &amp;&amp; noexcept(<span class="see-be
 <div class="sectionbody">
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace temp_ns {
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace iris {
 
 template&lt;std::size_t I, class T&gt;
 struct variant_alternative; // not defined
@@ -2092,7 +2092,7 @@ struct variant_alternative&lt;I, T const&gt;;<span class="candidate">// 1</span>
 template&lt;std::size_t I, class... Ts&gt;
 struct variant_alternative&lt;I, rvariant&lt;Ts...&gt;&gt;;<span class="candidate">// 2</span>
 
-} // temp_ns</code></pre>
+} // iris</code></pre>
 </div>
 </div>
 <div class="ulist candidates">
@@ -2116,7 +2116,7 @@ Equivalent to the <code>std::variant</code> counterpart. <sup><a href="https://e
 <div class="sectionbody">
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace temp_ns::rvariant_set {
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace iris::rvariant_set {
 
 template&lt;class W, class V&gt;
 struct is_subset_of : std::false_type {};<span class="candidate">// 1</span>
@@ -2133,7 +2133,7 @@ concept subset_of = is_subset_of_v&lt;W, V&gt;;
 template&lt;class W, class V&gt;
 concept equivalent_to = subset_of&lt;W, V&gt; &amp;&amp; subset_of&lt;V, W&gt;;
 
-} // temp_ns::rvariant_set</code></pre>
+} // iris::rvariant_set</code></pre>
 </div>
 </div>
 <div class="ulist candidates">
@@ -2163,12 +2163,12 @@ concept equivalent_to = subset_of&lt;W, V&gt; &amp;&amp; subset_of&lt;V, W&gt;;
 <div class="sectionbody">
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace temp_ns {
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace iris {
 
 template&lt;class T, class... Ts&gt;
 constexpr bool holds_alternative(rvariant&lt;Ts...&gt; const&amp; v) noexcept;
 
-} // temp_ns</code></pre>
+} // iris</code></pre>
 </div>
 </div>
 <div class="ulist candidates">
@@ -2214,7 +2214,7 @@ constexpr <span class="see-below">see below</span> const&amp;&amp; <em>GET</em>(
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace temp_ns {
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace iris {
 
 template&lt;std::size_t I, class... Ts&gt;
 constexpr variant_alternative_t&lt;I, rvariant&lt;Ts...&gt;&gt;&amp;
@@ -2232,7 +2232,7 @@ template&lt;std::size_t I, class... Ts&gt;
 constexpr variant_alternative_t&lt;I, rvariant&lt;Ts...&gt;&gt; const&amp;&amp;
   get(rvariant&lt;Ts...&gt; const&amp;&amp; v);
 
-} // temp_ns</code></pre>
+} // iris</code></pre>
 </div>
 </div>
 <div class="ulist candidates">
@@ -2247,14 +2247,14 @@ constexpr variant_alternative_t&lt;I, rvariant&lt;Ts...&gt;&gt; const&amp;&amp;
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace temp_ns {
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace iris {
 
 template&lt;class T, class... Ts&gt; constexpr T&amp;        get(rvariant&lt;Ts...&gt;&amp; v);
 template&lt;class T, class... Ts&gt; constexpr T&amp;&amp;       get(rvariant&lt;Ts...&gt;&amp;&amp; v);
 template&lt;class T, class... Ts&gt; constexpr T const&amp;  get(rvariant&lt;Ts...&gt; const&amp; v);
 template&lt;class T, class... Ts&gt; constexpr T const&amp;&amp; get(rvariant&lt;Ts...&gt; const&amp;&amp; v);
 
-} // temp_ns</code></pre>
+} // iris</code></pre>
 </div>
 </div>
 <div class="ulist candidates">
@@ -2272,7 +2272,7 @@ template&lt;class T, class... Ts&gt; constexpr T const&amp;&amp; get(rvariant&lt
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace temp_ns {
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace iris {
 
 template&lt;std::size_t I, class... Ts&gt;
 constexpr std::add_pointer_t&lt;variant_alternative_t&lt;I, rvariant&lt;Ts...&gt;&gt;&gt;
@@ -2282,7 +2282,7 @@ template&lt;std::size_t I, class... Ts&gt;
 constexpr std::add_pointer_t&lt;variant_alternative_t&lt;I, rvariant&lt;Ts...&gt;&gt; const&gt;
   get_if(rvariant&lt;Ts...&gt; const* v) noexcept;<span class="candidate">// 2</span>
 
-} // temp_ns</code></pre>
+} // iris</code></pre>
 </div>
 </div>
 <div class="ulist candidates">
@@ -2297,7 +2297,7 @@ constexpr std::add_pointer_t&lt;variant_alternative_t&lt;I, rvariant&lt;Ts...&gt
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace temp_ns {
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace iris {
 
 template&lt;class T, class... Ts&gt;
 constexpr std::add_pointer_t&lt;T&gt;
@@ -2307,7 +2307,7 @@ template&lt;class T, class... Ts&gt;
 constexpr std::add_pointer_t&lt;T const&gt;
   get_if(rvariant&lt;Ts...&gt; const* v) noexcept;<span class="candidate">// 2</span>
 
-} // temp_ns</code></pre>
+} // iris</code></pre>
 </div>
 </div>
 <div class="ulist candidates">
@@ -2330,7 +2330,7 @@ constexpr std::add_pointer_t&lt;T const&gt;
 <div class="sectionbody">
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace temp_ns {
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace iris {
 
 template&lt;class Visitor, class... Variants&gt;
 constexpr <span class="see-below">see below</span> visit(Visitor&amp;&amp; vis, Variants&amp;&amp;... vars);<span class="candidate">// 1</span>
@@ -2338,7 +2338,7 @@ constexpr <span class="see-below">see below</span> visit(Visitor&amp;&amp; vis, 
 template&lt;class R, class Visitor, class... Variants&gt;
 constexpr R visit(Visitor&amp;&amp; vis, Variants&amp;&amp;... vars);<span class="candidate">// 2</span>
 
-} // temp_ns
+} // iris
 
 // below are member functions of the class template <a href="#rvariant.rvariant"><code>rvariant</code></a>:
 
@@ -2362,7 +2362,7 @@ constexpr R visit(this Self&amp;&amp; self, Visitor&amp;&amp; vis);<span class="
 </div>
 </li>
 <li>
-<p><span class="candidate">3-4)</span> Equivalent to the <code>std::variant</code> counterpart <sup><a href="https://eel.is/c++draft/variant.visit">[spec]</a></sup>, except that it forwards to <code>temp_ns::visit</code> instead of <code>std::visit</code>.</p>
+<p><span class="candidate">3-4)</span> Equivalent to the <code>std::variant</code> counterpart <sup><a href="https://eel.is/c++draft/variant.visit">[spec]</a></sup>, except that it forwards to <code>iris::visit</code> instead of <code>std::visit</code>.</p>
 </li>
 </ul>
 </div>
@@ -2376,13 +2376,13 @@ constexpr R visit(this Self&amp;&amp; self, Visitor&amp;&amp; vis);<span class="
 <pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace std {
 
 template&lt;class... Ts&gt;
-struct hash&lt;::temp_ns::rvariant&lt;Ts...&gt;&gt;;<span class="candidate">// 1</span>
+struct hash&lt;::iris::rvariant&lt;Ts...&gt;&gt;;<span class="candidate">// 1</span>
 
 template&lt;class T&gt;
-struct hash&lt;::temp_ns::recursive_wrapper&lt;T&gt;&gt;;<span class="candidate">// 2</span>
+struct hash&lt;::iris::recursive_wrapper&lt;T&gt;&gt;;<span class="candidate">// 2</span>
 
 template&lt;class T, class Allocator&gt;
-struct hash&lt;::temp_ns::recursive_wrapper_alloca&lt;T, Allocator&gt;&gt;;<span class="candidate">// 3</span>
+struct hash&lt;::iris::recursive_wrapper_alloca&lt;T, Allocator&gt;&gt;;<span class="candidate">// 3</span>
 
 } // std</code></pre>
 </div>
@@ -2409,7 +2409,7 @@ Equivalent to the <code>std::indirect</code> counterpart. <sup><a href="https://
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace temp_ns {
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace iris {
 
 template&lt;class... Ts&gt;
 /* constexpr */ std::size_t hash_value(rvariant&lt;Ts...&gt; const&amp; v);<span class="candidate">// 1</span>
@@ -2420,7 +2420,7 @@ template&lt;class T&gt;
 template&lt;class T, class Allocator&gt;
 /* constexpr */ std::size_t hash_value(recursive_wrapper_alloca&lt;T, Allocator&gt; const&amp; rw);<span class="candidate">// 3</span>
 
-} // temp_ns</code></pre>
+} // iris</code></pre>
 </div>
 </div>
 <div class="openblock candidates">
@@ -2446,17 +2446,17 @@ template&lt;class T, class Allocator&gt;
 <h2 id="rvariant.io"><a class="anchor" href="#rvariant.io"></a>I/O <span class="slug"><a href="#rvariant.io">[rvariant.io]</a></span></h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>I/O components are <em>not</em> included by the global convenience header (<code>&lt;temp_ns/rvariant.hpp&gt;</code>).</p>
+<p>I/O components are <em>not</em> included by the global convenience header (<code>&lt;iris/rvariant.hpp&gt;</code>).</p>
 </div>
 <div class="sect2">
 <h3 id="rvariant.io.ostream"><a class="anchor" href="#rvariant.io.ostream"></a><code>operator&lt;&lt;</code> support</h3>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">// &lt;temp_ns/rvariant/rvariant_io.hpp&gt;
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">// &lt;iris/rvariant/rvariant_io.hpp&gt;
 
 #include &lt;ostream&gt;
 
-namespace temp_ns {
+namespace iris {
 
 template&lt;class T&gt;
 constexpr bool <em>ADL-ostreamable</em> = <span class="see-below">see below</span>; // <span class="exposition-only">exposition only</span><span class="candidate">// 1</span>
@@ -2464,7 +2464,7 @@ constexpr bool <em>ADL-ostreamable</em> = <span class="see-below">see below</spa
 template&lt;class... Ts&gt;
 std::ostream&amp; operator&lt;&lt;(std::ostream&amp; os, rvariant&lt;Ts...&gt; const&amp; v);<span class="candidate">// 2</span>
 
-} // temp_ns</code></pre>
+} // iris</code></pre>
 </div>
 </div>
 <div class="ulist candidates">
@@ -2522,7 +2522,7 @@ std::ostream&amp; operator&lt;&lt;(std::ostream&amp; os, rvariant&lt;Ts...&gt; c
 <p>Let <code>v</code> denote an object of <code>rvariant</code>, and let <code>proxy</code> denote an object of <code><em>variant_format_proxy</em></code>.</p>
 </li>
 <li>
-<p>The specialization <code>std::formatter&lt;::temp_ns::rvariant&lt;Ts...&gt;, charT&gt;</code> (for arbitrary <code>charT</code>) is enabled if and only if <code>std::formattable&lt;<a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;Ts<sub><em>i</em></sub>&gt;, charT&gt;</code> is <code>true</code> for all <em>i</em>, with the following characteristics:</p>
+<p>The specialization <code>std::formatter&lt;::iris::rvariant&lt;Ts...&gt;, charT&gt;</code> (for arbitrary <code>charT</code>) is enabled if and only if <code>std::formattable&lt;<a href="#rvariant.recursive.helper">unwrap_recursive_type</a>&lt;Ts<sub><em>i</em></sub>&gt;, charT&gt;</code> is <code>true</code> for all <em>i</em>, with the following characteristics:</p>
 <div class="ulist none">
 <ul class="none">
 <li>
@@ -2538,7 +2538,7 @@ std::ostream&amp; operator&lt;&lt;(std::ostream&amp; os, rvariant&lt;Ts...&gt; c
 <p><em>Example:</em></p>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">std::println("{}", temp_ns::rvariant&lt;int, double&gt;(42)); // prints <code>42</code></code></pre>
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">std::println("{}", iris::rvariant&lt;int, double&gt;(42)); // prints <code>42</code></code></pre>
 </div>
 </div>
 </li>
@@ -2578,10 +2578,10 @@ std::ostream&amp; operator&lt;&lt;(std::ostream&amp; os, rvariant&lt;Ts...&gt; c
 <p><em>Example:</em></p>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">using V = temp_ns::rvariant&lt;int, double&gt;;
-constexpr auto v_fmt = temp_ns::variant_format_for&lt;V&gt;("{:04d}", "{:.1f}");
-std::println("foo{}bar", temp_ns::format_by(v_fmt, V(42)); // prints <code>foo0042bar</code>
-std::println("foo{}bar", temp_ns::format_by(v_fmt, V(3.14)); // prints <code>foo3.1bar</code></code></pre>
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">using V = iris::rvariant&lt;int, double&gt;;
+constexpr auto v_fmt = iris::variant_format_for&lt;V&gt;("{:04d}", "{:.1f}");
+std::println("foo{}bar", iris::format_by(v_fmt, V(42)); // prints <code>foo0042bar</code>
+std::println("foo{}bar", iris::format_by(v_fmt, V(3.14)); // prints <code>foo3.1bar</code></code></pre>
 </div>
 </div>
 </li>
@@ -2605,7 +2605,7 @@ using <em>select-char-t</em> = <span class="see-below">see below</span>; // <spa
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">// &lt;temp_ns/rvariant/rvariant_io.hpp&gt;
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">// &lt;iris/rvariant/rvariant_io.hpp&gt;
 
 #include &lt;format&gt;
 
@@ -2616,7 +2616,7 @@ struct <em>variant_format_string</em> // <span class="exposition-only">expositio
   auto const&amp; operator()(std::in_place_type&lt;Ts...[i]&gt;) const noexcept { return fmts...[i]; }
 };
 
-namespace temp_ns {
+namespace iris {
 
 template&lt;class... Ts, class... Fmts&gt;
 constexpr <em>variant_format_string</em>&lt;<span class="see-below">see below</span>&gt; variant_format(Fmts&amp;&amp;... fmts) noexcept;<span class="candidate">// 1</span>
@@ -2624,7 +2624,7 @@ constexpr <em>variant_format_string</em>&lt;<span class="see-below">see below</s
 template&lt;class Variant, class... Fmts&gt;
 constexpr <em>variant_format_string</em>&lt;<span class="see-below">see below</span>&gt; variant_format_for(Fmts&amp;&amp;... fmts) noexcept;<span class="candidate">// 2</span>
 
-} // temp_ns</code></pre>
+} // iris</code></pre>
 </div>
 </div>
 <div class="ulist candidates">
@@ -2651,7 +2651,7 @@ constexpr <em>variant_format_string</em>&lt;<span class="see-below">see below</s
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">// &lt;temp_ns/rvariant/rvariant_io.hpp&gt;
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">// &lt;iris/rvariant/rvariant_io.hpp&gt;
 
 #include &lt;format&gt;
 
@@ -2662,13 +2662,13 @@ struct <em>variant_format_proxy</em> // <span class="exposition-only">exposition
     Variant v;
 };
 
-namespace temp_ns {
+namespace iris {
 
 template&lt;class VFormat, class Variant&gt;
 constexpr <em>variant_format_proxy</em>&lt;VFormat, Variant&gt;
 format_by(VFormat&amp;&amp; v_fmt, Variant&amp;&amp; v) noexcept;<span class="candidate">// 1</span>
 
-} // temp_ns</code></pre>
+} // iris</code></pre>
 </div>
 </div>
 <div class="ulist candidates">
@@ -2689,7 +2689,7 @@ format_by(VFormat&amp;&amp; v_fmt, Variant&amp;&amp; v) noexcept;<span class="ca
 <div class="sectionbody">
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace temp_ns {
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace iris {
 
 template&lt;class T&gt;
 class recursive_wrapper
@@ -2697,7 +2697,7 @@ class recursive_wrapper
   <span class="see-below">see below</span>
 };
 
-} // temp_ns</code></pre>
+} // iris</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -2706,7 +2706,7 @@ class recursive_wrapper
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace temp_ns {
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace iris {
 
 template&lt;class T, class Allocator = std::allocator&lt;T&gt;&gt;
 class recursive_wrapper_alloca
@@ -2732,23 +2732,23 @@ template&lt;class Allocator, class Value&gt;
       typename std::allocator_traits&lt;Allocator&gt;::template rebind_alloc&lt;Value&gt;
     &gt;;
 
-} // temp_ns</code></pre>
+} // iris</code></pre>
 </div>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">// &lt;temp_ns/rvariant/recursive_wrapper_pmr.hpp&gt;
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">// &lt;iris/rvariant/recursive_wrapper_pmr.hpp&gt;
 
 #include &lt;memory_resource&gt;
 
-namespace temp_ns::pmr {
+namespace iris::pmr {
 
 template&lt;class T&gt;
-using recursive_wrapper = ::temp_ns::recursive_wrapper_alloca&lt;
+using recursive_wrapper = ::iris::recursive_wrapper_alloca&lt;
   T, std::pmr::polymorphic_allocator&lt;T&gt;
 &gt;;
 
-} // temp_ns::pmr</code></pre>
+} // iris::pmr</code></pre>
 </div>
 </div>
 <div class="sect2">
@@ -2841,12 +2841,12 @@ constexpr <span class="underline">/* not explicit */</span> recursive_wrapper_al
 <div class="sectionbody">
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace temp_ns {
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace iris {
 
 template&lt;class T&gt;
 using unwrap_recursive_type = <span class="see-below">see below</span>;
 
-} // temp_ns</code></pre>
+} // iris</code></pre>
 </div>
 </div>
 <div class="ulist candidates">
@@ -2858,12 +2858,12 @@ using unwrap_recursive_type = <span class="see-below">see below</span>;
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace temp_ns {
+<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace iris {
 
 template&lt;class T&gt;
 constexpr auto&amp;&amp; unwrap_recursive(T&amp;&amp; o) noexcept;
 
-} // temp_ns</code></pre>
+} // iris</code></pre>
 </div>
 </div>
 <div class="ulist candidates">

@@ -36,12 +36,12 @@ Yaito Kakeyama; Nana Sakisaka
 ----
 // A common pattern for representing recursive ASTs using recursive variants.
 struct BinaryExpr;
-using Expr = temp_ns::<<rvariant.rvariant,rvariant>><int, double, temp_ns::<<rvariant.recursive,recursive_wrapper>><BinaryExpr>>;
+using Expr = iris::<<rvariant.rvariant,rvariant>><int, double, iris::<<rvariant.recursive,recursive_wrapper>><BinaryExpr>>;
 enum class Op;
 struct BinaryExpr { Expr lhs, rhs; Op op{}; };
 
 Expr expr{BinaryExpr{Expr{42}, Expr{3.14}}};
-expr.visit(temp_ns::overloaded{
+expr.visit(iris::overloaded{
     [](int const&) { /* ... */ },
     [](double const&) { /* ... */ },
     [](BinaryExpr const&) { /* ... */ },
@@ -180,9 +180,9 @@ using A = int;
 using B = double;
 struct C {};
 
-using AB  = temp_ns::<<rvariant.rvariant,rvariant>><A, B>;
-using BA  = temp_ns::rvariant<B, A>;
-using ABC = temp_ns::rvariant<A, B, C>;
+using AB  = iris::<<rvariant.rvariant,rvariant>><A, B>;
+using BA  = iris::rvariant<B, A>;
+using ABC = iris::rvariant<A, B, C>;
 
 // <<rvariant.ctor,constructor>>
 AB ab{42};
@@ -197,30 +197,30 @@ ab<<rvariant.mod,.emplace>><0>(123);
 // <<rvariant.assign,assignment>>
 ab = AB{123};
 
-A& a = temp_ns::<<rvariant.get,get>><0>(ab);
-A& a = temp_ns::get<A>(ab);
-C& c = temp_ns::get<C>(ab);     // throws {bad-variant-access}
+A& a = iris::<<rvariant.get,get>><0>(ab);
+A& a = iris::get<A>(ab);
+C& c = iris::get<C>(ab);     // throws {bad-variant-access}
 
-A* a = temp_ns::<<rvariant.get,get_if>><0>(&ab);
-A* a = temp_ns::get_if<A>(&ab);
-C* c = temp_ns::get_if<C>(&ab); // `nullptr`
+A* a = iris::<<rvariant.get,get_if>><0>(&ab);
+A* a = iris::get_if<A>(&ab);
+C* c = iris::get_if<C>(&ab); // `nullptr`
 
 // compatibility with boost; same effect as `get_if`
-A* a = temp_ns::<<rvariant.get,get>><0>(&ab);
-A* a = temp_ns::get<A>(&ab);
-C* c = temp_ns::get<C>(&ab);    // `nullptr`
+A* a = iris::<<rvariant.get,get>><0>(&ab);
+A* a = iris::get<A>(&ab);
+C* c = iris::get<C>(&ab);    // `nullptr`
 
 https://eel.is/{cxx}draft/variant.relops#lib:operator==,variant[ab pass:quotes[==] ab];
 https://eel.is/{cxx}draft/variant.relops#lib:operator<,variant[ab pass:quotes[&lt;] ab];
 https://eel.is/{cxx}draft/variant.relops#lib:operator<=>,variant[ab pass:quotes[&lt;=&gt;] ab]; // `requires (https://en.cppreference.com/w/cpp/utility/compare/three_way_comparable[std::three_way_comparable]<Ts> && ...)`
 
-auto visitor = temp_ns::overloaded {
+auto visitor = iris::overloaded {
     [](A const& a) {},
     [](B const& b) {},
 };
 
 ab<<rvariant.visit,.visit>>(visitor);           // member visit
-temp_ns::<<rvariant.visit,visit>>(visitor, ab); // function visit
+iris::<<rvariant.visit,visit>>(visitor, ab); // function visit
 ----
 
 
@@ -238,9 +238,9 @@ temp_ns::<<rvariant.visit,visit>>(visitor, ab); // function visit
     abc = AB{};    // subset assignment
 }
 
-static_assert(temp_ns::<<rvariant.syn,variant_size_v>><AB> == 2);
-static_assert(std::same_as<temp_ns::<<rvariant.helper,variant_alternative_t>><0, AB>, A>);
-static_assert(temp_ns::<<rvariant.get,holds_alternative>><A>(ab));
+static_assert(iris::<<rvariant.syn,variant_size_v>><AB> == 2);
+static_assert(std::same_as<iris::<<rvariant.helper,variant_alternative_t>><0, AB>, A>);
+static_assert(iris::<<rvariant.get,holds_alternative>><A>(ab));
 
 static_assert(!ab<<rvariant.status,.valueless_by_exception>>());
 static_assert(ab<<rvariant.status,.index>>() != https://eel.is/c++draft/variant.syn[std::variant_npos]);
@@ -260,7 +260,7 @@ std::size_t _ = <<rvariant.hash,hash_value>>(ab); // compatibility with boost
 
 // <<rvariant.io,I/O support>>
 {
-    using V = ::temp_ns::rvariant<int, double>;
+    using V = ::iris::rvariant<int, double>;
 
     // <<rvariant.io.ostream,`operator<<` support>>
     std::cout << V{42} << '\n';  // prints pass:quotes[`42`]
@@ -268,9 +268,9 @@ std::size_t _ = <<rvariant.hash,hash_value>>(ab); // compatibility with boost
     // <<rvariant.io.format,`std::formatter` support>>
     std::println("{}", V{42});   // prints pass:quotes[`42`]
 
-    constexpr auto v_fmt = temp_ns::variant_format_for<V>("{:04d}", "{:.1f}");
-    std::println("foo{}bar", temp_ns::format_by(v_fmt, V(42)); // prints pass:quotes[`foo0042bar`]
-    std::println("foo{}bar", temp_ns::format_by(v_fmt, V(3.14)); // prints pass:quotes[`foo3.1bar`]
+    constexpr auto v_fmt = iris::variant_format_for<V>("{:04d}", "{:.1f}");
+    std::println("foo{}bar", iris::format_by(v_fmt, V(42)); // prints pass:quotes[`foo0042bar`]
+    std::println("foo{}bar", iris::format_by(v_fmt, V(3.14)); // prints pass:quotes[`foo3.1bar`]
 }
 ----
 
@@ -285,7 +285,7 @@ std::size_t _ = <<rvariant.hash,hash_value>>(ab); // compatibility with boost
 
 
 [[rvariant.syn]]
-== Header <temp_ns/rvariant.hpp> synopsis [.slug]##<<rvariant.syn,[rvariant.syn]>>##
+== Header <iris/rvariant.hpp> synopsis [.slug]##<<rvariant.syn,[rvariant.syn]>>##
 
 [,cpp,subs="+macros,+attributes"]
 ----
@@ -295,7 +295,7 @@ std::size_t _ = <<rvariant.hash,hash_value>>(ab); // compatibility with boost
 #include <utility>     // for pass:quotes[`std::in_place_type`], etc.
 #include <variant>     // for compatibility with {bad-variant-access}, etc.
 
-namespace temp_ns {
+namespace iris {
 
 // <<rvariant.rvariant,[rvariant.rvariant]>>, class template pass:quotes[`rvariant`]
 template<class... Ts>
@@ -388,7 +388,7 @@ template<class T, class Allocator>
 template<class T> using unwrap_recursive_type = {see-below};
 template<class T> constexpr auto&& unwrap_recursive(T&& o) noexcept;
 
-} // temp_ns
+} // iris
 ----
 
 [,cpp,subs="+macros,+attributes"]
@@ -396,10 +396,10 @@ template<class T> constexpr auto&& unwrap_recursive(T&& o) noexcept;
 namespace std {
 
 // <<rvariant.hash,[rvariant.hash]>>, hash support
-template<class... Ts> struct hash<::temp_ns::rvariant<Ts...>>;
+template<class... Ts> struct hash<::iris::rvariant<Ts...>>;
 
 // <<rvariant.hash,[rvariant.hash]>>, hash support
-template<class T, class Allocator> struct hash<::temp_ns::recursive_wrapper<T, Allocator>>;
+template<class T, class Allocator> struct hash<::iris::recursive_wrapper<T, Allocator>>;
 
 } // std
 ----
@@ -410,7 +410,7 @@ template<class T, class Allocator> struct hash<::temp_ns::recursive_wrapper<T, A
 
 [,cpp,subs="+macros,+attributes"]
 ----
-namespace temp_ns {
+namespace iris {
 
 template<class... Ts>
 class rvariant
@@ -485,7 +485,7 @@ public:
     constexpr R visit(this Self&&, Visitor&&);
 };
 
-} // temp_ns
+} // iris
 ----
 
 
@@ -902,7 +902,7 @@ include::_std-variant-proxy.adoc[]
 
 [,cpp,subs="+macros,+attributes"]
 ----
-namespace temp_ns {
+namespace iris {
 
 template<std::size_t I, class T>
 struct variant_alternative; // not defined
@@ -913,7 +913,7 @@ struct variant_alternative<I, T const>;pass:quotes[[.candidate\]#// 1#]
 template<std::size_t I, class... Ts>
 struct variant_alternative<I, rvariant<Ts...>>;pass:quotes[[.candidate\]#// 2#]
 
-} // temp_ns
+} // iris
 ----
 
 [.candidates]
@@ -931,7 +931,7 @@ include::_std-variant-proxy.adoc[]
 
 [,cpp,subs="+macros,+attributes"]
 ----
-namespace temp_ns::rvariant_set {
+namespace iris::rvariant_set {
 
 template<class W, class V>
 struct is_subset_of : std::false_type {};pass:quotes[[.candidate\]#// 1#]
@@ -948,7 +948,7 @@ concept subset_of = is_subset_of_v<W, V>;
 template<class W, class V>
 concept equivalent_to = subset_of<W, V> && subset_of<V, W>;
 
-} // temp_ns::rvariant_set
+} // iris::rvariant_set
 ----
 
 [.candidates]
@@ -966,12 +966,12 @@ concept equivalent_to = subset_of<W, V> && subset_of<V, W>;
 
 [,cpp,subs="+macros,+attributes"]
 ----
-namespace temp_ns {
+namespace iris {
 
 template<class T, class... Ts>
 constexpr bool holds_alternative(rvariant<Ts...> const& v) noexcept;
 
-} // temp_ns
+} // iris
 ----
 
 [.candidates]
@@ -1007,7 +1007,7 @@ constexpr {see-below} const&& pass:quotes[_GET_](rvariant<Ts...> const&& v); // 
 
 [,cpp,subs="+macros,+attributes"]
 ----
-namespace temp_ns {
+namespace iris {
 
 template<std::size_t I, class... Ts>
 constexpr variant_alternative_t<I, rvariant<Ts...>>&
@@ -1025,7 +1025,7 @@ template<std::size_t I, class... Ts>
 constexpr variant_alternative_t<I, rvariant<Ts...>> const&&
   get(rvariant<Ts...> const&& v);
 
-} // temp_ns
+} // iris
 ----
 
 [.candidates]
@@ -1036,14 +1036,14 @@ constexpr variant_alternative_t<I, rvariant<Ts...>> const&&
 
 [,cpp,subs="+macros,+attributes"]
 ----
-namespace temp_ns {
+namespace iris {
 
 template<class T, class... Ts> constexpr T&        get(rvariant<Ts...>& v);
 template<class T, class... Ts> constexpr T&&       get(rvariant<Ts...>&& v);
 template<class T, class... Ts> constexpr T const&  get(rvariant<Ts...> const& v);
 template<class T, class... Ts> constexpr T const&& get(rvariant<Ts...> const&& v);
 
-} // temp_ns
+} // iris
 ----
 
 [.candidates]
@@ -1056,7 +1056,7 @@ template<class T, class... Ts> constexpr T const&& get(rvariant<Ts...> const&& v
 
 [,cpp,subs="+macros,+attributes"]
 ----
-namespace temp_ns {
+namespace iris {
 
 template<std::size_t I, class... Ts>
 constexpr std::add_pointer_t<variant_alternative_t<I, rvariant<Ts...>>>
@@ -1066,7 +1066,7 @@ template<std::size_t I, class... Ts>
 constexpr std::add_pointer_t<variant_alternative_t<I, rvariant<Ts...>> const>
   get_if(rvariant<Ts...> const* v) noexcept;pass:quotes[[.candidate\]#// 2#]
 
-} // temp_ns
+} // iris
 ----
 
 [.candidates]
@@ -1077,7 +1077,7 @@ constexpr std::add_pointer_t<variant_alternative_t<I, rvariant<Ts...>> const>
 
 [,cpp,subs="+macros,+attributes"]
 ----
-namespace temp_ns {
+namespace iris {
 
 template<class T, class... Ts>
 constexpr std::add_pointer_t<T>
@@ -1087,7 +1087,7 @@ template<class T, class... Ts>
 constexpr std::add_pointer_t<T const>
   get_if(rvariant<Ts...> const* v) noexcept;pass:quotes[[.candidate\]#// 2#]
 
-} // temp_ns
+} // iris
 ----
 
 [.candidates]
@@ -1103,7 +1103,7 @@ constexpr std::add_pointer_t<T const>
 
 [,cpp,subs="+macros,+attributes"]
 ----
-namespace temp_ns {
+namespace iris {
 
 template<class Visitor, class... Variants>
 constexpr {see-below} visit(Visitor&& vis, Variants&&... vars);pass:quotes[[.candidate\]#// 1#]
@@ -1111,7 +1111,7 @@ constexpr {see-below} visit(Visitor&& vis, Variants&&... vars);pass:quotes[[.can
 template<class R, class Visitor, class... Variants>
 constexpr R visit(Visitor&& vis, Variants&&... vars);pass:quotes[[.candidate\]#// 2#]
 
-} // temp_ns
+} // iris
 
 // below are member functions of the class template <<rvariant.rvariant,pass:quotes[`rvariant`]>>:
 
@@ -1128,7 +1128,7 @@ constexpr R visit(this Self&& self, Visitor&& vis);pass:quotes[[.candidate\]#// 
 [none]
 ** -- `_GET_<__m__>(std::forward<V>(vars))` is replaced with `{unwrap_recursive}(_GET_<__m__>(std::forward<V>(vars)))`.
 
-* [.candidate]#3-4)# Equivalent to the `std::variant` counterpart ^https://eel.is/c++draft/variant.visit[[spec\]]^, except that it forwards to `temp_ns::visit` instead of `std::visit`.
+* [.candidate]#3-4)# Equivalent to the `std::variant` counterpart ^https://eel.is/c++draft/variant.visit[[spec\]]^, except that it forwards to `iris::visit` instead of `std::visit`.
 
 
 [[rvariant.hash]]
@@ -1139,13 +1139,13 @@ constexpr R visit(this Self&& self, Visitor&& vis);pass:quotes[[.candidate\]#// 
 namespace std {
 
 template<class... Ts>
-struct hash<::temp_ns::rvariant<Ts...>>;pass:quotes[[.candidate\]#// 1#]
+struct hash<::iris::rvariant<Ts...>>;pass:quotes[[.candidate\]#// 1#]
 
 template<class T>
-struct hash<::temp_ns::recursive_wrapper<T>>;pass:quotes[[.candidate\]#// 2#]
+struct hash<::iris::recursive_wrapper<T>>;pass:quotes[[.candidate\]#// 2#]
 
 template<class T, class Allocator>
-struct hash<::temp_ns::recursive_wrapper_alloca<T, Allocator>>;pass:quotes[[.candidate\]#// 3#]
+struct hash<::iris::recursive_wrapper_alloca<T, Allocator>>;pass:quotes[[.candidate\]#// 3#]
 
 } // std
 ----
@@ -1163,7 +1163,7 @@ include::_std-indirect-proxy.adoc[]
 
 [,cpp,subs="+macros,+attributes"]
 ----
-namespace temp_ns {
+namespace iris {
 
 template<class... Ts>
 /* constexpr */ std::size_t hash_value(rvariant<Ts...> const& v);pass:quotes[[.candidate\]#// 1#]
@@ -1174,7 +1174,7 @@ template<class T>
 template<class T, class Allocator>
 /* constexpr */ std::size_t hash_value(recursive_wrapper_alloca<T, Allocator> const& rw);pass:quotes[[.candidate\]#// 3#]
 
-} // temp_ns
+} // iris
 ----
 
 [.candidates]
@@ -1189,18 +1189,18 @@ template<class T, class Allocator>
 
 [[rvariant.io]]
 == I/O [.slug]##<<rvariant.io,[rvariant.io]>>##
-I/O components are _not_ included by the global convenience header (`<temp_ns/rvariant.hpp>`).
+I/O components are _not_ included by the global convenience header (`<iris/rvariant.hpp>`).
 
 [[rvariant.io.ostream]]
 === `operator<<` support
 
 [,cpp,subs="+macros,+attributes"]
 ----
-// <temp_ns/rvariant/rvariant_io.hpp>
+// <iris/rvariant/rvariant_io.hpp>
 
 #include <ostream>
 
-namespace temp_ns {
+namespace iris {
 
 template<class T>
 constexpr bool pass:quotes[_ADL-ostreamable_] = {see-below}; // {exposition-only}pass:quotes[[.candidate\]#// 1#]
@@ -1208,7 +1208,7 @@ constexpr bool pass:quotes[_ADL-ostreamable_] = {see-below}; // {exposition-only
 template<class... Ts>
 std::ostream& operator<<(std::ostream& os, rvariant<Ts...> const& v);pass:quotes[[.candidate\]#// 2#]
 
-} // temp_ns
+} // iris
 ----
 
 [.candidates]
@@ -1242,7 +1242,7 @@ std::ostream& operator<<(std::ostream& os, rvariant<Ts...> const& v);pass:quotes
 [none]
 * Let `v` denote an object of `rvariant`, and let `proxy` denote an object of `{variant-format-proxy}`.
 
-* The specialization `std::formatter<::temp_ns::rvariant<Ts\...>, charT>` (for arbitrary `charT`) is enabled if and only if `std::formattable<{unwrap_recursive_type}<Ts~_i_~>, charT>` is `true` for all _i_, with the following characteristics:
+* The specialization `std::formatter<::iris::rvariant<Ts\...>, charT>` (for arbitrary `charT`) is enabled if and only if `std::formattable<{unwrap_recursive_type}<Ts~_i_~>, charT>` is `true` for all _i_, with the following characteristics:
 +
 [none]
 ** -- The format specifier must be empty, otherwise `std::format_error` is thrown, and
@@ -1252,7 +1252,7 @@ std::ostream& operator<<(std::ostream& os, rvariant<Ts...> const& v);pass:quotes
 +
 [,cpp,subs="+macros,+attributes"]
 ----
-std::println("{}", temp_ns::rvariant<int, double>(42)); // prints pass:quotes[`42`]
+std::println("{}", iris::rvariant<int, double>(42)); // prints pass:quotes[`42`]
 ----
 
 * The specialization `std::formatter<{variant-format-proxy}<VFormat, Variant>, charT>` is enabled if and only if:
@@ -1272,10 +1272,10 @@ std::println("{}", temp_ns::rvariant<int, double>(42)); // prints pass:quotes[`4
 +
 [,cpp,subs="+macros,+attributes"]
 ----
-using V = temp_ns::rvariant<int, double>;
-constexpr auto v_fmt = temp_ns::variant_format_for<V>("{:04d}", "{:.1f}");
-std::println("foo{}bar", temp_ns::format_by(v_fmt, V(42)); // prints pass:quotes[`foo0042bar`]
-std::println("foo{}bar", temp_ns::format_by(v_fmt, V(3.14)); // prints pass:quotes[`foo3.1bar`]
+using V = iris::rvariant<int, double>;
+constexpr auto v_fmt = iris::variant_format_for<V>("{:04d}", "{:.1f}");
+std::println("foo{}bar", iris::format_by(v_fmt, V(42)); // prints pass:quotes[`foo0042bar`]
+std::println("foo{}bar", iris::format_by(v_fmt, V(3.14)); // prints pass:quotes[`foo3.1bar`]
 ----
 
 
@@ -1291,7 +1291,7 @@ using pass:quotes[_select-char-t_] = {see-below}; // {exposition-only}
 
 [,cpp,subs="+macros,+attributes"]
 ----
-// <temp_ns/rvariant/rvariant_io.hpp>
+// <iris/rvariant/rvariant_io.hpp>
 
 #include <format>
 
@@ -1302,7 +1302,7 @@ struct {variant-format-string} // {exposition-only}
   auto const& operator()(std::in_place_type<Ts...[i]>) const noexcept { return fmts...[i]; }
 };
 
-namespace temp_ns {
+namespace iris {
 
 template<class... Ts, class... Fmts>
 constexpr {variant-format-string}<{see-below}> variant_format(Fmts&&... fmts) noexcept;pass:quotes[[.candidate\]#// 1#]
@@ -1310,7 +1310,7 @@ constexpr {variant-format-string}<{see-below}> variant_format(Fmts&&... fmts) no
 template<class Variant, class... Fmts>
 constexpr {variant-format-string}<{see-below}> variant_format_for(Fmts&&... fmts) noexcept;pass:quotes[[.candidate\]#// 2#]
 
-} // temp_ns
+} // iris
 ----
 
 [.candidates]
@@ -1329,7 +1329,7 @@ Let `charT` denote `_select-char-t_<Fmts\...>`.
 
 [,cpp,subs="+macros,+attributes"]
 ----
-// <temp_ns/rvariant/rvariant_io.hpp>
+// <iris/rvariant/rvariant_io.hpp>
 
 #include <format>
 
@@ -1340,13 +1340,13 @@ struct {variant-format-proxy} // {exposition-only}
     Variant v;
 };
 
-namespace temp_ns {
+namespace iris {
 
 template<class VFormat, class Variant>
 constexpr {variant-format-proxy}<VFormat, Variant>
 format_by(VFormat&& v_fmt, Variant&& v) noexcept;pass:quotes[[.candidate\]#// 1#]
 
-} // temp_ns
+} // iris
 ----
 
 [.candidates]
@@ -1360,7 +1360,7 @@ format_by(VFormat&& v_fmt, Variant&& v) noexcept;pass:quotes[[.candidate\]#// 1#
 
 [,cpp,subs="+macros,+attributes"]
 ----
-namespace temp_ns {
+namespace iris {
 
 template<class T>
 class recursive_wrapper
@@ -1368,7 +1368,7 @@ class recursive_wrapper
   {see-below}
 };
 
-} // temp_ns
+} // iris
 ----
 
 Class template `recursive_wrapper` behaves like `recursive_wrapper_alloca` instantiated with `std::allocator<T>`, except that the allocator-related member functions (that is, member functions that take allocator-specific arguments) are omitted.
@@ -1376,7 +1376,7 @@ Class template `recursive_wrapper` behaves like `recursive_wrapper_alloca` insta
 
 [,cpp,subs="+macros,+attributes"]
 ----
-namespace temp_ns {
+namespace iris {
 
 template<class T, class Allocator = std::allocator<T>>
 class recursive_wrapper_alloca
@@ -1402,23 +1402,23 @@ template<class Allocator, class Value>
       typename std::allocator_traits<Allocator>::template rebind_alloc<Value>
     >;
 
-} // temp_ns
+} // iris
 ----
 
 [,cpp,subs="+macros,+attributes"]
 ----
-// <temp_ns/rvariant/recursive_wrapper_pmr.hpp>
+// <iris/rvariant/recursive_wrapper_pmr.hpp>
 
 #include <memory_resource>
 
-namespace temp_ns::pmr {
+namespace iris::pmr {
 
 template<class T>
-using recursive_wrapper = ::temp_ns::recursive_wrapper_alloca<
+using recursive_wrapper = ::iris::recursive_wrapper_alloca<
   T, std::pmr::polymorphic_allocator<T>
 >;
 
-} // temp_ns::pmr
+} // iris::pmr
 ----
 
 [[rvariant.recursive.general]]
@@ -1470,12 +1470,12 @@ _Note 2:_ It is currently unknown whether the recursive instantiation scenario d
 
 [,cpp,subs="+macros,+attributes"]
 ----
-namespace temp_ns {
+namespace iris {
 
 template<class T>
 using unwrap_recursive_type = {see-below};
 
-} // temp_ns
+} // iris
 ----
 
 [.candidates]
@@ -1483,12 +1483,12 @@ using unwrap_recursive_type = {see-below};
 
 [,cpp,subs="+macros,+attributes"]
 ----
-namespace temp_ns {
+namespace iris {
 
 template<class T>
 constexpr auto&& unwrap_recursive(T&& o) noexcept;
 
-} // temp_ns
+} // iris
 ----
 
 [.candidates]
