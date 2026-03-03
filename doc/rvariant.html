@@ -905,19 +905,11 @@ document.addEventListener('DOMContentLoaded', (event) => {
 </ul>
 </li>
 <li><a href="#rvariant.recursive.helper"><code>recursive_wrapper</code> helper utilities <span class="slug">[rvariant.recursive.helper]</span></a></li>
-<li><a href="#rvariant.pack">Pack manipulation and deduping <span class="slug">[rvariant.pack]</span></a></li>
-<li><a href="#rvariant.xo">Exposition-only utilities <span class="slug">[rvariant.xo]</span></a>
-<ul class="sectlevel2">
-<li><a href="#rvariant.xo.pack">Pack utilities <span class="slug">[rvariant.xo.pack]</span></a></li>
-<li><a href="#rvariant.xo.core">Core type traits <span class="slug">[rvariant.xo.core]</span></a></li>
-</ul>
-</li>
 </ul>
 </li>
 <li><a href="#additional-information">Additional Information</a>
 <ul class="sectlevel1">
 <li><a href="#visitation-technique">Visitation Technique in Depth</a></li>
-<li><a href="#about">About the Authors</a></li>
 <li><a href="#license">License</a></li>
 </ul>
 </li>
@@ -1349,12 +1341,6 @@ template&lt;class T, class Allocator&gt;
 // <a href="#rvariant.recursive.helper">[rvariant.recursive.helper]</a>, <code>recursive_wrapper</code> helper classes
 template&lt;class T&gt; using unwrap_recursive_type = <span class="see-below">see below</span>;
 template&lt;class T&gt; constexpr auto&amp;&amp; unwrap_recursive(T&amp;&amp; o) noexcept;
-
-// <a href="#rvariant.pack">[rvariant.pack]</a>, pack manipulation and deduping
-template&lt;template&lt;class...&gt; class TT, class A, class B&gt;
-  struct compact_alternative;
-template&lt;template&lt;class...&gt; class TT, class A, class B&gt;
-  using compact_alternative_t = typename compact_alternative&lt;TT, A, B&gt;::type;
 
 } // temp_ns</code></pre>
 </div>
@@ -2892,121 +2878,6 @@ constexpr auto&amp;&amp; unwrap_recursive(T&amp;&amp; o) noexcept;
 </div>
 </div>
 </div>
-<div class="sect1">
-<h2 id="rvariant.pack"><a class="anchor" href="#rvariant.pack"></a>Pack manipulation and deduping <span class="slug"><a href="#rvariant.pack">[rvariant.pack]</a></span></h2>
-<div class="sectionbody">
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">namespace temp_ns {
-
-template&lt;template&lt;class...&gt; class TT, class A, class B&gt;
-struct compact_alternative;
-
-} // temp_ns</code></pre>
-</div>
-</div>
-<div class="ulist candidates">
-<ul>
-<li>
-<p><span class="candidate"></span> Effectively concatenates contained types in <code>A</code> and <code>B</code>, then dedupes them. If the resulting type list consists of only a single type, the surrounding template is unwrapped.</p>
-<div class="paragraph">
-<p><strong><em>Definition:</em></strong>  Let <code>Ts</code> denote an imaginary pack of types where <code>TT&lt;Ts...&gt;</code> is the same type as <code><a href="#rvariant.xo.pack"><em>pack-union-t</em></a>&lt;TT, A, B&gt;</code>. The member typedef <code>type</code> denotes <code>Ts...[0]</code> if <code>sizeof...(Ts) == 1</code>; otherwise, the member typedef <code>type</code> denotes <code>TT&lt;Ts...&gt;</code>.</p>
-</div>
-</li>
-</ul>
-</div>
-<div class="admonitionblock warning">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-warning" title="Warning"></i>
-</td>
-<td class="content">
-<div class="title">Notes on single-type variant</div>
-A variant with a single alternative may introduce unnecessary overhead when used in many places where only the underlying type is actually needed. In such cases, the variant can be <em>unwrapped</em> using <code>compact_alternative</code>. This is useful for resolving issues such as <a href="https://github.com/boostorg/spirit/issues/610">boostorg/spirit#610</a>.
-</td>
-</tr>
-</table>
-</div>
-<div class="admonitionblock warning">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-warning" title="Warning"></i>
-</td>
-<td class="content">
-<code>compact_alternative</code> does not unwrap <code><a href="#rvariant.recursive">recursive_wrapper</a></code> or <code><a href="#rvariant.recursive">recursive_wrapper_alloca</a></code>. This is intentional, because doing so could lead to instantiating incomplete type on undesired timings. You may apply <code><a href="#rvariant.recursive.helper">unwrap_recursive_type</a></code> manually.
-</td>
-</tr>
-</table>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="rvariant.xo"><a class="anchor" href="#rvariant.xo"></a>Exposition-only utilities <span class="slug"><a href="#rvariant.xo">[rvariant.xo]</a></span></h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>This section demonstrates internal features used in the implementation.</p>
-</div>
-<div class="sect2">
-<h3 id="rvariant.xo.pack"><a class="anchor" href="#rvariant.xo.pack"></a>Pack utilities <span class="slug"><a href="#rvariant.xo.pack">[rvariant.xo.pack]</a></span></h3>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">template&lt;template&lt;class...&gt; class TT, class A, class B&gt;
-using <em>pack-union-t</em> = <span class="see-below">see below</span>; // <span class="exposition-only">exposition only</span></code></pre>
-</div>
-</div>
-<div class="ulist candidates">
-<ul>
-<li>
-<p><span class="candidate"></span> Let <code>As</code> denote the pack of template parameters of <code>A</code> if <code>A</code> is a specialization of <code>TT</code>, otherwise let <code>As</code> denote a pack of single type <code>A</code>. Let <code>Bs</code> denote likewise. <code><em>pack-union-t</em></code> denotes <code>TT&lt;Ts...&gt;</code>, where <code>Ts...</code> is the set union of <code>As...</code> and <code>Bs...</code> expanded from left to right. For duplicate types, the first occurrence shall remain in <code>Ts...</code>.</p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="rvariant.xo.core"><a class="anchor" href="#rvariant.xo.core"></a>Core type traits <span class="slug"><a href="#rvariant.xo.core">[rvariant.xo.core]</a></span></h3>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-cpp" data-lang="cpp">template&lt;class T, template&lt;class...&gt; class TT&gt;
-struct <em>is-ttp-specialization-of</em>;  // <span class="exposition-only">exposition only</span><span class="candidate">// 1</span>
-
-template&lt;class T, template&lt;auto...&gt; class TT&gt;
-struct <em>is-nttp-specialization-of</em>; // <span class="exposition-only">exposition only</span><span class="candidate">// 2</span>
-
-template&lt;class T, <em>any-ttp</em>&gt;
-struct <em>is-specialization-of</em>;      // <span class="exposition-only">exposition only</span><span class="candidate">// 3</span></code></pre>
-</div>
-</div>
-<div class="openblock candidates">
-<div class="content">
-<div class="ulist">
-<ul>
-<li>
-<p><span class="candidate">1-2)</span> Inherits <code>std::true_type</code> if and only if <code>T</code> is a specialization of <code>TT</code>; otherwise, inherits <code>std::false_type</code>.</p>
-</li>
-<li>
-<p><span class="candidate">3)</span> If <code><em>any-ttp</em></code> is a template template parameter that consists of NTTP, equivalent to <code><em>is-nttp-specialization-of</em></code>; otherwise, equivalent to <code><em>is-ttp-specialization-of</em></code>.</p>
-</li>
-</ul>
-</div>
-</div>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<code><em>is-specialization-of</em></code> requires C&#43;&#43;26 reflection for a straightforward resolution. For older versions, it can be worked around by a compound <code>requires</code> expression.
-</td>
-</tr>
-</table>
-</div>
-</div>
-</div>
-</div>
 <h1 id="additional-information" class="sect0"><a class="anchor" href="#additional-information"></a>Additional Information</h1>
 <div class="sect1">
 <h2 id="visitation-technique"><a class="anchor" href="#visitation-technique"></a>Visitation Technique in Depth</h2>
@@ -3031,17 +2902,6 @@ vtable[v.index()](vis, v.storage()); // O(1), of course</code></pre>
 </div>
 <div class="paragraph">
 <p>Unfortunately, GCC enables the optimization only in limited scenarios (<a href="https://github.com/gcc-mirror/gcc/blob/679e24f5a751663998ff7202149a749e0f7251f9/libstdc%2B%2B-v3/include/std/variant#L1863" target="_blank" rel="noopener">link</a>), and LLVM has reverted it due to unresolved issues (<a href="https://github.com/llvm/llvm-project/issues/62648#issuecomment-1832315651" target="_blank" rel="noopener">link</a>). Our benchmark results reflect this status quo, with <code>rvariant</code> performing up to about 2x faster than GCC/Clang.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="about"><a class="anchor" href="#about"></a>About the Authors</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Yaito Kakeyama is a C&#43;&#43; enthusiast with a strong interest in language design and modern library development. He has contributed to several public efforts in the C&#43;&#43; community, including co-authoring LWG 4166 with Nana Sakisaka and submitting occasional compiler bug reports. He is the co-author of <code>rvariant</code> and has been deeply involved in its implementation.</p>
-</div>
-<div class="paragraph">
-<p>Nana Sakisaka has taken on an active maintainer role in Boost.Spirit since May 2025. The development of <code>rvariant</code> began as part of a broader effort to modernize the Boost.Spirit.X3 codebase. He is the co-author of <code>rvariant</code> and has focused on its rationale and specification wording.</p>
 </div>
 </div>
 </div>

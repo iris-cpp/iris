@@ -388,12 +388,6 @@ template<class T, class Allocator>
 template<class T> using unwrap_recursive_type = {see-below};
 template<class T> constexpr auto&& unwrap_recursive(T&& o) noexcept;
 
-// <<rvariant.pack,[rvariant.pack]>>, pack manipulation and deduping
-template<template<class...> class TT, class A, class B>
-  struct compact_alternative;
-template<template<class...> class TT, class A, class B>
-  using compact_alternative_t = typename compact_alternative<TT, A, B>::type;
-
 } // temp_ns
 ----
 
@@ -1503,75 +1497,6 @@ constexpr auto&& unwrap_recursive(T&& o) noexcept;
 *_Remarks:_* `unwrap_recursive` is an _algorithm function object_ (link:https://eel.is/c++draft/alg.func.obj[[alg.func.obj\],window=_blank]).
 
 
-[[rvariant.pack]]
-== Pack manipulation and deduping [.slug]##<<rvariant.pack,[rvariant.pack]>>##
-
-[,cpp,subs="+macros,+attributes"]
-----
-namespace temp_ns {
-
-template<template<class...> class TT, class A, class B>
-struct compact_alternative;
-
-} // temp_ns
-----
-
-[.candidates]
-* [.candidate]#{empty}# Effectively concatenates contained types in `A` and `B`, then dedupes them. If the resulting type list consists of only a single type, the surrounding template is unwrapped.
-+
-*_Definition:_*  Let `Ts` denote an imaginary pack of types where `TT<Ts\...>` is the same type as `<<rvariant.xo.pack,_pack-union-t_>><TT, A, B>`. The member typedef `type` denotes `Ts\...[0]` if `sizeof\...(Ts) == 1`; otherwise, the member typedef `type` denotes `TT<Ts\...>`.
-
-[WARNING]
-.Notes on single-type variant
-A variant with a single alternative may introduce unnecessary overhead when used in many places where only the underlying type is actually needed. In such cases, the variant can be _unwrapped_ using `compact_alternative`. This is useful for resolving issues such as https://github.com/boostorg/spirit/issues/610[boostorg/spirit#610].
-
-[WARNING]
-`compact_alternative` does not unwrap `{recursive_wrapper}` or `{recursive_wrapper_alloca}`. This is intentional, because doing so could lead to instantiating incomplete type on undesired timings. You may apply `{unwrap_recursive_type}` manually.
-
-
-[[rvariant.xo]]
-== Exposition-only utilities [.slug]##<<rvariant.xo,[rvariant.xo]>>##
-This section demonstrates internal features used in the implementation.
-
-
-[[rvariant.xo.pack]]
-=== Pack utilities [.slug]##<<rvariant.xo.pack,[rvariant.xo.pack]>>##
-
-[,cpp,subs="+macros,+attributes"]
-----
-template<template<class...> class TT, class A, class B>
-using pass:quotes[_pack-union-t_] = {see-below}; // {exposition-only}
-----
-
-[.candidates]
-* [.candidate]#{empty}# Let `As` denote the pack of template parameters of `A` if `A` is a specialization of `TT`, otherwise let `As` denote a pack of single type `A`. Let `Bs` denote likewise. `_pack-union-t_` denotes `TT<Ts\...>`, where `Ts\...` is the set union of `As\...` and `Bs\...` expanded from left to right. For duplicate types, the first occurrence shall remain in `Ts\...`.
-
-
-[[rvariant.xo.core]]
-=== Core type traits [.slug]##<<rvariant.xo.core,[rvariant.xo.core]>>##
-
-[,cpp,subs="+macros,+attributes"]
-----
-template<class T, template<class...> class TT>
-struct pass:quotes[_is-ttp-specialization-of_];  // {exposition-only}pass:quotes[[.candidate\]#// 1#]
-
-template<class T, template<auto...> class TT>
-struct pass:quotes[_is-nttp-specialization-of_]; // {exposition-only}pass:quotes[[.candidate\]#// 2#]
-
-template<class T, pass:quotes[_any-ttp_]>
-struct pass:quotes[_is-specialization-of_];      // {exposition-only}pass:quotes[[.candidate\]#// 3#]
-----
-
-[.candidates]
---
-* [.candidate]#1-2)# Inherits `std::true_type` if and only if `T` is a specialization of `TT`; otherwise, inherits `std::false_type`.
-
-* [.candidate]#3)# If `_any-ttp_` is a template template parameter that consists of NTTP, equivalent to `_is-nttp-specialization-of_`; otherwise, equivalent to `_is-ttp-specialization-of_`.
---
-
-NOTE: `_is-specialization-of_` requires {cpp}26 reflection for a straightforward resolution. For older versions, it can be worked around by a compound `requires` expression.
-
-
 = Additional Information
 
 [[visitation-technique]]
@@ -1594,13 +1519,6 @@ Early `std::variant` implementations used this _function-pointer-based dispatch_
 
 Unfortunately, GCC enables the optimization only in limited scenarios (link:https://github.com/gcc-mirror/gcc/blob/679e24f5a751663998ff7202149a749e0f7251f9/libstdc%2B%2B-v3/include/std/variant#L1863[link,window=_blank]), and LLVM has reverted it due to unresolved issues (link:https://github.com/llvm/llvm-project/issues/62648#issuecomment-1832315651[link,window=_blank]). Our benchmark results reflect this status quo, with `rvariant` performing up to about 2x faster than GCC/Clang.
 
-
-[[about]]
-== About the Authors
-
-Yaito Kakeyama is a {cpp} enthusiast with a strong interest in language design and modern library development. He has contributed to several public efforts in the {cpp} community, including co-authoring LWG 4166 with Nana Sakisaka and submitting occasional compiler bug reports. He is the co-author of `rvariant` and has been deeply involved in its implementation.
-
-Nana Sakisaka has taken on an active maintainer role in Boost.Spirit since May 2025. The development of `rvariant` began as part of a broader effort to modernize the Boost.Spirit.X3 codebase. He is the co-author of `rvariant` and has focused on its rationale and specification wording.
 
 [[license]]
 == License
