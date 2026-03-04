@@ -489,4 +489,4 @@ template<class T, class Allocator>
 
 } // iris
 
-#endif  // IRIS_ZZ_INDIRECT_HPP
+#endif
