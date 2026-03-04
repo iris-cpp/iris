@@ -1,5 +1,5 @@
-#ifndef IRIS_PREPROCESS_IF_HPP
-#define IRIS_PREPROCESS_IF_HPP
+#ifndef IRIS_ZZ_PREPROCESS_IF_HPP
+#define IRIS_ZZ_PREPROCESS_IF_HPP
 
 // SPDX-License-Identifier: MIT
 

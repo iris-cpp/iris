@@ -1,5 +1,5 @@
-#ifndef IRIS_ENUM_BITOPS_HPP
-#define IRIS_ENUM_BITOPS_HPP
+#ifndef IRIS_ZZ_ENUM_BITOPS_HPP
+#define IRIS_ZZ_ENUM_BITOPS_HPP
 
 // SPDX-License-Identifier: MIT
 

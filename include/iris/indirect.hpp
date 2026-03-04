@@ -1,5 +1,5 @@
-#ifndef IRIS_INDIRECT_HPP
-#define IRIS_INDIRECT_HPP
+#ifndef IRIS_ZZ_INDIRECT_HPP
+#define IRIS_ZZ_INDIRECT_HPP
 
 // SPDX-License-Identifier: MIT
 
@@ -489,4 +489,4 @@ template<class T, class Allocator>
 
 } // iris
 
-#endif  // IRIS_INDIRECT_HPP
+#endif

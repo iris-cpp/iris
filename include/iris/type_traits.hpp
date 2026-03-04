@@ -1,5 +1,5 @@
-#ifndef IRIS_TYPE_TRAITS_HPP
-#define IRIS_TYPE_TRAITS_HPP
+#ifndef IRIS_ZZ_TYPE_TRAITS_HPP
+#define IRIS_ZZ_TYPE_TRAITS_HPP
 
 // SPDX-License-Identifier: MIT
 

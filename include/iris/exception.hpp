@@ -1,5 +1,5 @@
-#ifndef IRIS_EXCEPTION_HPP
-#define IRIS_EXCEPTION_HPP
+#ifndef IRIS_ZZ_EXCEPTION_HPP
+#define IRIS_ZZ_EXCEPTION_HPP
 
 #include <iris/string.hpp>
 

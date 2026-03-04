@@ -1,5 +1,5 @@
-#ifndef IRIS_FIXED_STRING_HPP
-#define IRIS_FIXED_STRING_HPP
+#ifndef IRIS_ZZ_FIXED_STRING_HPP
+#define IRIS_ZZ_FIXED_STRING_HPP
 
 // SPDX-License-Identifier: MIT
 

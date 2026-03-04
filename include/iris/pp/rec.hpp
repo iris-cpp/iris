@@ -1,5 +1,5 @@
-#ifndef IRIS_PP_REC_HPP
-#define IRIS_PP_REC_HPP
+#ifndef IRIS_ZZ_PP_REC_HPP
+#define IRIS_ZZ_PP_REC_HPP
 
 #include <iris/pp/if.hpp>
 
