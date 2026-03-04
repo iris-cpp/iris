@@ -1,5 +1,5 @@
-#ifndef IRIS_COLORIZE_FORMAT_HPP
-#define IRIS_COLORIZE_FORMAT_HPP
+#ifndef IRIS_ZZ_COLORIZE_FORMAT_HPP
+#define IRIS_ZZ_COLORIZE_FORMAT_HPP
 
 #include <iris/string.hpp>
 #include <iris/enum_bitops.hpp>

@@ -1,5 +1,5 @@
-﻿#ifndef IRIS_INDIRECT_PMR_HPP
-#define IRIS_INDIRECT_PMR_HPP
+﻿#ifndef IRIS_ZZ_INDIRECT_PMR_HPP
+#define IRIS_ZZ_INDIRECT_PMR_HPP
 
 // SPDX-License-Identifier: MIT
 

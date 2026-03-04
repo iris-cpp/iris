@@ -1,5 +1,5 @@
-#ifndef IRIS_IO_FWD_HPP
-#define IRIS_IO_FWD_HPP
+#ifndef IRIS_ZZ_IO_FWD_HPP
+#define IRIS_ZZ_IO_FWD_HPP
 
 // SPDX-License-Identifier: MIT
 
