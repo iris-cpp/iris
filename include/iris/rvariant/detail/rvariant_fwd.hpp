@@ -1,4 +1,4 @@
-﻿#ifndef IRIS_ZZ_RVARIANT_DETAIL_RVARIANT_FWD_HPP
+#ifndef IRIS_ZZ_RVARIANT_DETAIL_RVARIANT_FWD_HPP
 #define IRIS_ZZ_RVARIANT_DETAIL_RVARIANT_FWD_HPP
 
 // SPDX-License-Identifier: MIT
@@ -20,8 +20,11 @@ namespace iris {
 template<class... Ts>
 class rvariant;
 
-template<class T, class Allocator>
+template<class T>
 class recursive_wrapper;
+
+template<class T, class Allocator>
+class recursive_wrapper_alloca;
 
 
 namespace detail {

@@ -70,13 +70,24 @@ struct variant_size<rvariant<Ts...>> : std::integral_constant<std::size_t, sizeo
 namespace detail {
 
 template<class T>
+constexpr bool is_recursive_wrapper_like_v =
+    is_ttp_specialization_of_v<T, recursive_wrapper> ||
+    is_ttp_specialization_of_v<T, recursive_wrapper_alloca>;
+
+template<class T>
 struct unwrap_recursive_type_impl
 {
     using type = T;
 };
 
+template<class T>
+struct unwrap_recursive_type_impl<recursive_wrapper<T>>
+{
+    using type = T;
+};
+
 template<class T, class Allocator>
-struct unwrap_recursive_type_impl<recursive_wrapper<T, Allocator>>
+struct unwrap_recursive_type_impl<recursive_wrapper_alloca<T, Allocator>>
 {
     using type = T;
 };
@@ -87,7 +98,7 @@ struct unwrap_recursive_fn
     [[nodiscard]] IRIS_FORCEINLINE static constexpr auto&&
     operator()(T&& o IRIS_LIFETIMEBOUND) noexcept
     {
-        if constexpr (is_ttp_specialization_of_v<std::remove_cvref_t<T>, recursive_wrapper>) {
+        if constexpr (is_recursive_wrapper_like_v<std::remove_cvref_t<T>>) {
             return *std::forward<T>(o);
         } else {
             return std::forward<T>(o);
@@ -124,57 +135,6 @@ struct overloaded : Fs...
 {
     using Fs::operator()...;
 };
-
-
-namespace detail {
-
-template<class VT, class RHS>
-struct forward_maybe_wrapped_impl; // [rvariant.rvariant.general]: different allocators are not allowed
-
-// recursive_wrapper<int> val = recursive_wrapper<int>{42};
-template<class T, class Allocator>
-struct forward_maybe_wrapped_impl<recursive_wrapper<T, Allocator>, recursive_wrapper<T, Allocator>>
-{
-    template<class Wrapped>
-    [[nodiscard]] static constexpr auto&& apply(Wrapped&& wrapped IRIS_LIFETIMEBOUND) noexcept
-    {
-        static_assert(std::is_same_v<std::remove_cvref_t<Wrapped>, recursive_wrapper<T, Allocator>>);
-        return std::forward<Wrapped>(wrapped);
-    }
-};
-
-// recursive_wrapper<int> val = 42;
-template<class T, class Allocator>
-struct forward_maybe_wrapped_impl<recursive_wrapper<T, Allocator>, T>
-{
-    template<class Value>
-    [[nodiscard]] static constexpr auto&& apply(Value&& value IRIS_LIFETIMEBOUND) noexcept
-    {
-        static_assert(std::is_same_v<std::remove_cvref_t<Value>, T>);
-        return std::forward<Value>(value);
-    }
-};
-
-// int val = 42;
-template<class T>
-struct forward_maybe_wrapped_impl<T, T>
-{
-    template<class Value>
-    [[nodiscard]] static constexpr auto&& apply(Value&& value IRIS_LIFETIMEBOUND) noexcept
-    {
-        static_assert(std::is_same_v<std::remove_cvref_t<Value>, T>);
-        return std::forward<Value>(value);
-    }
-};
-
-template<class VT, class RHS>
-[[nodiscard]] constexpr auto&& forward_maybe_wrapped(RHS&& rhs IRIS_LIFETIMEBOUND) noexcept
-{
-    static_assert(!std::is_reference_v<VT> && !std::is_const_v<VT>);
-    return forward_maybe_wrapped_impl<VT, std::remove_cvref_t<RHS>>::apply(std::forward<RHS>(rhs));
-}
-
-} // detail
 
 } // iris
 

@@ -4,7 +4,6 @@
 // SPDX-License-Identifier: MIT
 
 #include <iris/rvariant/detail/rvariant_fwd.hpp>
-#include <iris/rvariant/detail/variant_requirements.hpp>
 #include <iris/rvariant/detail/variant_storage.hpp>
 #include <iris/rvariant/detail/visit.hpp>
 #include <iris/rvariant/detail/recursive_traits.hpp>
@@ -18,6 +17,7 @@
 #include <iris/type_traits.hpp>
 #include <iris/hash.hpp>
 
+#include <concepts>
 #include <functional>
 #include <initializer_list>
 #include <type_traits>
@@ -31,6 +31,102 @@
 namespace iris {
 
 namespace detail {
+
+template<class T, class U>
+struct check_recursive_wrapper_duplicate_impl : std::true_type {};
+
+template<class T, class U>
+    requires
+        (!std::same_as<T, U>) &&
+        (is_recursive_wrapper_like_v<T> || is_recursive_wrapper_like_v<U>) &&
+        std::same_as<unwrap_recursive_type<T>, unwrap_recursive_type<U>>
+struct check_recursive_wrapper_duplicate_impl<T, U>
+    : std::false_type
+{
+    // ReSharper disable once CppStaticAssertFailure
+    static_assert(
+        false,
+        "rvariant cannot contain both `T` and `recursive_wrapper` of `T` "
+        "([rvariant.rvariant.general])."
+    );
+};
+
+template<class T, class... Ts>
+struct check_recursive_wrapper_duplicate : std::true_type {};
+
+template<class T, class... Ts> requires (sizeof...(Ts) > 0)
+struct check_recursive_wrapper_duplicate<T, T, Ts...>
+    : std::conjunction<check_recursive_wrapper_duplicate_impl<T, Ts>...>
+{};
+
+template<class T, class List>
+struct non_wrapped_exactly_once : exactly_once<T, List>
+{
+    static_assert(
+        !detail::is_recursive_wrapper_like_v<T>,
+        "Constructing a `recursive_wrapper` alternative with its full type as the tag is "
+        "prohibited to avoid confusion; just specify `T` instead."
+    );
+};
+
+template<class T, class List>
+constexpr bool non_wrapped_exactly_once_v = non_wrapped_exactly_once<T, List>::value;
+
+
+template<class T, class Variant>
+struct exactly_once_index
+{
+    static_assert(exactly_once_v<T, typename Variant::unwrapped_types>, "`T` or `recursive_wrapper<T>` or `recursive_wrapper_alloca<T, A>` must occur exactly once in Ts...");
+    static constexpr std::size_t value = find_index_v<T, typename Variant::unwrapped_types>;
+};
+
+template<class T, class Variant>
+inline constexpr std::size_t exactly_once_index_v = exactly_once_index<T, Variant>::value;
+
+
+template<class T, class U = T const&>
+struct variant_copy_assignable : std::conjunction<std::is_constructible<T, U>, std::is_assignable<T&, U>>
+{
+    static_assert(!std::is_reference_v<T>);
+    static_assert(std::is_lvalue_reference_v<U>);
+};
+
+template<class T, class U = T const&>
+struct variant_nothrow_copy_assignable : std::conjunction<std::is_nothrow_constructible<T, U>, std::is_nothrow_assignable<T&, U>>
+{
+    static_assert(!std::is_reference_v<T>);
+    static_assert(std::is_lvalue_reference_v<U>);
+    static_assert(variant_copy_assignable<T, U>::value);
+};
+
+template<class T, class U = T&&>
+struct variant_move_assignable : std::conjunction<std::is_constructible<T, U>, std::is_assignable<T&, U>>
+{
+    static_assert(!std::is_reference_v<T>);
+    static_assert(std::is_rvalue_reference_v<U>);
+};
+
+template<class T, class U = T&&>
+struct variant_nothrow_move_assignable : std::conjunction<std::is_nothrow_constructible<T, U>, std::is_nothrow_assignable<T&, U>>
+{
+    static_assert(!std::is_reference_v<T>);
+    static_assert(std::is_rvalue_reference_v<U>);
+    static_assert(variant_move_assignable<T, U>::value);
+};
+
+template<class T, class U>
+struct variant_assignable : std::conjunction<std::is_constructible<T, U>, std::is_assignable<T&, U>>
+{
+    static_assert(!std::is_reference_v<T>);
+};
+
+template<class T, class U>
+struct variant_nothrow_assignable : std::conjunction<std::is_nothrow_constructible<T, U>, std::is_nothrow_assignable<T&, U>>
+{
+    static_assert(!std::is_reference_v<T>);
+    static_assert(variant_assignable<T, U>::value);
+};
+
 
 template<class R, class Compare, class... Ts>
 struct relops_visitor;
@@ -371,7 +467,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                 } else if constexpr (std::is_same_v<T_old_i, T>) { // NOT type-changing
                     if constexpr (
                         (sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_move_assignable_v<T>) ||
-                        is_ttp_specialization_of_v<T, recursive_wrapper>
+                        detail::is_recursive_wrapper_like_v<T>
                     ) {
                         T tmp{std::forward<Args>(args)...}; // may throw
                         static_assert(noexcept(t_old_i = std::move(tmp)));
@@ -394,7 +490,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                 } else { // type-changing
                     if constexpr (
                         (sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_move_constructible_v<T>) ||
-                        is_ttp_specialization_of_v<T, recursive_wrapper>
+                        detail::is_recursive_wrapper_like_v<T>
                     ) {
                         T tmp{std::forward<Args>(args)...}; // may throw
                         t_old_i.~T_old_i();
@@ -598,7 +694,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
                 using maybe_wrapped = detail::select_maybe_wrapped<unwrap_recursive_type<Uj>, Ts...>;
                 using VT = maybe_wrapped::type;
                 static_assert(std::is_same_v<unwrap_recursive_type<VT>, unwrap_recursive_type<Uj>>);
-                base_type::template construct_on_valueless<maybe_wrapped::index>(detail::forward_maybe_wrapped<VT>(uj));
+                base_type::template construct_on_valueless<maybe_wrapped::index>(uj);
             }
         });
     }
@@ -621,7 +717,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
                 using VT = maybe_wrapped::type;
                 static_assert(std::is_same_v<unwrap_recursive_type<VT>, unwrap_recursive_type<Uj>>);
                 static_assert(std::is_rvalue_reference_v<Uj&&>);
-                base_type::template construct_on_valueless<maybe_wrapped::index>(detail::forward_maybe_wrapped<VT>(std::move(uj))); // NOLINT(bugprone-move-forwarding-reference)
+                base_type::template construct_on_valueless<maybe_wrapped::index>(std::move(uj)); // NOLINT(bugprone-move-forwarding-reference)
             }
         });
     }
@@ -654,16 +750,16 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
                 {
                     constexpr std::size_t VTi = maybe_wrapped::index;
                     if constexpr (i == std::variant_npos) { // this is valueless, rhs holds value
-                        base_type::template construct_on_valueless<VTi>(detail::forward_maybe_wrapped<VT>(uj));
+                        base_type::template construct_on_valueless<VTi>(uj);
 
                     } else if constexpr (std::is_same_v<unwrap_recursive_type<Ti>, unwrap_recursive_type<Uj>>) {
-                        ti = detail::forward_maybe_wrapped<Ti>(uj);
+                        ti = uj;
 
                     } else if constexpr (std::is_nothrow_constructible_v<VT, Uj const&> || !std::is_nothrow_move_constructible_v<VT>) {
-                        base_type::template reset_construct<i, VTi>(detail::forward_maybe_wrapped<VT>(uj));
+                        base_type::template reset_construct<i, VTi>(uj);
 
                     } else {
-                        VT tmp = detail::forward_maybe_wrapped<VT>(uj); // may throw
+                        VT tmp(uj); // may throw
                         base_type::template reset_construct<i, VTi>(std::move(tmp));
                     }
                 });
@@ -699,13 +795,13 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
                     static_assert(std::is_rvalue_reference_v<Uj&&>);
                     constexpr std::size_t VTi = maybe_wrapped::index;
                     if constexpr (i == std::variant_npos) { // this is valueless, rhs holds value
-                        base_type::template construct_on_valueless<VTi>(detail::forward_maybe_wrapped<VT>(std::move(uj)));  // NOLINT(bugprone-move-forwarding-reference)
+                        base_type::template construct_on_valueless<VTi>(std::move(uj));  // NOLINT(bugprone-move-forwarding-reference)
 
                     } else if constexpr (std::is_same_v<unwrap_recursive_type<Ti>, unwrap_recursive_type<Uj>>) {
-                        ti = detail::forward_maybe_wrapped<Ti>(std::move(uj)); // NOLINT(bugprone-move-forwarding-reference)
+                        ti = std::move(uj); // NOLINT(bugprone-move-forwarding-reference)
 
                     } else {
-                        base_type::template reset_construct<i, VTi>(detail::forward_maybe_wrapped<VT>(std::move(uj)));  // NOLINT(bugprone-move-forwarding-reference)
+                        base_type::template reset_construct<i, VTi>(std::move(uj));  // NOLINT(bugprone-move-forwarding-reference)
                     }
                 });
             }
@@ -1095,7 +1191,7 @@ private:
 // -------------------------------------------------
 
 template<class T, class... Ts>
-    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires detail::is_recursive_wrapper_like_v<T>
 [[nodiscard]] constexpr bool holds_alternative(rvariant<Ts...> const& v) noexcept = delete;
 
 template<class T, class... Ts>
@@ -1196,19 +1292,19 @@ get(rvariant<Ts...> const&& v IRIS_LIFETIMEBOUND)
 }
 
 template<class T, class... Ts>
-    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires detail::is_recursive_wrapper_like_v<T>
 constexpr T& get(rvariant<Ts...>&) = delete;
 
 template<class T, class... Ts>
-    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires detail::is_recursive_wrapper_like_v<T>
 constexpr T&& get(rvariant<Ts...>&&) = delete;
 
 template<class T, class... Ts>
-    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires detail::is_recursive_wrapper_like_v<T>
 constexpr T const& get(rvariant<Ts...> const&) = delete;
 
 template<class T, class... Ts>
-    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires detail::is_recursive_wrapper_like_v<T>
 constexpr T const&& get(rvariant<Ts...> const&&) = delete;
 
 // -------------------------------------------------
@@ -1277,19 +1373,19 @@ unsafe_get(rvariant<Ts...> const&& v IRIS_LIFETIMEBOUND) noexcept
 }
 
 template<class T, class... Ts>
-    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires detail::is_recursive_wrapper_like_v<T>
 constexpr T& unsafe_get(rvariant<Ts...>&) = delete;
 
 template<class T, class... Ts>
-    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires detail::is_recursive_wrapper_like_v<T>
 constexpr T&& unsafe_get(rvariant<Ts...>&&) = delete;
 
 template<class T, class... Ts>
-    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires detail::is_recursive_wrapper_like_v<T>
 constexpr T const& unsafe_get(rvariant<Ts...> const&) = delete;
 
 template<class T, class... Ts>
-    requires is_ttp_specialization_of_v<T, recursive_wrapper>
+    requires detail::is_recursive_wrapper_like_v<T>
 constexpr T const&& unsafe_get(rvariant<Ts...> const&&) = delete;
 
 // ---------------------------------------------

@@ -1,4 +1,4 @@
-﻿#ifndef IRIS_ZZ_RVARIANT_RECURSIVE_WRAPPER_PMR_HPP
+#ifndef IRIS_ZZ_RVARIANT_RECURSIVE_WRAPPER_PMR_HPP
 #define IRIS_ZZ_RVARIANT_RECURSIVE_WRAPPER_PMR_HPP
 
 // SPDX-License-Identifier: MIT
@@ -10,7 +10,7 @@
 namespace iris::pmr {
 
 template<class T>
-using recursive_wrapper = iris::recursive_wrapper<T, std::pmr::polymorphic_allocator<T>>;
+using recursive_wrapper = iris::recursive_wrapper_alloca<T, std::pmr::polymorphic_allocator<T>>;
 
 } // iris::pmr
 

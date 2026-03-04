@@ -3,9 +3,9 @@
 
 // SPDX-License-Identifier: MIT
 
+#include <iris/bits/specialization_of.hpp>
 #include <iris/compare.hpp>
 #include <iris/hash.hpp>
-#include <iris/type_traits.hpp>
 
 #include <compare>
 #include <memory>
@@ -25,13 +25,12 @@ public:
     using pointer = std::allocator_traits<Alloc>::pointer;
     using const_pointer = std::allocator_traits<Alloc>::const_pointer;
 
-
     template<class... Args>
-    constexpr explicit scoped_allocation(Alloc const& a, std::in_place_t, Args&&... args)
+    constexpr explicit scoped_allocation(Alloc const& a, Args&&... args)
         : alloc_(a)
         , ptr_(std::allocator_traits<Alloc>::allocate(alloc_, 1))
     {
-        std::allocator_traits<Alloc>::construct(alloc_, get(), std::forward<Args>(args)...);
+        std::allocator_traits<Alloc>::construct(alloc_, this->get(), std::forward<Args>(args)...);
     }
 
     constexpr ~scoped_allocation()
@@ -70,7 +69,7 @@ public:
     using const_pointer = std::allocator_traits<Allocator>::const_pointer;
 
     constexpr explicit indirect_base() requires std::is_default_constructible_v<Allocator>
-        : ptr_(make_obj())
+        : ptr_(this->make_obj())
     {}
 
     constexpr indirect_base(indirect_base const& other)
@@ -83,12 +82,12 @@ public:
 
     constexpr explicit indirect_base(std::allocator_arg_t, Allocator const& a)
         : alloc_(a)
-        , ptr_(make_obj())
+        , ptr_(this->make_obj())
     {}
 
     constexpr indirect_base(std::allocator_arg_t, Allocator const& a, indirect_base const& other)
         : alloc_(a)
-        , ptr_(other.ptr_ ? make_obj(std::as_const(*other.ptr_)) : nullptr)
+        , ptr_(other.ptr_ ? this->make_obj(std::as_const(*other.ptr_)) : nullptr)
     {
         static_assert(std::is_copy_constructible_v<T>);
     }
@@ -103,7 +102,7 @@ public:
         : alloc_(a)
         , ptr_(alloc_ == other.alloc_
             ? std::exchange(other.ptr_, nullptr)
-            : make_obj(*std::move(other))
+            : this->make_obj(*std::move(other))
         )
     {}
 
@@ -114,7 +113,7 @@ public:
             std::is_constructible_v<T, U> &&
             std::is_default_constructible_v<Allocator>
     constexpr explicit indirect_base(U&& u)
-        : ptr_(make_obj(std::forward<U>(u)))
+        : ptr_(this->make_obj(std::forward<U>(u)))
     {}
 
     template<class U = T>
@@ -124,7 +123,7 @@ public:
             std::is_constructible_v<T, U>
     constexpr explicit indirect_base(std::allocator_arg_t, Allocator const& a, U&& u)
         : alloc_(a)
-        , ptr_(make_obj(std::forward<U>(u)))
+        , ptr_(this->make_obj(std::forward<U>(u)))
     {}
 
     template<class... Us>
@@ -132,7 +131,7 @@ public:
             std::is_constructible_v<T, Us...> &&
             std::is_default_constructible_v<Allocator>
     constexpr explicit indirect_base(std::in_place_t, Us&&... us)
-        : ptr_(make_obj(std::forward<Us>(us)...))
+        : ptr_(this->make_obj(std::forward<Us>(us)...))
     {}
 
     template<class... Us>
@@ -140,7 +139,7 @@ public:
             std::is_constructible_v<T, Us...>
     constexpr explicit indirect_base(std::allocator_arg_t, Allocator const& a, std::in_place_t, Us&&... us)
         : alloc_(a)
-        , ptr_(make_obj(std::forward<Us>(us)...))
+        , ptr_(this->make_obj(std::forward<Us>(us)...))
     {}
 
     template<class I, class... Us>
@@ -148,7 +147,7 @@ public:
             std::is_constructible_v<T, std::initializer_list<I>&, Us...> &&
             std::is_default_constructible_v<Allocator>
     constexpr explicit indirect_base(std::in_place_t, std::initializer_list<I> il, Us&&... us)
-        : ptr_(make_obj(il, std::forward<Us>(us)...))
+        : ptr_(this->make_obj(il, std::forward<Us>(us)...))
     {}
 
     template<class I, class... Us>
@@ -156,13 +155,13 @@ public:
             std::is_constructible_v<T, std::initializer_list<I>&, Us...>
     constexpr explicit indirect_base(std::allocator_arg_t, Allocator const& a, std::in_place_t, std::initializer_list<I> il, Us&&... us)
         : alloc_(a)
-        , ptr_(make_obj(il, std::forward<Us>(us)...))
+        , ptr_(this->make_obj(il, std::forward<Us>(us)...))
     {}
 
     constexpr ~indirect_base() noexcept
     {
         if (ptr_) [[likely]] {
-            destroy_deallocate();
+            this->destroy_deallocate();
         }
     }
 
@@ -220,7 +219,7 @@ public:
                 // other.ptr_ && (ptr_ || !ptr_)
                 // either allocator is not equal or `this` does not contain value; create copy from `other`
                 if (ptr_) [[likely]] {
-                    destroy_deallocate();
+                    this->destroy_deallocate();
                     ptr_ = nullptr; // make it safer
                 }
                 if constexpr (pocca) {
@@ -234,7 +233,7 @@ public:
 
         } else [[unlikely]] { // !other.ptr_
             if (ptr_) [[likely]] {
-                destroy_deallocate();
+                this->destroy_deallocate();
                 ptr_ = nullptr; // make it safer
             }
             if constexpr (pocca) {
@@ -261,7 +260,7 @@ public:
         if (other.ptr_) [[likely]] {
             if constexpr (std::allocator_traits<Allocator>::is_always_equal::value) {
                 if (ptr_) [[likely]] {
-                    destroy_deallocate();
+                    this->destroy_deallocate();
                 }
                 ptr_ = std::exchange(other.ptr_, nullptr);
                 if constexpr (pocma) {
@@ -271,7 +270,7 @@ public:
 
             } else if (alloc_ == other.alloc_) {
                 if (ptr_) [[likely]] {
-                    destroy_deallocate();
+                    this->destroy_deallocate();
                 }
                 ptr_ = std::exchange(other.ptr_, nullptr);
                 if constexpr (pocma) {
@@ -281,7 +280,7 @@ public:
 
             } else {
                 if (ptr_) [[likely]] {
-                    destroy_deallocate();
+                    this->destroy_deallocate();
                 }
                 if constexpr (pocma) {
                     ptr_ = other.make_obj(std::move(*other));
@@ -293,7 +292,7 @@ public:
             }
         } else [[unlikely]] { // !other.ptr_
             if (ptr_) [[likely]] {
-                destroy_deallocate();
+                this->destroy_deallocate();
                 ptr_ = nullptr;
             }
             if constexpr (pocma) {
@@ -314,7 +313,7 @@ public:
             **this = std::forward<U>(u);
 
         } else [[unlikely]] {
-            ptr_ = make_obj(std::forward<U>(u));
+            ptr_ = this->make_obj(std::forward<U>(u));
         }
         return *this;
     }
@@ -361,7 +360,7 @@ private:
     template<class... Args>
     [[nodiscard]] constexpr T* make_obj(Args&&... args) const
     {
-        detail::scoped_allocation sa(alloc_, std::in_place, std::forward<Args>(args)...);
+        detail::scoped_allocation sa(alloc_, std::forward<Args>(args)...);
         return sa.release();
     }
 
