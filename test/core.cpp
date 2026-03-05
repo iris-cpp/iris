@@ -5,11 +5,14 @@
 #include <iris/type_traits.hpp>
 #include <iris/requirements.hpp>
 #include <iris/compare.hpp>
+#include <iris/string.hpp>
 #include <iris/fixed_string.hpp>
 #include <iris/exception.hpp>
 #include <iris/hash.hpp>
 
 #include <concepts>
+#include <string>
+#include <string_view>
 #include <utility>
 #include <type_traits>
 #include <ranges>
@@ -446,6 +449,45 @@ TEST_CASE("synth_three_way")
     STATIC_CHECK(std::same_as<iris::cmp::synth_three_way_result<NoThreeWay>, std::weak_ordering>);
     STATIC_CHECK(noexcept(iris::cmp::synth_three_way{}(NoThreeWay{0}, NoThreeWay{1})));
     STATIC_CHECK(iris::cmp::synth_three_way{}(NoThreeWay{0}, NoThreeWay{1}) == std::weak_ordering::less);
+}
+
+TEST_CASE("StringLike")
+{
+    STATIC_CHECK(iris::StringLike<char const*>);
+    STATIC_CHECK(iris::StringLike<wchar_t const*>);
+    STATIC_CHECK(iris::StringLike<char8_t const*>);
+    STATIC_CHECK(iris::StringLike<char16_t const*>);
+    STATIC_CHECK(iris::StringLike<char32_t const*>);
+
+    STATIC_CHECK(iris::StringLike<std::string>);
+    STATIC_CHECK(iris::StringLike<std::wstring>);
+    STATIC_CHECK(iris::StringLike<std::u8string>);
+    STATIC_CHECK(iris::StringLike<std::u16string>);
+    STATIC_CHECK(iris::StringLike<std::u32string>);
+
+    STATIC_CHECK(iris::StringLike<std::string_view>);
+    STATIC_CHECK(iris::StringLike<std::wstring_view>);
+    STATIC_CHECK(iris::StringLike<std::u8string_view>);
+    STATIC_CHECK(iris::StringLike<std::u16string_view>);
+    STATIC_CHECK(iris::StringLike<std::u32string_view>);
+
+    struct InvalidValueRange
+    {
+        struct Invalid { Invalid(Invalid const&) = delete; };
+
+        using value_type = Invalid;
+        value_type const* begin() const { return nullptr; }
+        value_type const* end() const { return nullptr; }
+        std::size_t size() const { return 0; }
+    };
+    static_assert(std::ranges::sized_range<InvalidValueRange>);
+    static_assert(std::ranges::contiguous_range<InvalidValueRange>);
+
+    // hard error as per [strings.general]/1
+    //std::basic_string_view sv{InvalidValueRange{}};
+
+    // should NOT yield hard error
+    STATIC_CHECK(!iris::StringLike<InvalidValueRange>);
 }
 
 TEST_CASE("fixed_string")
