@@ -69,6 +69,7 @@ endif()
 # https://github.com/catchorg/Catch2/blob/devel/docs/configuration.md
 set(CATCH_CONFIG_FAST_COMPILE ON)
 set(CATCH_CONFIG_NO_USE_BUILTIN_CONSTANT_P ON)
+set(CATCH_CONFIG_DISABLE_EXCEPTIONS ON) # disable default `catch(...)` to enable debugger
 
 include(FetchContent)
 FetchContent_Declare(
