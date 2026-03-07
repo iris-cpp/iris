@@ -194,6 +194,14 @@ TEST_CASE("is_valid")
         std::u8string const utf8_with_surrogates_u8(std::from_range, utf8_with_surrogates);
         CHECK(unicode::is_valid(utf8_with_surrogates));
     }
+
+    {
+        constexpr char const* twochars = "ab";
+        CHECK(unicode::is_valid(twochars));
+
+        std::string const two_chars_string(twochars);
+        CHECK(unicode::is_valid(two_chars_string));
+    }
 }
 
 TEST_CASE("find_invalid")
@@ -396,15 +404,6 @@ TEST_CASE("utf8to32")
     std::u32string utf32result = utf8to32(twochars);
     CHECK(utf32result.size() == 2);
 }
-
-TEST_CASE("string_class_and_literals")
-{
-    char const* twochars = "ab";
-    CHECK(is_valid(twochars));
-    std::string const two_chars_string(twochars);
-    CHECK(is_valid(two_chars_string));
-}
-
 
 TEST_CASE("utf16tou8")
 {
