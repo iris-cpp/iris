@@ -26,77 +26,77 @@ DEALINGS IN THE SOFTWARE.
 */
 
 
-#ifndef IRIS_UTFLIB_UTF8_H
-#define IRIS_UTFLIB_UTF8_H
+#ifndef IRIS_UNICODE_STRING_HPP
+#define IRIS_UNICODE_STRING_HPP
 
 #include <concepts>
-#include <exception>
+#include <stdexcept>
 #include <iterator>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <type_traits>
+#include <utility>
 
-#include <cstring>
-
-namespace iris::utflib
+namespace iris::unicode
 {
-    template <typename T>
+    template<class T>
     concept octet = std::integral<T> && sizeof(T) == 1;
 
-    template <typename T>
+    template<class T>
     concept utf8char = octet<T> && (std::same_as<T, char> || std::same_as<T, char8_t>);
-    
-    template <typename T>
+
+    template<class T>
     concept utf16char = std::same_as<T, char16_t>;
-    
-    template <typename T>
+
+    template<class T>
     concept utf32char = std::same_as<T, char32_t>;
 
-    template <typename It>
-    concept octet_iterator = std::input_iterator<It> && octet<std::iter_value_t<It>>;
+    template<class It>
+    concept octet_input_iterator = std::input_iterator<It> && octet<std::iter_value_t<It>>;
 
-    template <typename It>
-    concept utf8_iterator = octet_iterator<It> && utf8char<std::iter_value_t<It>>;
+    template<class It>
+    concept utf8_input_iterator = octet_input_iterator<It> && utf8char<std::iter_value_t<It>>;
 
-    template <typename It>
-    concept utf16_iterator = std::input_iterator<It> && utf16char<std::iter_value_t<It>>;
-    
-    template <typename It>
-    concept utf32_iterator = std::input_iterator<It> && utf32char<std::iter_value_t<It>>;
+    template<class It>
+    concept utf16_input_iterator = std::input_iterator<It> && utf16char<std::iter_value_t<It>>;
+
+    template<class It>
+    concept utf32_input_iterator = std::input_iterator<It> && utf32char<std::iter_value_t<It>>;
 
     namespace traits
     {
-        template <typename T, typename = void>
+        template<class T, class = void>
         struct is_nothrow_dereferenceable : std::false_type {};
 
-        template <typename T>
+        template<class T>
         struct is_nothrow_dereferenceable<T, std::void_t<decltype(*std::declval<T>())>> : std::bool_constant<noexcept(*std::declval<T>())> {};
 
-        template <typename T>
+        template<class T>
         inline constexpr bool is_nothrow_dereferenceable_v = is_nothrow_dereferenceable<T>::value;
-        
-        template <typename T, typename = void>
+
+        template<class T, class = void>
         struct is_nothrow_prefix_incrementable : std::false_type {};
 
-        template <typename T>
+        template<class T>
         struct is_nothrow_prefix_incrementable<T, std::void_t<decltype(++std::declval<T>())>> : std::bool_constant<noexcept(++std::declval<T>())> {};
 
-        template <typename T>
+        template<class T>
         inline constexpr bool is_nothrow_prefix_incrementable_v = is_nothrow_prefix_incrementable<T>::value;
-        
-        template <typename T, typename = void>
+
+        template<class T, class = void>
         struct is_nothrow_postfix_incrementable : std::false_type {};
 
-        template <typename T>
+        template<class T>
         struct is_nothrow_postfix_incrementable<T, std::void_t<decltype(std::declval<T>()++)>> : std::bool_constant<noexcept(std::declval<T>()++)> {};
 
-        template <typename T>
+        template<class T>
         inline constexpr bool is_nothrow_postfix_incrementable_v = is_nothrow_postfix_incrementable<T>::value;
 
-        template <typename It, typename Se>
+        template<class It, class Se>
         struct is_nothrow_sentinel : std::false_type {};
 
-        template <typename It, typename Se>
+        template<class It, class Se>
             requires std::sentinel_for<Se, It>
         struct is_nothrow_sentinel<It, Se> : std::bool_constant<
             noexcept(std::declval<It&>() == std::declval<Se&>()) &&
@@ -106,7 +106,7 @@ namespace iris::utflib
         >
         {};
 
-        template <typename It, typename Se>
+        template<class It, class Se>
         inline constexpr bool is_nothrow_sentinel_v = is_nothrow_sentinel<It, Se>::value;
     } // namespace traits
 
@@ -128,7 +128,7 @@ namespace iris::utflib
 
         enum class utf_error { OK, NOT_ENOUGH_ROOM, INVALID_LEAD, INCOMPLETE_SEQUENCE, OVERLONG_SEQUENCE, INVALID_CODE_POINT };
 
-        template <octet Octet>
+        template<octet Octet>
         [[nodiscard]] constexpr char8_t mask8(Octet oc) noexcept
         {
             return static_cast<char8_t>(0xff & oc);
@@ -139,7 +139,7 @@ namespace iris::utflib
             return static_cast<char16_t>(0xffff & oc);
         }
 
-        template <octet Octet>
+        template<octet Octet>
         [[nodiscard]] constexpr bool is_trail(Octet oc) noexcept
         {
             return ((internal::mask8(oc) >> 6) == 0x2);
@@ -185,7 +185,7 @@ namespace iris::utflib
             return false;
         }
 
-        template <octet_iterator It>
+        template<octet_input_iterator It>
         [[nodiscard]] constexpr int sequence_length(It lead_it)
             noexcept(traits::is_nothrow_dereferenceable_v<It&>)
         {
@@ -203,7 +203,7 @@ namespace iris::utflib
         }
 
         /// Helper for get_sequence_x
-        template <octet_iterator It, std::sentinel_for<It> Se>
+        template<octet_input_iterator It, std::sentinel_for<It> Se>
         constexpr utf_error increase_safely(It& it, Se end)
             noexcept(std::conjunction_v<
                 traits::is_nothrow_dereferenceable<It&>,
@@ -228,7 +228,7 @@ namespace iris::utflib
     } while (false)
 
         /// get_sequence_x functions decode utf-8 sequences of the length x
-        template <octet_iterator It, std::sentinel_for<It> Se>
+        template<octet_input_iterator It, std::sentinel_for<It> Se>
         constexpr utf_error get_sequence_1(It& it, Se end, char32_t& code_point)
             noexcept(std::conjunction_v<
                 traits::is_nothrow_dereferenceable<It&>,
@@ -243,7 +243,7 @@ namespace iris::utflib
             return utf_error::OK;
         }
 
-        template <octet_iterator It, std::sentinel_for<It> Se>
+        template<octet_input_iterator It, std::sentinel_for<It> Se>
         constexpr utf_error get_sequence_2(It& it, Se end, char32_t& code_point)
             noexcept(std::conjunction_v<
                 traits::is_nothrow_dereferenceable<It&>,
@@ -263,7 +263,7 @@ namespace iris::utflib
             return utf_error::OK;
         }
 
-        template <octet_iterator It, std::sentinel_for<It> Se>
+        template<octet_input_iterator It, std::sentinel_for<It> Se>
         constexpr utf_error get_sequence_3(It& it, Se end, char32_t& code_point)
             noexcept(std::conjunction_v<
                 traits::is_nothrow_dereferenceable<It&>,
@@ -287,7 +287,7 @@ namespace iris::utflib
             return utf_error::OK;
         }
 
-        template <octet_iterator It, std::sentinel_for<It> Se>
+        template<octet_input_iterator It, std::sentinel_for<It> Se>
         constexpr utf_error get_sequence_4(It& it, Se end, char32_t& code_point)
             noexcept(std::conjunction_v<
                 traits::is_nothrow_dereferenceable<It&>,
@@ -317,7 +317,7 @@ namespace iris::utflib
 
 #undef IRIS_UTFLIB_INCREASE_AND_RETURN_ON_ERROR
 
-        template <octet_iterator It, std::sentinel_for<It> Se>
+        template<octet_input_iterator It, std::sentinel_for<It> Se>
             requires std::forward_iterator<It>
         constexpr utf_error validate_next(It& it, Se end, char32_t& code_point)
             noexcept(std::conjunction_v<
@@ -376,7 +376,7 @@ namespace iris::utflib
             return err;
         }
 
-        template <octet_iterator It, std::sentinel_for<It> Se>
+        template<octet_input_iterator It, std::sentinel_for<It> Se>
             requires std::forward_iterator<It>
         constexpr utf_error validate_next(It& it, Se end)
             noexcept(noexcept(internal::validate_next(it, end, std::declval<char32_t&>())))
@@ -385,7 +385,7 @@ namespace iris::utflib
             return internal::validate_next(it, end, ignored);
         }
 
-        template <utf16_iterator It, std::sentinel_for<It> Se>
+        template<utf16_input_iterator It, std::sentinel_for<It> Se>
             requires std::forward_iterator<It>
         constexpr utf_error validate_next16(It& it, Se end, char32_t& code_point)
             noexcept(std::conjunction_v<
@@ -429,10 +429,9 @@ namespace iris::utflib
             return err;
         }
 
-        template <typename It, octet octet_type = std::iter_value_t<It>>
-            requires std::output_iterator<It, octet_type>
-        constexpr It append(char32_t cp, It result)
-            noexcept(noexcept(*result++ = std::declval<octet_type>()))
+        template<class OutIt, octet octet_type = std::iter_value_t<OutIt>>
+            requires std::output_iterator<OutIt, octet_type>
+        constexpr OutIt append(char32_t cp, OutIt result) noexcept
         {
             if (cp < 0x80) // one octet
                 *(result++) = static_cast<octet_type>(cp);
@@ -452,14 +451,14 @@ namespace iris::utflib
             return result;
         }
 
-        template <typename container_type>
+        template<class container_type>
         constexpr std::back_insert_iterator<container_type> append(char32_t cp, std::back_insert_iterator<container_type> result)
-            noexcept(noexcept(internal::append<std::back_insert_iterator<container_type>, typename container_type::value_type>(cp, result)))
+            noexcept(noexcept(internal::append<std::back_insert_iterator<container_type>, class container_type::value_type>(cp, result)))
         {
-            return internal::append<std::back_insert_iterator<container_type>, typename container_type::value_type>(cp, result);
+            return internal::append<std::back_insert_iterator<container_type>, class container_type::value_type>(cp, result);
         }
 
-        template <std::output_iterator<char16_t> It>
+        template<std::output_iterator<char16_t> It>
         constexpr It append16(char32_t cp, It result)
             noexcept(noexcept(*result++ = std::declval<char16_t>()))
         {
@@ -534,7 +533,7 @@ namespace iris::utflib
     // Byte order mark
     constexpr char8_t bom[] = {0xef, 0xbb, 0xbf};
 
-    template <octet_iterator It, std::sentinel_for<It> Se>
+    template<octet_input_iterator It, std::sentinel_for<It> Se>
     [[nodiscard]] constexpr It find_invalid(It it, Se se)
         noexcept(noexcept(internal::validate_next(it, se)) && std::is_nothrow_copy_constructible_v<It>)
     {
@@ -547,39 +546,39 @@ namespace iris::utflib
     }
 
     [[nodiscard]] constexpr std::size_t find_invalid(std::string_view s)
-        noexcept(noexcept(utflib::find_invalid(s.begin(), s.end())))
+        noexcept(noexcept(unicode::find_invalid(s.begin(), s.end())))
     {
-        std::string_view::const_iterator invalid = utflib::find_invalid(s.begin(), s.end());
+        std::string_view::const_iterator invalid = unicode::find_invalid(s.begin(), s.end());
         return (invalid == s.end()) ? std::string_view::npos : static_cast<std::size_t>(invalid - s.begin());
     }
 
     [[nodiscard]] constexpr std::size_t find_invalid(std::u8string_view s)
-        noexcept(noexcept(utflib::find_invalid(s.begin(), s.end())))
+        noexcept(noexcept(unicode::find_invalid(s.begin(), s.end())))
     {
-        std::u8string_view::const_iterator invalid = utflib::find_invalid(s.begin(), s.end());
+        std::u8string_view::const_iterator invalid = unicode::find_invalid(s.begin(), s.end());
         return (invalid == s.end()) ? std::u8string_view::npos : static_cast<std::size_t>(invalid - s.begin());
     }
 
-    template <octet_iterator It, std::sentinel_for<It> Se>
+    template<octet_input_iterator It, std::sentinel_for<It> Se>
     [[nodiscard]] constexpr bool is_valid(It it, Se se)
-        noexcept(noexcept(utflib::find_invalid(it, se)) && traits::is_nothrow_sentinel_v<It, Se>)
+        noexcept(noexcept(unicode::find_invalid(it, se)) && traits::is_nothrow_sentinel_v<It, Se>)
     {
-        return (utflib::find_invalid(it, se) == se);
+        return (unicode::find_invalid(it, se) == se);
     }
 
     [[nodiscard]] constexpr bool is_valid(std::string_view s)
-        noexcept(noexcept(utflib::is_valid(s.begin(), s.end())))
+        noexcept(noexcept(unicode::is_valid(s.begin(), s.end())))
     {
-        return utflib::is_valid(s.begin(), s.end());
+        return unicode::is_valid(s.begin(), s.end());
     }
 
     [[nodiscard]] constexpr bool is_valid(std::u8string_view s)
-        noexcept(noexcept(utflib::is_valid(s.begin(), s.end())))
+        noexcept(noexcept(unicode::is_valid(s.begin(), s.end())))
     {
-        return utflib::is_valid(s.begin(), s.end());
+        return unicode::is_valid(s.begin(), s.end());
     }
 
-    template <octet_iterator It, std::sentinel_for<It> Se>
+    template<octet_input_iterator It, std::sentinel_for<It> Se>
     [[nodiscard]] constexpr bool starts_with_bom(It it, Se end)
         noexcept(noexcept(internal::mask8(*it++)) && traits::is_nothrow_sentinel_v<It, Se>)
     {
@@ -587,19 +586,19 @@ namespace iris::utflib
     }
 
     [[nodiscard]] constexpr bool starts_with_bom(std::string_view s)
-        noexcept(noexcept(utflib::starts_with_bom(s.begin(), s.end())))
+        noexcept(noexcept(unicode::starts_with_bom(s.begin(), s.end())))
     {
-        return utflib::starts_with_bom(s.begin(), s.end());
+        return unicode::starts_with_bom(s.begin(), s.end());
     }
 
     [[nodiscard]] constexpr bool starts_with_bom(std::u8string_view s)
-        noexcept(noexcept(utflib::starts_with_bom(s.begin(), s.end())))
+        noexcept(noexcept(unicode::starts_with_bom(s.begin(), s.end())))
     {
-        return utflib::starts_with_bom(s.begin(), s.end());
+        return unicode::starts_with_bom(s.begin(), s.end());
     }
 
-    template <typename It>  // TODO: add constraints
-    constexpr It append(char32_t cp, It result)
+    template<class OutIt>
+    constexpr OutIt append(char32_t cp, OutIt result)
     {
         if (!internal::is_code_point_valid(cp))
             throw invalid_code_point(cp);
@@ -609,15 +608,15 @@ namespace iris::utflib
 
     constexpr void append(char32_t cp, std::string& s)
     {
-        utflib::append(cp, std::back_inserter(s));
+        unicode::append(cp, std::back_inserter(s));
     }
 
     constexpr void append(char32_t cp, std::u8string& s)
     {
-        utflib::append(cp, std::back_inserter(s));
+        unicode::append(cp, std::back_inserter(s));
     }
 
-    template <typename It>  // TODO: add constraints
+    template<class It>  // TODO: add constraints
     constexpr It append16(char32_t cp, It result)
     {
         if (!internal::is_code_point_valid(cp))
@@ -628,10 +627,10 @@ namespace iris::utflib
 
     constexpr void append16(char32_t cp, std::u16string& s)
     {
-        utflib::append16(cp, std::back_inserter(s));
+        unicode::append16(cp, std::back_inserter(s));
     }
 
-    template <octet_iterator It, std::sentinel_for<It> Se, typename Out>  // TODO: add constraints
+    template<octet_input_iterator It, std::sentinel_for<It> Se, class Out>  // TODO: add constraints
     constexpr Out replace_invalid(It start, Se end, Out out, char32_t replacement)
     {
         while (start != end) {
@@ -643,17 +642,17 @@ namespace iris::utflib
                         *out++ = *it;
                     break;
                 case internal::utf_error::NOT_ENOUGH_ROOM:
-                    out   = utflib::append(replacement, out);
+                    out   = unicode::append(replacement, out);
                     start = end;
                     break;
                 case internal::utf_error::INVALID_LEAD:
-                    out = utflib::append(replacement, out);
+                    out = unicode::append(replacement, out);
                     ++start;
                     break;
                 case internal::utf_error::INCOMPLETE_SEQUENCE:
                 case internal::utf_error::OVERLONG_SEQUENCE:
                 case internal::utf_error::INVALID_CODE_POINT:
-                    out = utflib::append(replacement, out);
+                    out = unicode::append(replacement, out);
                     ++start;
                     // just one replacement mark for the sequence
                     while (start != end && internal::is_trail(*start))
@@ -664,11 +663,11 @@ namespace iris::utflib
         return out;
     }
 
-    template <octet_iterator It, std::sentinel_for<It> Se, typename Out>  // TODO: add constraints
+    template<octet_input_iterator It, std::sentinel_for<It> Se, class Out>  // TODO: add constraints
     constexpr Out replace_invalid(It start, Se end, Out out)
     {
         constexpr char32_t replacement_marker = static_cast<char32_t>(internal::mask16(0xfffd));
-        return utflib::replace_invalid(start, end, out, replacement_marker);
+        return unicode::replace_invalid(start, end, out, replacement_marker);
     }
 
     [[nodiscard]] constexpr std::string replace_invalid(std::string_view s, char32_t replacement)
@@ -699,7 +698,7 @@ namespace iris::utflib
         return result;
     }
 
-    template <octet_iterator It, std::sentinel_for<It> Se>
+    template<octet_input_iterator It, std::sentinel_for<It> Se>
     [[nodiscard]] constexpr char32_t next(It& it, Se end)
     {
         char32_t cp               = 0;
@@ -719,7 +718,7 @@ namespace iris::utflib
         return cp;
     }
 
-    template <utf16_iterator It, std::sentinel_for<It> Se>
+    template<utf16_input_iterator It, std::sentinel_for<It> Se>
     [[nodiscard]] constexpr char32_t next16(It& it, Se end)
     {
         char32_t cp               = 0;
@@ -729,13 +728,13 @@ namespace iris::utflib
         return cp;
     }
 
-    template <octet_iterator It, std::sentinel_for<It> Se>
+    template<octet_input_iterator It, std::sentinel_for<It> Se>
     [[nodiscard]] constexpr char32_t peek_next(It it, Se end)
     {
-        return utflib::next(it, end);
+        return unicode::next(it, end);
     }
 
-    template <octet_iterator It, std::sentinel_for<It> Se>
+    template<octet_input_iterator It, std::sentinel_for<It> Se>
     [[nodiscard]] constexpr char32_t prior(It& it, Se start)
     {
         // can't do much if it == start
@@ -747,34 +746,34 @@ namespace iris::utflib
         while (internal::is_trail(*(--it)))
             if (it == start)
                 throw invalid_utf8(*it); // error - no lead byte in the sequence
-        return utflib::peek_next(it, end);
+        return unicode::peek_next(it, end);
     }
 
-    template <octet_iterator It, std::sentinel_for<It> Se, typename distance_type>
+    template<octet_input_iterator It, std::sentinel_for<It> Se, class distance_type>
     constexpr void advance(It& it, distance_type n, Se end)
     {
         const distance_type zero(0);
         if (n < zero) {
             // backward
             for (distance_type i = n; i < zero; ++i)
-                (void)utflib::prior(it, end);
+                (void)unicode::prior(it, end);
         } else {
             // forward
             for (distance_type i = zero; i < n; ++i)
-                (void)utflib::next(it, end);
+                (void)unicode::next(it, end);
         }
     }
 
-    template <octet_iterator It, std::sentinel_for<It> Se>
-    [[nodiscard]] constexpr typename std::iterator_traits<It>::difference_type distance(It first, Se last)
+    template<octet_input_iterator It, std::sentinel_for<It> Se>
+    [[nodiscard]] constexpr class std::iterator_traits<It>::difference_type distance(It first, Se last)
     {
-        typename std::iterator_traits<It>::difference_type dist;
+        class std::iterator_traits<It>::difference_type dist;
         for (dist = 0; first != last; ++dist)
-            (void)utflib::next(first, last);
+            (void)unicode::next(first, last);
         return dist;
     }
 
-    template <utf16_iterator It, std::sentinel_for<It> Se, typename OutIt> // TODO: add constraints
+    template<utf16_input_iterator It, std::sentinel_for<It> Se, class OutIt> // TODO: add constraints
     constexpr OutIt utf16to8(It start, Se end, OutIt result)
     {
         while (start != end) {
@@ -795,7 +794,7 @@ namespace iris::utflib
             else if (internal::is_trail_surrogate(cp))
                 throw invalid_utf16(static_cast<char16_t>(cp));
 
-            result = utflib::append(cp, result);
+            result = unicode::append(cp, result);
         }
         return result;
     }
@@ -803,22 +802,22 @@ namespace iris::utflib
     [[nodiscard]] constexpr std::string utf16to8(std::u16string_view s)
     {
         std::string result;
-        utflib::utf16to8(s.begin(), s.end(), std::back_inserter(result));
+        unicode::utf16to8(s.begin(), s.end(), std::back_inserter(result));
         return result;
     }
 
     [[nodiscard]] constexpr std::u8string utf16tou8(std::u16string_view s)
     {
         std::u8string result;
-        utflib::utf16to8(s.begin(), s.end(), std::back_inserter(result));
+        unicode::utf16to8(s.begin(), s.end(), std::back_inserter(result));
         return result;
     }
 
-    template <utf8_iterator It, std::sentinel_for<It> Se, typename OutIt>  // TODO: add constraints
+    template<utf8_input_iterator It, std::sentinel_for<It> Se, class OutIt>  // TODO: add constraints
     constexpr OutIt utf8to16(It start, Se end, OutIt result)
     {
         while (start != end) {
-            const char32_t cp = utflib::next(start, end);
+            const char32_t cp = unicode::next(start, end);
             if (cp > 0xffff) { // make a surrogate pair
                 *result++ = static_cast<char16_t>((cp >> 10) + internal::LEAD_OFFSET);
                 *result++ = static_cast<char16_t>((cp & 0x3ff) + internal::TRAIL_SURROGATE_MIN);
@@ -831,22 +830,22 @@ namespace iris::utflib
     [[nodiscard]] constexpr std::u16string utf8to16(std::string_view s)
     {
         std::u16string result;
-        utflib::utf8to16(s.begin(), s.end(), std::back_inserter(result));
+        unicode::utf8to16(s.begin(), s.end(), std::back_inserter(result));
         return result;
     }
 
     [[nodiscard]] constexpr std::u16string utf8to16(std::u8string_view s)
     {
         std::u16string result;
-        utflib::utf8to16(s.begin(), s.end(), std::back_inserter(result));
+        unicode::utf8to16(s.begin(), s.end(), std::back_inserter(result));
         return result;
     }
 
-    template <utf32_iterator It, std::sentinel_for<It> Se, typename OutIt>  // TODO: add constraints
+    template<utf32_input_iterator It, std::sentinel_for<It> Se, class OutIt>  // TODO: add constraints
     constexpr OutIt utf32to8(It start, Se end, OutIt result)
     {
         while (start != end)
-            result = utflib::append(*(start++), result);
+            result = unicode::append(*(start++), result);
 
         return result;
     }
@@ -854,22 +853,22 @@ namespace iris::utflib
     [[nodiscard]] constexpr std::string utf32to8(std::u32string_view s)
     {
         std::string result;
-        utflib::utf32to8(s.begin(), s.end(), std::back_inserter(result));
+        unicode::utf32to8(s.begin(), s.end(), std::back_inserter(result));
         return result;
     }
 
     [[nodiscard]] constexpr std::u8string utf32tou8(std::u32string_view s)
     {
         std::u8string result;
-        utflib::utf32to8(s.begin(), s.end(), std::back_inserter(result));
+        unicode::utf32to8(s.begin(), s.end(), std::back_inserter(result));
         return result;
     }
 
-    template <utf8_iterator It, std::sentinel_for<It> Se, typename OutIt>
+    template<utf8_input_iterator It, std::sentinel_for<It> Se, class OutIt>
     constexpr OutIt utf8to32(It start, Se end, OutIt result)
     {
         while (start != end)
-            (*result++) = utflib::next(start, end);
+            (*result++) = unicode::next(start, end);
 
         return result;
     }
@@ -877,19 +876,19 @@ namespace iris::utflib
     [[nodiscard]] constexpr std::u32string utf8to32(std::string_view s)
     {
         std::u32string result;
-        utflib::utf8to32(s.begin(), s.end(), std::back_inserter(result));
+        unicode::utf8to32(s.begin(), s.end(), std::back_inserter(result));
         return result;
     }
 
     [[nodiscard]] constexpr std::u32string utf8to32(std::u8string_view s)
     {
         std::u32string result;
-        utflib::utf8to32(s.begin(), s.end(), std::back_inserter(result));
+        unicode::utf8to32(s.begin(), s.end(), std::back_inserter(result));
         return result;
     }
 
     // The iterator class
-    template <octet_iterator It>
+    template<octet_input_iterator It>
     class iterator
     {
         It it;
@@ -920,7 +919,7 @@ namespace iris::utflib
         [[nodiscard]] constexpr char32_t operator*() const
         {
             It temp = it;
-            return utflib::next(temp, range_end);
+            return unicode::next(temp, range_end);
         }
         [[nodiscard]] constexpr bool operator==(const iterator& rhs) const
         {
@@ -930,28 +929,28 @@ namespace iris::utflib
         }
         constexpr iterator& operator++()
         {
-            (void)utflib::next(it, range_end);
+            (void)unicode::next(it, range_end);
             return *this;
         }
         constexpr iterator operator++(int)
         {
             iterator temp = *this;
-            (void)utflib::next(it, range_end);
+            (void)unicode::next(it, range_end);
             return temp;
         }
         constexpr iterator& operator--()
         {
-            (void)utflib::prior(it, range_start);
+            (void)unicode::prior(it, range_start);
             return *this;
         }
         constexpr iterator operator--(int)
         {
             iterator temp = *this;
-            (void)utflib::prior(it, range_start);
+            (void)unicode::prior(it, range_start);
             return temp;
         }
     }; // class iterator
 
-} // namespace iris::utflib
+} // iris::unicode
 
-#endif // header guard
+#endif
