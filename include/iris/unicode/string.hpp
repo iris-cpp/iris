@@ -875,7 +875,80 @@ distance(It first, Se last)
     return dist;
 }
 
-// --------------------------------
+// ------------------------------------
+
+template<octet_input_iterator It>
+class iterator
+{
+    It it;
+    It range_start;
+    It range_end;
+
+public:
+    using value_type = char32_t;
+    using pointer = char32_t*;
+    using reference = char32_t&;
+    using difference_type = std::ptrdiff_t;
+    using iterator_category = std::bidirectional_iterator_tag;
+
+    constexpr iterator()
+        requires std::is_default_constructible_v<It>
+    = default;
+
+    constexpr explicit iterator(It octet_it, It rangestart, It rangeend)
+        : it(std::move(octet_it))
+        , range_start(std::move(rangestart))
+        , range_end(std::move(rangeend))
+    {
+        if constexpr (std::random_access_iterator<It>) {
+            if (it < range_start || it > range_end) {
+                throw std::out_of_range("Invalid utf-8 iterator position");
+            }
+        }
+    }
+
+    [[nodiscard]] constexpr It base() const { return it; }
+
+    [[nodiscard]] constexpr char32_t operator*() const
+    {
+        It temp = it;
+        return unicode::next(temp, range_end);
+    }
+
+    [[nodiscard]] constexpr bool operator==(iterator const& rhs) const noexcept
+    {
+        assert(range_start == rhs.range_start && range_end == rhs.range_end && "comparing incompatible iterator range is not allowed");
+        return it == rhs.it;
+    }
+
+    constexpr iterator& operator++()
+    {
+        (void)unicode::next(it, range_end);
+        return *this;
+    }
+
+    [[nodiscard]] constexpr iterator operator++(int)
+    {
+        iterator temp = *this;
+        (void)unicode::next(it, range_end);
+        return temp;
+    }
+
+    constexpr iterator& operator--()
+    {
+        (void)unicode::prev(it, range_start);
+        return *this;
+    }
+
+    [[nodiscard]] constexpr iterator operator--(int)
+    {
+        iterator temp = *this;
+        (void)unicode::prev(it, range_start);
+        return temp;
+    }
+};
+
+// ------------------------------------
 
 template<utf8_input_iterator It, std::sentinel_for<It> Se, utf16_output_iterator OutIt>
 constexpr OutIt utf8to16(It start, Se end, OutIt out)
@@ -1057,78 +1130,6 @@ template<class CharT>
         return unicode::utf32to8(str);
     }
 }
-
-
-template<octet_input_iterator It>
-class iterator
-{
-    It it;
-    It range_start;
-    It range_end;
-
-public:
-    using value_type = char32_t;
-    using pointer = char32_t*;
-    using reference = char32_t&;
-    using difference_type = std::ptrdiff_t;
-    using iterator_category = std::bidirectional_iterator_tag;
-
-    constexpr iterator()
-        requires std::is_default_constructible_v<It>
-    = default;
-
-    constexpr explicit iterator(It octet_it, It rangestart, It rangeend)
-        : it(std::move(octet_it))
-        , range_start(std::move(rangestart))
-        , range_end(std::move(rangeend))
-    {
-        if constexpr (std::random_access_iterator<It>) {
-            if (it < range_start || it > range_end) {
-                throw std::out_of_range("Invalid utf-8 iterator position");
-            }
-        }
-    }
-
-    [[nodiscard]] constexpr It base() const { return it; }
-
-    [[nodiscard]] constexpr char32_t operator*() const
-    {
-        It temp = it;
-        return unicode::next(temp, range_end);
-    }
-
-    [[nodiscard]] constexpr bool operator==(iterator const& rhs) const noexcept
-    {
-        assert(range_start == rhs.range_start && range_end == rhs.range_end && "comparing incompatible iterator range is not allowed");
-        return it == rhs.it;
-    }
-
-    constexpr iterator& operator++()
-    {
-        (void)unicode::next(it, range_end);
-        return *this;
-    }
-
-    constexpr iterator operator++(int)
-    {
-        iterator temp = *this;
-        (void)unicode::next(it, range_end);
-        return temp;
-    }
-
-    constexpr iterator& operator--()
-    {
-        (void)unicode::prev(it, range_start);
-        return *this;
-    }
-
-    constexpr iterator operator--(int)
-    {
-        iterator temp = *this;
-        (void)unicode::prev(it, range_start);
-        return temp;
-    }
-};
 
 } // iris::unicode
 
