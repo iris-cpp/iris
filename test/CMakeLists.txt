@@ -170,4 +170,8 @@ if(PROJECT_IS_TOP_LEVEL)
             iris_define_test_headers(iris_${test_name} iris_test.hpp)
         endforeach()
     endif()
+
+    if(NOT DEFINED IRIS_CI_COMPONENT OR IRIS_CI_COMPONENT STREQUAL unicode)
+        add_subdirectory(unicode)
+    endif()
 endif()
