@@ -173,6 +173,28 @@ TEST_CASE("distance")
     CHECK(dist == 2);
 }
 
+TEST_CASE("is_valid")
+{
+    {
+        char utf_invalid[] = "\xe6\x97\xa5\xd1\x88\xfa";
+        CHECK(!unicode::is_valid(utf_invalid));
+        CHECK(!unicode::is_valid(utf_invalid, utf_invalid + 6));
+    }
+    {
+        char utf8_with_surrogates[] = "\xe6\x97\xa5\xd1\x88\xf0\x9d\x84\x9e";
+        CHECK(unicode::is_valid(utf8_with_surrogates));
+        CHECK(unicode::is_valid(utf8_with_surrogates, utf8_with_surrogates + 9));
+    }
+    {
+        std::u8string const utf_invalid(std::from_range, "\xe6\x97\xa5\xd1\x88\xfa");
+        CHECK(!unicode::is_valid(utf_invalid));
+    }
+    {
+        std::u8string const utf8_with_surrogates(std::from_range, "\xe6\x97\xa5\xd1\x88\xf0\x9d\x84\x9e");
+        CHECK(unicode::is_valid(utf8_with_surrogates));
+    }
+}
+
 TEST_CASE("replace_invalid (vector)")
 {
     char invalid_sequence[] = "a\x80\xe0\xa0\xc0\xaf\xed\xa0\x80z";
@@ -215,20 +237,6 @@ TEST_CASE("find_invalid")
     CHECK(invalid == utf_invalid + 5);
     invalid = utf_invalid + find_invalid(utf_invalid);
     CHECK(invalid == utf_invalid + 5);
-}
-
-TEST_CASE("is_valid")
-{
-    char utf_invalid[] = "\xe6\x97\xa5\xd1\x88\xfa";
-    bool bvalid = is_valid(utf_invalid, utf_invalid + 6);
-    CHECK(!bvalid);
-    bvalid = is_valid(utf_invalid);
-    CHECK(!bvalid);
-    char utf8_with_surrogates[] = "\xe6\x97\xa5\xd1\x88\xf0\x9d\x84\x9e";
-    bvalid = is_valid(utf8_with_surrogates, utf8_with_surrogates + 9);
-    CHECK(bvalid);
-    bvalid = is_valid(utf8_with_surrogates);
-    CHECK(bvalid);
 }
 
 TEST_CASE("starts_with_bom")
@@ -341,16 +349,6 @@ TEST_CASE("find_invalid")
     CHECK(invalid == 5);
 }
 
-TEST_CASE("is_valid")
-{
-    std::string utf_invalid = "\xe6\x97\xa5\xd1\x88\xfa";
-    bool bvalid = is_valid(utf_invalid);
-    CHECK(!bvalid);
-    std::string utf8_with_surrogates = "\xe6\x97\xa5\xd1\x88\xf0\x9d\x84\x9e";
-    bvalid = is_valid(utf8_with_surrogates);
-    CHECK(bvalid);
-}
-
 TEST_CASE("starts_with_bom")
 {
     std::string byte_order_mark = {char(0xef), char(0xbb), char(0xbf)};
@@ -401,16 +399,6 @@ TEST_CASE("find_invalid")
     CHECK(invalid == 5);
 }
 
-TEST_CASE("is_valid")
-{
-    std::string_view utf_invalid = "\xe6\x97\xa5\xd1\x88\xfa";
-    bool bvalid = is_valid(utf_invalid);
-    CHECK(!bvalid);
-    std::string_view utf8_with_surrogates = "\xe6\x97\xa5\xd1\x88\xf0\x9d\x84\x9e";
-    bvalid = is_valid(utf8_with_surrogates);
-    CHECK(bvalid);
-}
-
 TEST_CASE("starts_with_bom")
 {
     std::string byte_order_mark = {char(0xef), char(0xbb), char(0xbf)};
@@ -422,7 +410,7 @@ TEST_CASE("starts_with_bom")
     CHECK(!no_bbom);
 }
 
-TEST(CPP17APITests, string_class_and_literals)
+TEST_CASE("string_class_and_literals")
 {
     char const* twochars = "ab";
     CHECK(is_valid(twochars));
@@ -470,16 +458,6 @@ TEST_CASE("find_invalid")
     std::u8string utf_invalid = reinterpret_cast<char8_t const*>("\xe6\x97\xa5\xd1\x88\xfa");
     auto invalid = find_invalid(utf_invalid);
     CHECK(invalid == 5);
-}
-
-TEST_CASE("is_valid")
-{
-    std::u8string utf_invalid = reinterpret_cast<char8_t const*>("\xe6\x97\xa5\xd1\x88\xfa");
-    bool bvalid = is_valid(utf_invalid);
-    CHECK(!bvalid);
-    std::u8string utf8_with_surrogates = reinterpret_cast<char8_t const*>("\xe6\x97\xa5\xd1\x88\xf0\x9d\x84\x9e");
-    bvalid = is_valid(utf8_with_surrogates);
-    CHECK(bvalid);
 }
 
 TEST_CASE("starts_with_bom")
