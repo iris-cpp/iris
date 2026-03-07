@@ -875,6 +875,37 @@ distance(It first, Se last)
     return dist;
 }
 
+// --------------------------------
+
+template<utf8_input_iterator It, std::sentinel_for<It> Se, utf16_output_iterator OutIt>
+constexpr OutIt utf8to16(It start, Se end, OutIt out)
+{
+    while (start != end) {
+        char32_t const cp = unicode::next(start, end);
+        if (cp > 0xffff) { // make a surrogate pair
+            *out++ = static_cast<char16_t>((cp >> 10) + detail::LEAD_OFFSET);
+            *out++ = static_cast<char16_t>((cp & 0x3ff) + detail::TRAIL_SURROGATE_MIN);
+        } else {
+            *out++ = static_cast<char16_t>(cp);
+        }
+    }
+    return out;
+}
+
+[[nodiscard]] constexpr std::u16string utf8to16(std::string_view str)
+{
+    std::u16string result;
+    unicode::utf8to16(str.begin(), str.end(), std::back_inserter(result));
+    return result;
+}
+
+[[nodiscard]] constexpr std::u16string utf8to16(std::u8string_view str)
+{
+    std::u16string result;
+    unicode::utf8to16(str.begin(), str.end(), std::back_inserter(result));
+    return result;
+}
+
 template<utf16_input_iterator It, std::sentinel_for<It> Se, octet_output_iterator OutIt>
 constexpr OutIt utf16to8(It start, Se end, OutIt out)
 {
@@ -902,69 +933,17 @@ constexpr OutIt utf16to8(It start, Se end, OutIt out)
     return out;
 }
 
-[[nodiscard]] constexpr std::string utf16to8(std::u16string_view s)
+[[nodiscard]] constexpr std::string utf16to8(std::u16string_view str)
 {
     std::string result;
-    unicode::utf16to8(s.begin(), s.end(), std::back_inserter(result));
+    unicode::utf16to8(str.begin(), str.end(), std::back_inserter(result));
     return result;
 }
 
-[[nodiscard]] constexpr std::u8string utf16tou8(std::u16string_view s)
+[[nodiscard]] constexpr std::u8string utf16tou8(std::u16string_view str)
 {
     std::u8string result;
-    unicode::utf16to8(s.begin(), s.end(), std::back_inserter(result));
-    return result;
-}
-
-template<utf8_input_iterator It, std::sentinel_for<It> Se, utf16_output_iterator OutIt>
-constexpr OutIt utf8to16(It start, Se end, OutIt out)
-{
-    while (start != end) {
-        char32_t const cp = unicode::next(start, end);
-        if (cp > 0xffff) { // make a surrogate pair
-            *out++ = static_cast<char16_t>((cp >> 10) + detail::LEAD_OFFSET);
-            *out++ = static_cast<char16_t>((cp & 0x3ff) + detail::TRAIL_SURROGATE_MIN);
-        } else {
-            *out++ = static_cast<char16_t>(cp);
-        }
-    }
-    return out;
-}
-
-[[nodiscard]] constexpr std::u16string utf8to16(std::string_view s)
-{
-    std::u16string result;
-    unicode::utf8to16(s.begin(), s.end(), std::back_inserter(result));
-    return result;
-}
-
-[[nodiscard]] constexpr std::u16string utf8to16(std::u8string_view s)
-{
-    std::u16string result;
-    unicode::utf8to16(s.begin(), s.end(), std::back_inserter(result));
-    return result;
-}
-
-template<utf32_input_iterator It, std::sentinel_for<It> Se, octet_output_iterator OutIt>
-constexpr OutIt utf32to8(It start, Se end, OutIt out)
-{
-    while (start != end) {
-        out = unicode::append8(*start++, out);
-    }
-    return out;
-}
-
-[[nodiscard]] constexpr std::string utf32to8(std::u32string_view s)
-{
-    std::string result;
-    unicode::utf32to8(s.begin(), s.end(), std::back_inserter(result));
-    return result;
-}
-
-[[nodiscard]] constexpr std::u8string utf32tou8(std::u32string_view s)
-{
-    std::u8string result;
-    unicode::utf32to8(s.begin(), s.end(), std::back_inserter(result));
+    unicode::utf16to8(str.begin(), str.end(), std::back_inserter(result));
     return result;
 }
 
@@ -977,21 +956,109 @@ constexpr OutIt utf8to32(It start, Se end, OutIt out)
     return out;
 }
 
-[[nodiscard]] constexpr std::u32string utf8to32(std::string_view s)
+[[nodiscard]] constexpr std::u32string utf8to32(std::string_view str)
 {
     std::u32string result;
-    unicode::utf8to32(s.begin(), s.end(), std::back_inserter(result));
+    unicode::utf8to32(str.begin(), str.end(), std::back_inserter(result));
     return result;
 }
 
-[[nodiscard]] constexpr std::u32string utf8to32(std::u8string_view s)
+[[nodiscard]] constexpr std::u32string utf8to32(std::u8string_view str)
 {
     std::u32string result;
-    unicode::utf8to32(s.begin(), s.end(), std::back_inserter(result));
+    unicode::utf8to32(str.begin(), str.end(), std::back_inserter(result));
     return result;
 }
 
-// The iterator class
+template<utf32_input_iterator It, std::sentinel_for<It> Se, octet_output_iterator OutIt>
+constexpr OutIt utf32to8(It start, Se end, OutIt out)
+{
+    while (start != end) {
+        out = unicode::append8(*start++, out);
+    }
+    return out;
+}
+
+[[nodiscard]] constexpr std::string utf32to8(std::u32string_view str)
+{
+    std::string result;
+    unicode::utf32to8(str.begin(), str.end(), std::back_inserter(result));
+    return result;
+}
+
+[[nodiscard]] constexpr std::u8string utf32tou8(std::u32string_view str)
+{
+    std::u8string result;
+    unicode::utf32to8(str.begin(), str.end(), std::back_inserter(result));
+    return result;
+}
+
+
+template<class CharT>
+[[nodiscard]] constexpr std::basic_string<CharT> transcode(std::string_view str)
+{
+    if constexpr (std::same_as<CharT, char8_t>) {
+        return std::u8string{std::from_range, str};
+    } else if constexpr (std::same_as<CharT, char16_t>) {
+        return unicode::utf8to16(str);
+    } else if constexpr (std::same_as<CharT, char32_t>) {
+        return unicode::utf8to32(str);
+    } else {
+        static_assert(std::same_as<CharT, char>);
+        return std::string{str};
+    }
+}
+
+template<class CharT>
+[[nodiscard]] constexpr std::basic_string<CharT> transcode(std::u8string_view str)
+{
+    if constexpr (std::same_as<CharT, char8_t>) {
+        return std::u8string{str};
+    } else if constexpr (std::same_as<CharT, char16_t>) {
+        return unicode::utf8to16(str);
+    } else if constexpr (std::same_as<CharT, char32_t>) {
+        return unicode::utf8to32(str);
+    } else {
+        static_assert(std::same_as<CharT, char>);
+        return std::string{std::from_range, str};
+    }
+}
+
+template<class CharT>
+[[nodiscard]] constexpr std::basic_string<CharT> transcode(std::u16string_view str)
+{
+    if constexpr (std::same_as<CharT, char8_t>) {
+        return unicode::utf16tou8(str);
+    } else if constexpr (std::same_as<CharT, char16_t>) {
+        return std::u16string{str};
+    } else if constexpr (std::same_as<CharT, char32_t>) {
+        static_assert(false, "not implemented");
+        return {}; // dummy
+        //return unicode::utf16to32(str);
+    } else {
+        static_assert(std::same_as<CharT, char>);
+        return unicode::utf16to8(str);
+    }
+}
+
+template<class CharT>
+[[nodiscard]] constexpr std::basic_string<CharT> transcode(std::u32string_view str)
+{
+    if constexpr (std::same_as<CharT, char8_t>) {
+        return unicode::utf32tou8(str);
+    } else if constexpr (std::same_as<CharT, char16_t>) {
+        static_assert(false, "not implemented");
+        return {}; // dummy
+        //return unicode::utf32to16(str);
+    } else if constexpr (std::same_as<CharT, char32_t>) {
+        return std::u32string{str};
+    } else {
+        static_assert(std::same_as<CharT, char>);
+        return unicode::utf32to8(str);
+    }
+}
+
+
 template<octet_input_iterator It>
 class iterator
 {

@@ -187,11 +187,11 @@ TEST_CASE("is_valid")
         CHECK(unicode::is_valid(utf8_with_surrogates, utf8_with_surrogates + 9));
     }
     {
-        std::u8string const utf_invalid_u8(std::from_range, utf_invalid);
+        std::u8string const utf_invalid_u8(reinterpret_cast<char8_t const*>(utf_invalid));
         CHECK(!unicode::is_valid(utf_invalid_u8));
     }
     {
-        std::u8string const utf8_with_surrogates_u8(std::from_range, utf8_with_surrogates);
+        std::u8string const utf8_with_surrogates_u8(reinterpret_cast<char8_t const*>(utf8_with_surrogates));
         CHECK(unicode::is_valid(utf8_with_surrogates));
     }
 
@@ -224,7 +224,7 @@ TEST_CASE("find_invalid")
         CHECK(invalid_pos == 5);
     }
     {
-        std::u8string const utf_invalid_u8(std::from_range, utf_invalid);
+        std::u8string const utf_invalid_u8(reinterpret_cast<char8_t const*>(utf_invalid));
         std::size_t const invalid_pos = unicode::find_invalid(utf_invalid_u8);
         CHECK(invalid_pos == 5);
     }
@@ -255,11 +255,11 @@ TEST_CASE("replace_invalid (string)")
 
 TEST_CASE("replace_invalid (u8string)")
 {
-    std::u8string const invalid_sequence(std::from_range, "a\x80\xe0\xa0\xc0\xaf\xed\xa0\x80z");
+    std::u8string const invalid_sequence(reinterpret_cast<char8_t const*>("a\x80\xe0\xa0\xc0\xaf\xed\xa0\x80z"));
     std::u8string const replace_invalid_result = unicode::replace_invalid(invalid_sequence, u8'?');
 
     CHECK(unicode::is_valid(replace_invalid_result));
-    std::u8string const fixed_invalid_sequence(std::from_range, "a????z");
+    std::u8string const fixed_invalid_sequence(reinterpret_cast<char8_t const*>("a????z"));
     CHECK(fixed_invalid_sequence == replace_invalid_result);
 }
 
@@ -275,7 +275,7 @@ TEST_CASE("starts_with_bom")
     CHECK(!unicode::starts_with_bom(threechars));
     CHECK(!unicode::starts_with_bom(std::string{threechars}));
     CHECK(!unicode::starts_with_bom(std::string_view{threechars}));
-    CHECK(!unicode::starts_with_bom(std::u8string{std::from_range, threechars}));
+    CHECK(!unicode::starts_with_bom(std::u8string{reinterpret_cast<char8_t const*>(threechars)}));
 }
 
 TEST_CASE("increment")
@@ -304,141 +304,152 @@ TEST_CASE("decrement")
     CHECK(*it == 0x10346);
 }
 
-#if 0
+// -----------------------------------
 
-TEST_CASE("utf32to8")
+TEST_CASE("utf8to16")
 {
-    char32_t utf32string[] = {0x448, 0x65E5, 0x10346, 0};
-    std::string utf8result;
-    iris::utflib::utf32to8(utf32string, utf32string + 3, back_inserter(utf8result));
-    CHECK(utf8result.size() == 9);
-}
-
-TEST_CASE("utf8to32")
-{
-    char const* twochars = "\xe6\x97\xa5\xd1\x88";
-    std::vector<unsigned int> utf32result;
-    iris::utflib::utf8to32(twochars, twochars + 5, back_inserter(utf32result));
-    CHECK(utf32result.size() == 2);
+    {
+        constexpr char utf8_with_surrogates[] = "\xe6\x97\xa5\xd1\x88\xf0\x9d\x84\x9e";
+        std::vector<char16_t> utf16result;
+        unicode::utf8to16(utf8_with_surrogates, utf8_with_surrogates + 9, back_inserter(utf16result));
+        CHECK(utf16result.size() == 4);
+        CHECK(utf16result[2] == 0xd834);
+        CHECK(utf16result[3] == 0xdd1e);
+    }
+    {
+        std::string const utf8_with_surrogates = "\xe6\x97\xa5\xd1\x88\xf0\x9d\x84\x9e";
+        std::u16string const utf16result = unicode::utf8to16(utf8_with_surrogates);
+        CHECK(utf16result.size() == 4);
+        CHECK(utf16result[2] == 0xd834);
+        CHECK(utf16result[3] == 0xdd1e);
+        // Just to make sure it compiles with string literals
+        CHECK(unicode::utf8to16(u8"simple") == u"simple");
+        CHECK(unicode::utf8to16("simple") == u"simple");
+    }
+    {
+        constexpr std::string_view utf8_with_surrogates = "\xe6\x97\xa5\xd1\x88\xf0\x9d\x84\x9e";
+        std::u16string const utf16result = unicode::utf8to16(utf8_with_surrogates);
+        CHECK(utf16result.size() == 4);
+        CHECK(utf16result[2] == 0xd834);
+        CHECK(utf16result[3] == 0xdd1e);
+    }
+    {
+        std::u8string const utf8_with_surrogates{reinterpret_cast<char8_t const*>("\xe6\x97\xa5\xd1\x88\xf0\x9d\x84\x9e")};
+        std::u16string const utf16result = unicode::utf8to16(utf8_with_surrogates);
+        CHECK(utf16result.size() == 4);
+        CHECK(utf16result[2] == 0xd834);
+        CHECK(utf16result[3] == 0xdd1e);
+    }
 }
 
 TEST_CASE("utf16to8")
 {
-    char16_t utf16string[] = {0x41, 0x0448, 0x65e5, 0xd834, 0xdd1e};
-    std::string utf8result;
-    iris::utflib::utf16to8(utf16string, utf16string + 5, back_inserter(utf8result));
-    CHECK(utf8result.size() == 10);
+    {
+        constexpr char16_t utf16string[] = {0x41, 0x0448, 0x65e5, 0xd834, 0xdd1e};
+        std::string utf8result;
+        unicode::utf16to8(utf16string, utf16string + 5, back_inserter(utf8result));
+        CHECK(utf8result.size() == 10);
+    }
+    {
+        std::u16string const utf16string{0x41, 0x0448, 0x65e5, 0xd834, 0xdd1e};
+        std::string const u = unicode::utf16to8(utf16string);
+        CHECK(u.size() == 10);
+    }
+    {
+        std::u16string const utf16string = {0x41, 0x0448, 0x65e5, 0xd834, 0xdd1e};
+        std::u16string_view const utf16stringview(utf16string);
+        std::string const u = unicode::utf16to8(utf16stringview);
+        CHECK(u.size() == 10);
+    }
+    {
+        std::u16string const utf16string = {0x41, 0x0448, 0x65e5, 0xd834, 0xdd1e};
+        std::u16string_view const utf16stringview{utf16string};
+        {
+            std::u8string const u = unicode::utf16tou8(utf16string);
+            CHECK(u.size() == 10);
+        }
+        {
+            std::u8string const u = unicode::utf16tou8(utf16stringview);
+            CHECK(u.size() == 10);
+        }
+    }
 }
 
-TEST_CASE("utf8to16")
-{
-    char utf8_with_surrogates[] = "\xe6\x97\xa5\xd1\x88\xf0\x9d\x84\x9e";
-    std::vector<char16_t> utf16result;
-    iris::utflib::utf8to16(utf8_with_surrogates, utf8_with_surrogates + 9, back_inserter(utf16result));
-    CHECK(utf16result.size() == 4);
-    CHECK(utf16result[2] == 0xd834);
-    CHECK(utf16result[3] == 0xdd1e);
-}
+// -----------------------------------------
 
-TEST_CASE("utf16to8")
+TEST_CASE("utf8to32")
 {
-    std::u16string utf16string = {0x41, 0x0448, 0x65e5, 0xd834, 0xdd1e};
-    std::string u = utf16to8(utf16string);
-    CHECK(u.size() == 10);
-}
-
-TEST_CASE("utf8to16")
-{
-    std::string utf8_with_surrogates = "\xe6\x97\xa5\xd1\x88\xf0\x9d\x84\x9e";
-    std::u16string utf16result = utf8to16(utf8_with_surrogates);
-    CHECK(utf16result.size() == 4);
-    CHECK(utf16result[2] == 0xd834);
-    CHECK(utf16result[3] == 0xdd1e);
-    // Just to make sure it compiles with std::string literals
-    CHECK(utf8to16(u8"simple") == u"simple");
-    CHECK(utf8to16("simple") == u"simple");
+    {
+        constexpr char const* twochars = "\xe6\x97\xa5\xd1\x88";
+        std::vector<unsigned int> utf32result;
+        unicode::utf8to32(twochars, twochars + 5, back_inserter(utf32result));
+        CHECK(utf32result.size() == 2);
+    }
+    {
+        constexpr char const* twochars = "\xe6\x97\xa5\xd1\x88";
+        std::u32string const utf32result = unicode::utf8to32(twochars);
+        CHECK(utf32result.size() == 2);
+    }
+    {
+        constexpr std::string_view twochars = "\xe6\x97\xa5\xd1\x88";
+        std::u32string const utf32result = unicode::utf8to32(twochars);
+        CHECK(utf32result.size() == 2);
+    }
+    {
+        std::u8string const twochars{reinterpret_cast<char8_t const*>("\xe6\x97\xa5\xd1\x88")};
+        std::u32string const utf32result = unicode::utf8to32(twochars);
+        CHECK(utf32result.size() == 2);
+    }
 }
 
 TEST_CASE("utf32to8")
 {
-    std::u32string utf32string = {0x448, 0x65E5, 0x10346};
-    std::string utf8result = utf32to8(utf32string);
-    CHECK(utf8result.size() == 9);
+    {
+        constexpr char32_t utf32string[] = {0x448, 0x65E5, 0x10346, 0};
+        std::string utf8result;
+        unicode::utf32to8(utf32string, utf32string + 3, back_inserter(utf8result));
+        CHECK(utf8result.size() == 9);
+    }
+    {
+        std::u32string const utf32string = {0x448, 0x65E5, 0x10346};
+        std::string const utf8result = unicode::utf32to8(utf32string);
+        CHECK(utf8result.size() == 9);
+    }
+    {
+        std::u32string const utf32string = {0x448, 0x65E5, 0x10346};
+        std::u32string_view const utf32stringview(utf32string);
+        std::string const utf8result = unicode::utf32to8(utf32stringview);
+        CHECK(utf8result.size() == 9);
+    }
+    {
+        std::u32string const utf32string = {0x448, 0x65E5, 0x10346};
+        std::u32string_view const utf32stringview{utf32string};
+        std::u8string const utf8result = unicode::utf32tou8(utf32stringview);
+        CHECK(utf8result.size() == 9);
+    }
 }
 
-TEST_CASE("utf8to32")
+TEST_CASE("transcode")
 {
-    char const* twochars = "\xe6\x97\xa5\xd1\x88";
-    std::u32string utf32result = utf8to32(twochars);
-    CHECK(utf32result.size() == 2);
-}
+    STATIC_CHECK(unicode::transcode<char>("aこれはb試験ですc")       == "aこれはb試験ですc");
+    STATIC_CHECK(unicode::transcode<char>(u8"aこれはb試験ですc")     == "aこれはb試験ですc");
+    STATIC_CHECK(unicode::transcode<char>(u"aこれはb試験ですc")      == "aこれはb試験ですc");
+    STATIC_CHECK(unicode::transcode<char>(U"aこれはb試験ですc")      == "aこれはb試験ですc");
 
-TEST_CASE("utf16to8")
-{
-    std::u16string utf16string = {0x41, 0x0448, 0x65e5, 0xd834, 0xdd1e};
-    u16string_view utf16stringview(utf16string);
-    std::string u = utf16to8(utf16stringview);
-    CHECK(u.size() == 10);
-}
+    STATIC_CHECK(unicode::transcode<char8_t>("aこれはb試験ですc")    == u8"aこれはb試験ですc");
+    STATIC_CHECK(unicode::transcode<char8_t>(u8"aこれはb試験ですc")  == u8"aこれはb試験ですc");
+    STATIC_CHECK(unicode::transcode<char8_t>(u"aこれはb試験ですc")   == u8"aこれはb試験ですc");
+    STATIC_CHECK(unicode::transcode<char8_t>(U"aこれはb試験ですc")   == u8"aこれはb試験ですc");
 
-TEST_CASE("utf8to16")
-{
-    std::string_view utf8_with_surrogates = "\xe6\x97\xa5\xd1\x88\xf0\x9d\x84\x9e";
-    std::u16string utf16result = utf8to16(utf8_with_surrogates);
-    CHECK(utf16result.size() == 4);
-    CHECK(utf16result[2] == 0xd834);
-    CHECK(utf16result[3] == 0xdd1e);
-}
+    STATIC_CHECK(unicode::transcode<char16_t>("aこれはb試験ですc")   == u"aこれはb試験ですc");
+    STATIC_CHECK(unicode::transcode<char16_t>(u8"aこれはb試験ですc") == u"aこれはb試験ですc");
+    STATIC_CHECK(unicode::transcode<char16_t>(u"aこれはb試験ですc")  == u"aこれはb試験ですc");
+    //STATIC_CHECK(unicode::transcode<char16_t>(U"aこれはb試験ですc")  == u"aこれはb試験ですc");
 
-TEST_CASE("utf32to8")
-{
-    std::u32string utf32string = {0x448, 0x65E5, 0x10346};
-    u32string_view utf32stringview(utf32string);
-    std::string utf8result = utf32to8(utf32stringview);
-    CHECK(utf8result.size() == 9);
+    STATIC_CHECK(unicode::transcode<char32_t>("aこれはb試験ですc")   == U"aこれはb試験ですc");
+    STATIC_CHECK(unicode::transcode<char32_t>(u8"aこれはb試験ですc") == U"aこれはb試験ですc");
+    //STATIC_CHECK(unicode::transcode<char32_t>(u"aこれはb試験ですc")  == U"aこれはb試験ですc");
+    STATIC_CHECK(unicode::transcode<char32_t>(U"aこれはb試験ですc")  == U"aこれはb試験ですc");
 }
-
-TEST_CASE("utf8to32")
-{
-    std::string_view twochars = "\xe6\x97\xa5\xd1\x88";
-    std::u32string utf32result = utf8to32(twochars);
-    CHECK(utf32result.size() == 2);
-}
-
-TEST_CASE("utf16tou8")
-{
-    std::u16string utf16string = {0x41, 0x0448, 0x65e5, 0xd834, 0xdd1e};
-    u16string_view utf16stringview{utf16string};
-    std::u8string u = utf16tou8(utf16string);
-    CHECK(u.size() == 10);
-    u = utf16tou8(utf16stringview);
-    CHECK(u.size() == 10);
-}
-
-TEST_CASE("utf8to16")
-{
-    std::u8string utf8_with_surrogates{ reinterpret_cast<char8_t const*>("\xe6\x97\xa5\xd1\x88\xf0\x9d\x84\x9e") };
-    std::u16string utf16result = utf8to16(utf8_with_surrogates);
-    CHECK(utf16result.size() == 4);
-    CHECK(utf16result[2] == 0xd834);
-    CHECK(utf16result[3] == 0xdd1e);
-}
-
-TEST_CASE("utf32tou8")
-{
-    std::u32string utf32string = {0x448, 0x65E5, 0x10346};
-    u32string_view utf32stringview{utf32string};
-    std::u8string utf8result = utf32tou8(utf32stringview);
-    CHECK(utf8result.size() == 9);
-}
-
-TEST_CASE("utf8to32")
-{
-    std::u8string twochars = reinterpret_cast<char8_t const*>("\xe6\x97\xa5\xd1\x88");
-    std::u32string utf32result = utf8to32(twochars);
-    CHECK(utf32result.size() == 2);
-}
-
-#endif
 
 } // iris_unicode_test
