@@ -40,7 +40,8 @@ DEALINGS IN THE SOFTWARE.
 
 namespace iris::unicode {
 
-constexpr char8_t bom[] = {0xef, 0xbb, 0xbf};
+template<class T>
+constexpr T bom[] = {static_cast<T>(0xef), static_cast<T>(0xbb), static_cast<T>(0xbf)};
 
 template<class T>
 concept octet = std::integral<T> && sizeof(T) == 1;
@@ -65,6 +66,12 @@ concept utf16_input_iterator = std::input_iterator<It> && utf16char<std::iter_va
 
 template<class It>
 concept utf32_input_iterator = std::input_iterator<It> && utf32char<std::iter_value_t<It>>;
+
+
+template<class R>
+concept octet_input_range =
+    std::ranges::input_range<R> &&
+    octet_input_iterator<std::ranges::iterator_t<R>>;
 
 
 namespace detail {
@@ -256,12 +263,12 @@ enum class utf_error
 template<octet Octet>
 [[nodiscard]] constexpr char8_t mask8(Octet oc) noexcept
 {
-    return static_cast<char8_t>(0xff & oc);
+    return static_cast<char8_t>(oc & 0xff);
 }
 
 [[nodiscard]] constexpr char16_t mask16(char16_t oc) noexcept
 {
-    return static_cast<char16_t>(0xffff & oc);
+    return static_cast<char16_t>(oc & 0xffff);
 }
 
 template<octet Octet>
@@ -578,9 +585,16 @@ template<octet_input_iterator It, std::sentinel_for<It> Se>
     noexcept(noexcept(detail::mask8(*it++)) && is_nothrow_sentinel_v<It, Se>)
 {
     return
-        (it != end && (detail::mask8(*it++)) == bom[0]) &&
-        (it != end && (detail::mask8(*it++)) == bom[1]) &&
-        (it != end && (detail::mask8(*it)) == bom[2]);
+        (it != end && detail::mask8(*it++) == bom<char8_t>[0]) &&
+        (it != end && detail::mask8(*it++) == bom<char8_t>[1]) &&
+        (it != end && detail::mask8(*it)   == bom<char8_t>[2]);
+}
+
+template<octet_input_range R>
+[[nodiscard]] constexpr bool starts_with_bom(R&& r)
+    noexcept(noexcept(unicode::starts_with_bom(std::ranges::begin(r), std::ranges::end(r))))
+{
+    return unicode::starts_with_bom(std::ranges::begin(r), std::ranges::end(r));
 }
 
 [[nodiscard]] constexpr bool starts_with_bom(std::string_view s)

@@ -247,25 +247,30 @@ TEST_CASE("replace_invalid (string)")
 
 TEST_CASE("replace_invalid (u8string)")
 {
-    std::u8string invalid_sequence = reinterpret_cast<char8_t const*>("a\x80\xe0\xa0\xc0\xaf\xed\xa0\x80z");
+    std::u8string const invalid_sequence(std::from_range, "a\x80\xe0\xa0\xc0\xaf\xed\xa0\x80z");
     std::u8string const replace_invalid_result = unicode::replace_invalid(invalid_sequence, u8'?');
 
     CHECK(unicode::is_valid(replace_invalid_result));
-    std::u8string const fixed_invalid_sequence = reinterpret_cast<char8_t const*>("a????z");
+    std::u8string const fixed_invalid_sequence(std::from_range, "a????z");
     CHECK(fixed_invalid_sequence == replace_invalid_result);
 }
 
-#if 0
-
 TEST_CASE("starts_with_bom")
 {
-    unsigned char byte_order_mark[] = {0xef, 0xbb, 0xbf};
-    bool bbom = starts_with_bom(byte_order_mark, byte_order_mark + sizeof(byte_order_mark));
-    CHECK(bbom);
-    char const* threechars = "\xf0\x90\x8d\x86\xe6\x97\xa5\xd1\x88";
-    bool no_bbom = starts_with_bom(threechars, threechars + sizeof(threechars));
-    CHECK(!no_bbom);
+    CHECK(unicode::starts_with_bom(unicode::bom<char>));
+    CHECK(unicode::starts_with_bom(unicode::bom<unsigned char>));
+    CHECK(unicode::starts_with_bom(unicode::bom<char8_t>));
+    CHECK(unicode::starts_with_bom(unicode::bom<std::int8_t>));
+    CHECK(unicode::starts_with_bom(unicode::bom<std::uint8_t>));
+
+    constexpr char threechars[] = "\xf0\x90\x8d\x86\xe6\x97\xa5\xd1\x88";
+    CHECK(!unicode::starts_with_bom(threechars));
+    CHECK(!unicode::starts_with_bom(std::string{threechars}));
+    CHECK(!unicode::starts_with_bom(std::string_view{threechars}));
+    CHECK(!unicode::starts_with_bom(std::u8string{std::from_range, threechars}));
 }
+
+#if 0
 
 TEST_CASE("increment")
 {
@@ -360,17 +365,6 @@ TEST_CASE("utf8to32")
     CHECK(utf32result.size() == 2);
 }
 
-TEST_CASE("starts_with_bom")
-{
-    std::string byte_order_mark = {char(0xef), char(0xbb), char(0xbf)};
-    bool bbom = starts_with_bom(byte_order_mark);
-    CHECK(bbom);
-    std::string threechars = "\xf0\x90\x8d\x86\xe6\x97\xa5\xd1\x88";
-    bool no_bbom = starts_with_bom(threechars);
-    CHECK(!no_bbom);
-}
-
-
 TEST_CASE("utf16to8")
 {
     std::u16string utf16string = {0x41, 0x0448, 0x65e5, 0xd834, 0xdd1e};
@@ -401,17 +395,6 @@ TEST_CASE("utf8to32")
     std::string_view twochars = "\xe6\x97\xa5\xd1\x88";
     std::u32string utf32result = utf8to32(twochars);
     CHECK(utf32result.size() == 2);
-}
-
-TEST_CASE("starts_with_bom")
-{
-    std::string byte_order_mark = {char(0xef), char(0xbb), char(0xbf)};
-    std::string_view byte_order_mark_view(byte_order_mark);
-    bool bbom = starts_with_bom(byte_order_mark_view);
-    CHECK(bbom);
-    std::string_view threechars = "\xf0\x90\x8d\x86\xe6\x97\xa5\xd1\x88";
-    bool no_bbom = starts_with_bom(threechars);
-    CHECK(!no_bbom);
 }
 
 TEST_CASE("string_class_and_literals")
@@ -455,16 +438,6 @@ TEST_CASE("utf8to32")
     std::u8string twochars = reinterpret_cast<char8_t const*>("\xe6\x97\xa5\xd1\x88");
     std::u32string utf32result = utf8to32(twochars);
     CHECK(utf32result.size() == 2);
-}
-
-TEST_CASE("starts_with_bom")
-{
-    std::u8string byte_order_mark = reinterpret_cast<char8_t const*>("\xef\xbb\xbf");
-    bool bbom = starts_with_bom(byte_order_mark);
-    CHECK(bbom);
-    std::u8string threechars = reinterpret_cast<char8_t const*>("\xf0\x90\x8d\x86\xe6\x97\xa5\xd1\x88");
-    bool no_bbom = starts_with_bom(threechars);
-    CHECK(!no_bbom);
 }
 
 #endif
