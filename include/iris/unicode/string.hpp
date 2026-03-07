@@ -801,7 +801,7 @@ template<octet_input_iterator It, std::sentinel_for<It> Se>
 template<utf16_input_iterator It, std::sentinel_for<It> Se>
 [[nodiscard]] constexpr char32_t next16(It& it, Se end)
 {
-    char32_t cp               = 0;
+    char32_t cp = 0;
     detail::utf_error err_code = detail::validate_next16(it, end, cp);
     if (err_code == detail::utf_error::NOT_ENOUGH_SPACE) {
         throw not_enough_space();
@@ -823,7 +823,7 @@ template<octet_input_iterator It, std::sentinel_for<It> Se>
 
     It end = it;
     // Go back until we hit either a lead octet or start
-    while (detail::is_trail(*(--it))) {
+    while (detail::is_trail(*--it)) {
         if (it == start) throw invalid_utf8(*it); // error - no lead byte in the sequence
     }
     return unicode::peek_next(it, end);
@@ -866,18 +866,19 @@ constexpr OutIt utf16to8(It start, Se end, OutIt out)
         if (detail::is_lead_surrogate(cp)) {
             if (start != end) {
                 char32_t const trail_surrogate = static_cast<char32_t>(detail::mask16(*start++));
-                if (detail::is_trail_surrogate(trail_surrogate))
+                if (detail::is_trail_surrogate(trail_surrogate)) {
                     cp = (cp << 10) + trail_surrogate + detail::SURROGATE_OFFSET;
-                else
+                } else {
                     throw invalid_utf16(static_cast<char16_t>(trail_surrogate));
-            } else
+                }
+            } else {
                 throw invalid_utf16(static_cast<char16_t>(cp));
+            }
 
-        }
         // Lone trail surrogate
-        else if (detail::is_trail_surrogate(cp))
+        } else if (detail::is_trail_surrogate(cp)) {
             throw invalid_utf16(static_cast<char16_t>(cp));
-
+        }
         out = unicode::append8(cp, out);
     }
     return out;
