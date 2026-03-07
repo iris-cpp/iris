@@ -25,7 +25,6 @@ ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-
 #ifndef IRIS_UNICODE_STRING_HPP
 #define IRIS_UNICODE_STRING_HPP
 
@@ -37,8 +36,11 @@ DEALINGS IN THE SOFTWARE.
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#include <ranges>
 
 namespace iris::unicode {
+
+constexpr char8_t bom[] = {0xef, 0xbb, 0xbf};
 
 template<class T>
 concept octet = std::integral<T> && sizeof(T) == 1;
@@ -63,6 +65,65 @@ concept utf16_input_iterator = std::input_iterator<It> && utf16char<std::iter_va
 
 template<class It>
 concept utf32_input_iterator = std::input_iterator<It> && utf32char<std::iter_value_t<It>>;
+
+
+namespace detail {
+
+template<class OutIt, class DesiredValueT>
+struct select_output_value_type
+{
+    static_assert(std::output_iterator<OutIt, DesiredValueT>);
+    using type = DesiredValueT;
+};
+
+template<class OutIt, class DesiredValueT>
+    requires requires {
+        typename std::iter_value_t<OutIt>;
+        requires std::convertible_to<DesiredValueT, std::iter_value_t<OutIt>>;
+    }
+struct select_output_value_type<OutIt, DesiredValueT>
+{
+    static_assert(std::output_iterator<OutIt, std::iter_value_t<OutIt>>);
+    using type = std::iter_value_t<OutIt>;
+};
+
+template<class OutIt, std::size_t SizeofChar>
+concept maybe_value_type_sized =
+    requires {
+        typename std::iter_value_t<OutIt>;
+        requires sizeof(std::iter_value_t<OutIt>) == SizeofChar;
+    } ||
+    !requires {
+        typename std::iter_value_t<OutIt>;
+    };
+
+} // detail
+
+template<class OutIt>
+concept octet_output_iterator =
+    (
+        std::output_iterator<OutIt, char8_t> ||
+        std::output_iterator<OutIt, char>
+    ) &&
+    detail::maybe_value_type_sized<OutIt, 1>;
+
+template<class R>
+concept octet_output_range =
+    (
+        std::ranges::output_range<R, char8_t> ||
+        std::ranges::output_range<R, char>
+    ) &&
+    detail::maybe_value_type_sized<std::ranges::iterator_t<R>, 1>;
+
+template<class OutIt>
+concept utf16_output_iterator =
+    std::output_iterator<OutIt, char16_t> &&
+    detail::maybe_value_type_sized<OutIt, 2>;
+
+template<class R>
+concept utf16_output_range =
+    std::ranges::output_range<R, char16_t> &&
+    detail::maybe_value_type_sized<std::ranges::iterator_t<R>, 2>;
 
 
 template<class T, class = void>
@@ -109,6 +170,64 @@ template<class It, class Se>
 inline constexpr bool is_nothrow_sentinel_v = is_nothrow_sentinel<It, Se>::value;
 
 
+class unicode_error : public std::runtime_error
+{
+    using std::runtime_error::runtime_error;
+};
+
+class invalid_code_point : public unicode_error
+{
+    char32_t cp;
+
+public:
+    explicit invalid_code_point(char32_t codepoint)
+        : unicode_error("invalid code point")
+        , cp(codepoint)
+    {}
+
+    [[nodiscard]] char32_t code_point() const noexcept { return cp; }
+};
+
+class invalid_utf8 : public unicode_error
+{
+    char8_t u8;
+
+public:
+    explicit invalid_utf8(char c)
+        : unicode_error("invalid UTF-8")
+        , u8(static_cast<char8_t>(c))
+    {}
+
+    explicit invalid_utf8(char8_t u)
+        : unicode_error("invalid UTF-8")
+        , u8(u)
+    {}
+
+    [[nodiscard]] char8_t utf8_octet() const noexcept { return u8; }
+};
+
+class invalid_utf16 : public unicode_error
+{
+    char16_t u16;
+
+public:
+    explicit invalid_utf16(char16_t u)
+        : unicode_error("Invalid UTF-16")
+        , u16(u)
+    {}
+
+    [[nodiscard]] char16_t utf16_word() const noexcept { return u16; }
+};
+
+class not_enough_space : public unicode_error
+{
+public:
+    not_enough_space()
+        : unicode_error("not enough space")
+    {}
+};
+
+
 namespace detail {
 
 // Unicode constants
@@ -124,7 +243,15 @@ constexpr char32_t SURROGATE_OFFSET    = 0xfca02400u; // 0x10000u - (LEAD_SURROG
 // Maximum valid value for a Unicode code point
 constexpr char32_t CODE_POINT_MAX = 0x0010ffffu;
 
-enum class utf_error { OK, NOT_ENOUGH_ROOM, INVALID_LEAD, INCOMPLETE_SEQUENCE, OVERLONG_SEQUENCE, INVALID_CODE_POINT };
+enum class utf_error
+{
+    OK,
+    NOT_ENOUGH_SPACE,
+    INVALID_LEAD,
+    INCOMPLETE_SEQUENCE,
+    OVERLONG_SEQUENCE,
+    INVALID_CODE_POINT,
+};
 
 template<octet Octet>
 [[nodiscard]] constexpr char8_t mask8(Octet oc) noexcept
@@ -145,22 +272,22 @@ template<octet Octet>
 
 [[nodiscard]] constexpr bool is_lead_surrogate(char32_t cp) noexcept
 {
-    return (cp >= static_cast<char32_t>(LEAD_SURROGATE_MIN) && cp <= static_cast<char32_t>(LEAD_SURROGATE_MAX));
+    return cp >= static_cast<char32_t>(LEAD_SURROGATE_MIN) && cp <= static_cast<char32_t>(LEAD_SURROGATE_MAX);
 }
 
 [[nodiscard]] constexpr bool is_trail_surrogate(char32_t cp) noexcept
 {
-    return (cp >= static_cast<char32_t>(TRAIL_SURROGATE_MIN) && cp <= static_cast<char32_t>(TRAIL_SURROGATE_MAX));
+    return cp >= static_cast<char32_t>(TRAIL_SURROGATE_MIN) && cp <= static_cast<char32_t>(TRAIL_SURROGATE_MAX);
 }
 
 [[nodiscard]] constexpr bool is_surrogate(char32_t cp) noexcept
 {
-    return (cp >= static_cast<char32_t>(LEAD_SURROGATE_MIN) && cp <= static_cast<char32_t>(TRAIL_SURROGATE_MAX));
+    return cp >= static_cast<char32_t>(LEAD_SURROGATE_MIN) && cp <= static_cast<char32_t>(TRAIL_SURROGATE_MAX);
 }
 
 [[nodiscard]] constexpr bool is_code_point_valid(char32_t cp) noexcept
 {
-    return (cp <= CODE_POINT_MAX && !detail::is_surrogate(cp));
+    return cp <= CODE_POINT_MAX && !detail::is_surrogate(cp);
 }
 
 [[nodiscard]] constexpr bool is_in_bmp(char32_t cp) noexcept
@@ -171,14 +298,11 @@ template<octet Octet>
 [[nodiscard]] constexpr bool is_overlong_sequence(char32_t cp, int length) noexcept
 {
     if (cp < 0x80) {
-        if (length != 1)
-            return true;
+        if (length != 1) return true;
     } else if (cp < 0x800) {
-        if (length != 2)
-            return true;
+        if (length != 2) return true;
     } else if (cp < 0x10000) {
-        if (length != 3)
-            return true;
+        if (length != 3) return true;
     }
     return false;
 }
@@ -187,17 +311,12 @@ template<octet_input_iterator It>
 [[nodiscard]] constexpr int sequence_length(It lead_it)
     noexcept(is_nothrow_dereferenceable_v<It&>)
 {
-    const char8_t lead = detail::mask8(*lead_it);
-    if (lead < 0x80)
-        return 1;
-    else if ((lead >> 5) == 0x6)
-        return 2;
-    else if ((lead >> 4) == 0xe)
-        return 3;
-    else if ((lead >> 3) == 0x1e)
-        return 4;
-    else
-        return 0;
+    char8_t const lead = detail::mask8(*lead_it);
+    if (lead < 0x80) return 1;
+    if ((lead >> 5) == 0x6) return 2;
+    if ((lead >> 4) == 0xe) return 3;
+    if ((lead >> 3) == 0x1e) return 4;
+    return 0;
 }
 
 /// Helper for get_sequence_x
@@ -209,21 +328,21 @@ constexpr utf_error increase_safely(It& it, Se end)
         is_nothrow_sentinel<It, Se>
     >)
 {
-    if (++it == end)
-        return utf_error::NOT_ENOUGH_ROOM;
-
-    if (!detail::is_trail(*it))
+    if (++it == end) {
+        return utf_error::NOT_ENOUGH_SPACE;
+    }
+    if (!detail::is_trail(*it)) {
         return utf_error::INCOMPLETE_SEQUENCE;
-
+    }
     return utf_error::OK;
 }
 
 #define IRIS_UTFLIB_INCREASE_AND_RETURN_ON_ERROR(IT, END)                                                                                                                                                                                      \
-do {                                                                                                                                                                                                                                       \
-utf_error ret = increase_safely(IT, END);                                                                                                                                                                                              \
-if (ret != utf_error::OK)                                                                                                                                                                                                                    \
-    return ret;                                                                                                                                                                                                                        \
-} while (false)
+    do {                                                                                                                                                                                                                                       \
+        utf_error ret = increase_safely(IT, END);                                                                                                                                                                                              \
+    if (ret != utf_error::OK)                                                                                                                                                                                                                    \
+        return ret;                                                                                                                                                                                                                        \
+    } while (false)
 
 /// get_sequence_x functions decode utf-8 sequences of the length x
 template<octet_input_iterator It, std::sentinel_for<It> Se>
@@ -233,11 +352,8 @@ constexpr utf_error get_sequence_1(It& it, Se end, char32_t& code_point)
         is_nothrow_sentinel<It, Se>
     >)
 {
-    if (it == end)
-        return utf_error::NOT_ENOUGH_ROOM;
-
+    if (it == end) return utf_error::NOT_ENOUGH_SPACE;
     code_point = static_cast<char32_t>(detail::mask8(*it));
-
     return utf_error::OK;
 }
 
@@ -249,15 +365,11 @@ constexpr utf_error get_sequence_2(It& it, Se end, char32_t& code_point)
         is_nothrow_sentinel<It, Se>
     >)
 {
-    if (it == end)
-        return utf_error::NOT_ENOUGH_ROOM;
+    if (it == end) return utf_error::NOT_ENOUGH_SPACE;
 
     code_point = static_cast<char32_t>(detail::mask8(*it));
-
     IRIS_UTFLIB_INCREASE_AND_RETURN_ON_ERROR(it, end);
-
     code_point = ((code_point << 6) & 0x7ff) + ((*it) & 0x3f);
-
     return utf_error::OK;
 }
 
@@ -269,19 +381,13 @@ constexpr utf_error get_sequence_3(It& it, Se end, char32_t& code_point)
         is_nothrow_sentinel<It, Se>
     >)
 {
-    if (it == end)
-        return utf_error::NOT_ENOUGH_ROOM;
+    if (it == end) return utf_error::NOT_ENOUGH_SPACE;
 
     code_point = static_cast<char32_t>(detail::mask8(*it));
-
     IRIS_UTFLIB_INCREASE_AND_RETURN_ON_ERROR(it, end);
-
     code_point = ((code_point << 12) & 0xffff) + ((detail::mask8(*it) << 6) & 0xfff);
-
     IRIS_UTFLIB_INCREASE_AND_RETURN_ON_ERROR(it, end);
-
     code_point = static_cast<char32_t>(code_point + ((*it) & 0x3f));
-
     return utf_error::OK;
 }
 
@@ -293,23 +399,15 @@ constexpr utf_error get_sequence_4(It& it, Se end, char32_t& code_point)
         is_nothrow_sentinel<It, Se>
     >)
 {
-    if (it == end)
-        return utf_error::NOT_ENOUGH_ROOM;
+    if (it == end) return utf_error::NOT_ENOUGH_SPACE;
 
     code_point = static_cast<char32_t>(detail::mask8(*it));
-
     IRIS_UTFLIB_INCREASE_AND_RETURN_ON_ERROR(it, end);
-
     code_point = ((code_point << 18) & 0x1fffff) + ((detail::mask8(*it) << 12) & 0x3ffff);
-
     IRIS_UTFLIB_INCREASE_AND_RETURN_ON_ERROR(it, end);
-
     code_point = static_cast<char32_t>(code_point + ((detail::mask8(*it) << 6) & 0xfff));
-
     IRIS_UTFLIB_INCREASE_AND_RETURN_ON_ERROR(it, end);
-
     code_point = static_cast<char32_t>(code_point + ((*it) & 0x3f));
-
     return utf_error::OK;
 }
 
@@ -325,8 +423,7 @@ constexpr utf_error validate_next(It& it, Se end, char32_t& code_point)
         std::is_nothrow_copy_constructible<It>
     >)
 {
-    if (it == end)
-        return utf_error::NOT_ENOUGH_ROOM;
+    if (it == end) return utf_error::NOT_ENOUGH_SPACE;
 
     // Save the original value of it so we can go back in case of failure
     // Of course, it does not make much sense with i.e. stream iterators
@@ -337,22 +434,24 @@ constexpr utf_error validate_next(It& it, Se end, char32_t& code_point)
     const int length = detail::sequence_length(it);
 
     // Get trail octets and calculate the code point
-    utf_error err = utf_error::OK;
+    utf_error err{};
     switch (length) {
-        case 0:
-            return utf_error::INVALID_LEAD;
-        case 1:
-            err = detail::get_sequence_1(it, end, cp);
-            break;
-        case 2:
-            err = detail::get_sequence_2(it, end, cp);
-            break;
-        case 3:
-            err = detail::get_sequence_3(it, end, cp);
-            break;
-        case 4:
-            err = detail::get_sequence_4(it, end, cp);
-            break;
+    case 0:
+        return utf_error::INVALID_LEAD;
+    case 1:
+        err = detail::get_sequence_1(it, end, cp);
+        break;
+    case 2:
+        err = detail::get_sequence_2(it, end, cp);
+        break;
+    case 3:
+        err = detail::get_sequence_3(it, end, cp);
+        break;
+    case 4:
+        err = detail::get_sequence_4(it, end, cp);
+        break;
+    default:
+        std::unreachable();
     }
 
     if (err == utf_error::OK) {
@@ -363,10 +462,12 @@ constexpr utf_error validate_next(It& it, Se end, char32_t& code_point)
                 code_point = cp;
                 ++it;
                 return utf_error::OK;
-            } else
+            } else {
                 err = utf_error::OVERLONG_SEQUENCE;
-        } else
+            }
+        } else {
             err = utf_error::INVALID_CODE_POINT;
+        }
     }
 
     // Failure branch - restore the original value of the iterator
@@ -395,142 +496,36 @@ constexpr utf_error validate_next16(It& it, Se end, char32_t& code_point)
     >)
 {
     // Check the edge case:
-    if (it == end)
-        return utf_error::NOT_ENOUGH_ROOM;
+    if (it == end) return utf_error::NOT_ENOUGH_SPACE;
+
     // Save the original value of it so we can go back in case of failure
     // Of course, it does not make much sense with i.e. stream iterators
-    It original_it = it;
+    It const original_it = it;
 
-    utf_error err = utf_error::OK;
-
-    const char16_t first_word = *it++;
+    char16_t const first_word = *it++;
     if (!detail::is_surrogate(first_word)) {
         code_point = first_word;
         return utf_error::OK;
-    } else {
-        if (it == end)
-            err = utf_error::NOT_ENOUGH_ROOM;
-        else if (detail::is_lead_surrogate(first_word)) {
-            const char16_t second_word = *it++;
-            if (detail::is_trail_surrogate(static_cast<char32_t>(second_word))) {
-                code_point = static_cast<char32_t>(first_word << 10) + static_cast<char32_t>(second_word) + SURROGATE_OFFSET;
-                return utf_error::OK;
-            } else
-                err = utf_error::INCOMPLETE_SEQUENCE;
-
-        } else {
-            err = utf_error::INVALID_LEAD;
-        }
     }
-    // error branch
+    if (it == end) {
+        it = original_it;
+        return utf_error::NOT_ENOUGH_SPACE;
+    }
+    if (detail::is_lead_surrogate(first_word)) {
+        char16_t const second_word = *it++;
+        if (detail::is_trail_surrogate(static_cast<char32_t>(second_word))) {
+            code_point = static_cast<char32_t>(first_word << 10) + static_cast<char32_t>(second_word) + SURROGATE_OFFSET;
+            return utf_error::OK;
+        }
+        it = original_it;
+        return utf_error::INCOMPLETE_SEQUENCE;
+    }
+
     it = original_it;
-    return err;
+    return utf_error::INVALID_LEAD;
 }
-
-template<class OutIt, octet octet_type = std::iter_value_t<OutIt>>
-    requires std::output_iterator<OutIt, octet_type>
-constexpr OutIt append(char32_t cp, OutIt result) noexcept
-{
-    if (cp < 0x80) // one octet
-        *(result++) = static_cast<octet_type>(cp);
-    else if (cp < 0x800) { // two octets
-        *(result++) = static_cast<octet_type>((cp >> 6) | 0xc0);
-        *(result++) = static_cast<octet_type>((cp & 0x3f) | 0x80);
-    } else if (cp < 0x10000) { // three octets
-        *(result++) = static_cast<octet_type>((cp >> 12) | 0xe0);
-        *(result++) = static_cast<octet_type>(((cp >> 6) & 0x3f) | 0x80);
-        *(result++) = static_cast<octet_type>((cp & 0x3f) | 0x80);
-    } else { // four octets
-        *(result++) = static_cast<octet_type>((cp >> 18) | 0xf0);
-        *(result++) = static_cast<octet_type>(((cp >> 12) & 0x3f) | 0x80);
-        *(result++) = static_cast<octet_type>(((cp >> 6) & 0x3f) | 0x80);
-        *(result++) = static_cast<octet_type>((cp & 0x3f) | 0x80);
-    }
-    return result;
-}
-
-template<class container_type>
-constexpr std::back_insert_iterator<container_type> append(char32_t cp, std::back_insert_iterator<container_type> result)
-    noexcept(noexcept(detail::append<std::back_insert_iterator<container_type>, class container_type::value_type>(cp, result)))
-    {
-        return detail::append<std::back_insert_iterator<container_type>, class container_type::value_type>(cp, result);
-    }
-
-    template<std::output_iterator<char16_t> It>
-    constexpr It append16(char32_t cp, It result)
-        noexcept(noexcept(*result++ = std::declval<char16_t>()))
-    {
-        if (detail::is_in_bmp(cp))
-            *(result++) = static_cast<char16_t>(cp);
-        else {
-            // Code points from the supplementary planes are encoded via surrogate pairs
-            *(result++) = static_cast<char16_t>(LEAD_OFFSET + (cp >> 10));
-            *(result++) = static_cast<char16_t>(TRAIL_SURROGATE_MIN + (cp & 0x3FF));
-        }
-        return result;
-    }
 
 } // detail
-
-// Base for the exceptions that may be thrown from the library
-class exception : public ::std::exception
-{
-};
-
-// Exceptions that may be thrown from the library functions.
-class invalid_code_point : public exception
-{
-    char32_t cp;
-
-public:
-    explicit invalid_code_point(char32_t codepoint)
-        : cp(codepoint)
-    {
-    }
-    virtual const char* what() const noexcept override { return "Invalid code point"; }
-    [[nodiscard]] char32_t code_point() const noexcept { return cp; }
-};
-
-class invalid_utf8 : public exception
-{
-    char8_t u8;
-
-public:
-    explicit invalid_utf8(char c)
-        : u8(static_cast<char8_t>(c))
-    {
-    }
-    explicit invalid_utf8(char8_t u)
-        : u8(u)
-    {
-    }
-    virtual const char* what() const noexcept override { return "Invalid UTF-8"; }
-    [[nodiscard]] char8_t utf8_octet() const noexcept { return u8; }
-};
-
-class invalid_utf16 : public exception
-{
-    char16_t u16;
-
-public:
-    explicit invalid_utf16(char16_t u)
-        : u16(u)
-    {
-    }
-    virtual const char* what() const noexcept override { return "Invalid UTF-16"; }
-    [[nodiscard]] char16_t utf16_word() const noexcept { return u16; }
-};
-
-class not_enough_room : public exception
-{
-public:
-    virtual const char* what() const noexcept override { return "Not enough space"; }
-};
-
-/// The library API - functions intended to be called by the users
-
-// Byte order mark
-constexpr char8_t bom[] = {0xef, 0xbb, 0xbf};
 
 template<octet_input_iterator It, std::sentinel_for<It> Se>
 [[nodiscard]] constexpr It find_invalid(It it, Se se)
@@ -538,8 +533,9 @@ template<octet_input_iterator It, std::sentinel_for<It> Se>
 {
     while (it != se) {
         detail::utf_error err_code = detail::validate_next(it, se);
-        if (err_code != detail::utf_error::OK)
+        if (err_code != detail::utf_error::OK) {
             return it;
+        }
     }
     return it;
 }
@@ -548,21 +544,21 @@ template<octet_input_iterator It, std::sentinel_for<It> Se>
     noexcept(noexcept(unicode::find_invalid(s.begin(), s.end())))
 {
     std::string_view::const_iterator invalid = unicode::find_invalid(s.begin(), s.end());
-    return (invalid == s.end()) ? std::string_view::npos : static_cast<std::size_t>(invalid - s.begin());
+    return invalid == s.end() ? std::string_view::npos : static_cast<std::size_t>(invalid - s.begin());
 }
 
 [[nodiscard]] constexpr std::size_t find_invalid(std::u8string_view s)
     noexcept(noexcept(unicode::find_invalid(s.begin(), s.end())))
 {
     std::u8string_view::const_iterator invalid = unicode::find_invalid(s.begin(), s.end());
-    return (invalid == s.end()) ? std::u8string_view::npos : static_cast<std::size_t>(invalid - s.begin());
+    return invalid == s.end() ? std::u8string_view::npos : static_cast<std::size_t>(invalid - s.begin());
 }
 
 template<octet_input_iterator It, std::sentinel_for<It> Se>
 [[nodiscard]] constexpr bool is_valid(It it, Se se)
     noexcept(noexcept(unicode::find_invalid(it, se)) && is_nothrow_sentinel_v<It, Se>)
 {
-    return (unicode::find_invalid(it, se) == se);
+    return unicode::find_invalid(it, se) == se;
 }
 
 [[nodiscard]] constexpr bool is_valid(std::string_view s)
@@ -581,7 +577,10 @@ template<octet_input_iterator It, std::sentinel_for<It> Se>
 [[nodiscard]] constexpr bool starts_with_bom(It it, Se end)
     noexcept(noexcept(detail::mask8(*it++)) && is_nothrow_sentinel_v<It, Se>)
 {
-    return (((it != end) && (detail::mask8(*it++)) == bom[0]) && ((it != end) && (detail::mask8(*it++)) == bom[1]) && ((it != end) && (detail::mask8(*it)) == bom[2]));
+    return
+        (it != end && (detail::mask8(*it++)) == bom[0]) &&
+        (it != end && (detail::mask8(*it++)) == bom[1]) &&
+        (it != end && (detail::mask8(*it)) == bom[2]);
 }
 
 [[nodiscard]] constexpr bool starts_with_bom(std::string_view s)
@@ -596,73 +595,154 @@ template<octet_input_iterator It, std::sentinel_for<It> Se>
     return unicode::starts_with_bom(s.begin(), s.end());
 }
 
-template<class OutIt>
-constexpr OutIt append(char32_t cp, OutIt result)
-{
-    if (!detail::is_code_point_valid(cp))
-        throw invalid_code_point(cp);
 
-    return detail::append(cp, result);
+template<octet_output_iterator OutIt>
+constexpr OutIt append8(char32_t cp, OutIt out)
+{
+    if (!detail::is_code_point_valid(cp)) throw invalid_code_point(cp);
+
+    using octet_type = detail::select_output_value_type<OutIt, char>::type;
+
+    if (cp < 0x80) { // one octet
+        *out++ = static_cast<octet_type>(cp);
+    } else if (cp < 0x800) { // two octets
+        *out++ = static_cast<octet_type>((cp >> 6) | 0xc0);
+        *out++ = static_cast<octet_type>((cp & 0x3f) | 0x80);
+    } else if (cp < 0x10000) { // three octets
+        *out++ = static_cast<octet_type>((cp >> 12) | 0xe0);
+        *out++ = static_cast<octet_type>(((cp >> 6) & 0x3f) | 0x80);
+        *out++ = static_cast<octet_type>((cp & 0x3f) | 0x80);
+    } else { // four octets
+        *out++ = static_cast<octet_type>((cp >> 18) | 0xf0);
+        *out++ = static_cast<octet_type>(((cp >> 12) & 0x3f) | 0x80);
+        *out++ = static_cast<octet_type>(((cp >> 6) & 0x3f) | 0x80);
+        *out++ = static_cast<octet_type>((cp & 0x3f) | 0x80);
+    }
+    return out;
 }
 
-constexpr void append(char32_t cp, std::string& s)
+template<utf16_output_iterator OutIt>
+constexpr OutIt append16(char32_t cp, OutIt out)
 {
-    unicode::append(cp, std::back_inserter(s));
+    if (!detail::is_code_point_valid(cp)) throw invalid_code_point(cp);
+
+    if (detail::is_in_bmp(cp)) {
+        *out++ = static_cast<char16_t>(cp);
+    } else {
+        // Code points from the supplementary planes are encoded via surrogate pairs
+        *out++ = static_cast<char16_t>(detail::LEAD_OFFSET + (cp >> 10));
+        *out++ = static_cast<char16_t>(detail::TRAIL_SURROGATE_MIN + (cp & 0x3FF));
+    }
+    return out;
 }
 
-constexpr void append(char32_t cp, std::u8string& s)
+// Forwards automatically based on `sizeof(value_type)`, but overload may become
+// ambiguous on `value_type`-agnostic iterators such as `std::back_insert_iterator`.
+template<octet_output_iterator OutIt>
+constexpr OutIt append(char32_t cp, OutIt out)
 {
-    unicode::append(cp, std::back_inserter(s));
+    return unicode::append8(cp, std::move(out));
+}
+template<utf16_output_iterator OutIt>
+constexpr OutIt append(char32_t cp, OutIt out)
+{
+    return unicode::append16(cp, std::move(out));
 }
 
-template<class It>  // TODO: add constraints
-constexpr It append16(char32_t cp, It result)
-{
-    if (!detail::is_code_point_valid(cp))
-        throw invalid_code_point(cp);
 
-    return detail::append16(cp, result);
+template<class OutR>
+    requires octet_output_range<std::decay_t<OutR>>
+constexpr std::ranges::subrange<std::ranges::iterator_t<std::decay_t<OutR>>, std::ranges::sentinel_t<std::decay_t<OutR>>>
+append8(char32_t cp, OutR&& r)
+{
+    return std::ranges::subrange{
+        unicode::append8(cp, std::ranges::begin(r)), std::ranges::end(r)
+    };
 }
 
-constexpr void append16(char32_t cp, std::u16string& s)
+template<class OutR>
+    requires utf16_output_range<std::decay_t<OutR>>
+constexpr std::ranges::subrange<std::ranges::iterator_t<std::decay_t<OutR>>, std::ranges::sentinel_t<std::decay_t<OutR>>>
+append16(char32_t cp, OutR&& r)
 {
-    unicode::append16(cp, std::back_inserter(s));
+    return std::ranges::subrange{
+        unicode::append16(cp, std::ranges::begin(r)), std::ranges::end(r)
+    };
 }
 
-template<octet_input_iterator It, std::sentinel_for<It> Se, class Out>  // TODO: add constraints
+// Forwards automatically based on `sizeof(value_type)`, but overload may become
+// ambiguous on `value_type`-agnostic iterators such as `std::back_insert_iterator`.
+template<class OutR>
+    requires octet_output_range<std::decay_t<OutR>>
+constexpr std::ranges::subrange<std::ranges::iterator_t<std::decay_t<OutR>>, std::ranges::sentinel_t<std::decay_t<OutR>>>
+append(char32_t cp, OutR&& r)
+{
+    return unicode::append8(cp, std::forward<OutR>(r));
+}
+template<class OutR>
+    requires utf16_output_range<std::decay_t<OutR>>
+constexpr std::ranges::subrange<std::ranges::iterator_t<std::decay_t<OutR>>, std::ranges::sentinel_t<std::decay_t<OutR>>>
+append(char32_t cp, OutR&& r)
+{
+    return unicode::append16(cp, std::forward<OutR>(r));
+}
+
+constexpr void append(char32_t cp, std::string& str)
+{
+    unicode::append8(cp, std::back_inserter(str));
+}
+
+constexpr void append(char32_t cp, std::u8string& str)
+{
+    unicode::append8(cp, std::back_inserter(str));
+}
+
+constexpr void append(char32_t cp, std::u16string& str)
+{
+    unicode::append16(cp, std::back_inserter(str));
+}
+
+template<octet_input_iterator It, std::sentinel_for<It> Se, octet_output_iterator Out>
 constexpr Out replace_invalid(It start, Se end, Out out, char32_t replacement)
 {
     while (start != end) {
-        It sequence_start = start;
-        detail::utf_error err_code  = detail::validate_next(start, end);
-        switch (err_code) {
-            case detail::utf_error::OK:
-                for (It it = sequence_start; it != start; ++it)
-                    *out++ = *it;
-                break;
-            case detail::utf_error::NOT_ENOUGH_ROOM:
-                out   = unicode::append(replacement, out);
-                start = end;
-                break;
-            case detail::utf_error::INVALID_LEAD:
-                out = unicode::append(replacement, out);
+        It const sequence_start = start;
+        switch (detail::validate_next(start, end)) {
+        case detail::utf_error::OK:
+            for (It it = sequence_start; it != start; ++it) {
+                *out++ = *it;
+            }
+            break;
+
+        case detail::utf_error::NOT_ENOUGH_SPACE:
+            out = unicode::append8(replacement, out);
+            start = end;
+            break;
+
+        case detail::utf_error::INVALID_LEAD:
+            out = unicode::append8(replacement, out);
+            ++start;
+            break;
+
+        case detail::utf_error::INCOMPLETE_SEQUENCE:
+        case detail::utf_error::OVERLONG_SEQUENCE:
+        case detail::utf_error::INVALID_CODE_POINT:
+            out = unicode::append8(replacement, out);
+            ++start;
+            // just one replacement mark for the sequence
+            while (start != end && detail::is_trail(*start)) {
                 ++start;
-                break;
-            case detail::utf_error::INCOMPLETE_SEQUENCE:
-            case detail::utf_error::OVERLONG_SEQUENCE:
-            case detail::utf_error::INVALID_CODE_POINT:
-                out = unicode::append(replacement, out);
-                ++start;
-                // just one replacement mark for the sequence
-                while (start != end && detail::is_trail(*start))
-                    ++start;
-                break;
+            }
+            break;
+
+        default:
+            std::unreachable();
         }
     }
     return out;
 }
 
-template<octet_input_iterator It, std::sentinel_for<It> Se, class Out>  // TODO: add constraints
+template<octet_input_iterator It, std::sentinel_for<It> Se, octet_output_iterator Out>
 constexpr Out replace_invalid(It start, Se end, Out out)
 {
     constexpr char32_t replacement_marker = static_cast<char32_t>(detail::mask16(0xfffd));
@@ -672,47 +752,48 @@ constexpr Out replace_invalid(It start, Se end, Out out)
 [[nodiscard]] constexpr std::string replace_invalid(std::string_view s, char32_t replacement)
 {
     std::string result;
-    replace_invalid(s.begin(), s.end(), std::back_inserter(result), replacement);
+    unicode::replace_invalid(s.begin(), s.end(), std::back_inserter(result), replacement);
     return result;
 }
 
 [[nodiscard]] constexpr std::u8string replace_invalid(std::u8string_view s, char32_t replacement)
 {
     std::u8string result;
-    replace_invalid(s.begin(), s.end(), std::back_inserter(result), replacement);
+    unicode::replace_invalid(s.begin(), s.end(), std::back_inserter(result), replacement);
     return result;
 }
 
 [[nodiscard]] constexpr std::string replace_invalid(std::string_view s)
 {
     std::string result;
-    replace_invalid(s.begin(), s.end(), std::back_inserter(result));
+    unicode::replace_invalid(s.begin(), s.end(), std::back_inserter(result));
     return result;
 }
 
 [[nodiscard]] constexpr std::u8string replace_invalid(std::u8string_view s)
 {
     std::u8string result;
-    replace_invalid(s.begin(), s.end(), std::back_inserter(result));
+    unicode::replace_invalid(s.begin(), s.end(), std::back_inserter(result));
     return result;
 }
 
 template<octet_input_iterator It, std::sentinel_for<It> Se>
 [[nodiscard]] constexpr char32_t next(It& it, Se end)
 {
-    char32_t cp               = 0;
-    detail::utf_error err_code = detail::validate_next(it, end, cp);
-    switch (err_code) {
-        case detail::utf_error::OK:
-            break;
-        case detail::utf_error::NOT_ENOUGH_ROOM:
-            throw not_enough_room();
-        case detail::utf_error::INVALID_LEAD:
-        case detail::utf_error::INCOMPLETE_SEQUENCE:
-        case detail::utf_error::OVERLONG_SEQUENCE:
-            throw invalid_utf8(static_cast<char8_t>(*it));
-        case detail::utf_error::INVALID_CODE_POINT:
-            throw invalid_code_point(cp);
+    char32_t cp = 0;
+    switch (detail::validate_next(it, end, cp)) {
+    case detail::utf_error::OK:
+        break;
+    case detail::utf_error::NOT_ENOUGH_SPACE:
+        throw not_enough_space();
+    case detail::utf_error::INVALID_LEAD:
+    case detail::utf_error::INCOMPLETE_SEQUENCE:
+    case detail::utf_error::OVERLONG_SEQUENCE:
+        throw invalid_utf8(static_cast<char8_t>(*it));
+    case detail::utf_error::INVALID_CODE_POINT:
+        throw invalid_code_point(cp);
+    default:
+        std::unreachable();
     }
     return cp;
 }
@@ -722,8 +803,9 @@ template<utf16_input_iterator It, std::sentinel_for<It> Se>
 {
     char32_t cp               = 0;
     detail::utf_error err_code = detail::validate_next16(it, end, cp);
-    if (err_code == detail::utf_error::NOT_ENOUGH_ROOM)
-        throw not_enough_room();
+    if (err_code == detail::utf_error::NOT_ENOUGH_SPACE) {
+        throw not_enough_space();
+    }
     return cp;
 }
 
@@ -737,50 +819,53 @@ template<octet_input_iterator It, std::sentinel_for<It> Se>
 [[nodiscard]] constexpr char32_t prev(It& it, Se start)
 {
     // can't do much if it == start
-    if (it == start)
-        throw not_enough_room();
+    if (it == start) throw not_enough_space();
 
     It end = it;
     // Go back until we hit either a lead octet or start
-    while (detail::is_trail(*(--it)))
-        if (it == start)
-            throw invalid_utf8(*it); // error - no lead byte in the sequence
+    while (detail::is_trail(*(--it))) {
+        if (it == start) throw invalid_utf8(*it); // error - no lead byte in the sequence
+    }
     return unicode::peek_next(it, end);
 }
 
 template<octet_input_iterator It, std::sentinel_for<It> Se, class distance_type>
 constexpr void advance(It& it, distance_type n, Se end)
 {
-    const distance_type zero(0);
+    constexpr distance_type zero(0);
     if (n < zero) {
         // backward
-        for (distance_type i = n; i < zero; ++i)
+        for (distance_type i = n; i < zero; ++i) {
             (void)unicode::prev(it, end);
+        }
     } else {
         // forward
-        for (distance_type i = zero; i < n; ++i)
+        for (distance_type i = zero; i < n; ++i) {
             (void)unicode::next(it, end);
+        }
     }
 }
 
 template<octet_input_iterator It, std::sentinel_for<It> Se>
-[[nodiscard]] constexpr class std::iterator_traits<It>::difference_type distance(It first, Se last)
+[[nodiscard]] constexpr typename std::iterator_traits<It>::difference_type
+distance(It first, Se last)
 {
-    class std::iterator_traits<It>::difference_type dist;
-    for (dist = 0; first != last; ++dist)
+    typename std::iterator_traits<It>::difference_type dist;
+    for (dist = 0; first != last; ++dist) {
         (void)unicode::next(first, last);
+    }
     return dist;
 }
 
-template<utf16_input_iterator It, std::sentinel_for<It> Se, class OutIt> // TODO: add constraints
-constexpr OutIt utf16to8(It start, Se end, OutIt result)
+template<utf16_input_iterator It, std::sentinel_for<It> Se, octet_output_iterator OutIt>
+constexpr OutIt utf16to8(It start, Se end, OutIt out)
 {
     while (start != end) {
         char32_t cp = static_cast<char32_t>(detail::mask16(*start++));
         // Take care of surrogate pairs first
         if (detail::is_lead_surrogate(cp)) {
             if (start != end) {
-                const char32_t trail_surrogate = static_cast<char32_t>(detail::mask16(*start++));
+                char32_t const trail_surrogate = static_cast<char32_t>(detail::mask16(*start++));
                 if (detail::is_trail_surrogate(trail_surrogate))
                     cp = (cp << 10) + trail_surrogate + detail::SURROGATE_OFFSET;
                 else
@@ -793,9 +878,9 @@ constexpr OutIt utf16to8(It start, Se end, OutIt result)
         else if (detail::is_trail_surrogate(cp))
             throw invalid_utf16(static_cast<char16_t>(cp));
 
-        result = unicode::append(cp, result);
+        out = unicode::append8(cp, out);
     }
-    return result;
+    return out;
 }
 
 [[nodiscard]] constexpr std::string utf16to8(std::u16string_view s)
@@ -812,18 +897,19 @@ constexpr OutIt utf16to8(It start, Se end, OutIt result)
     return result;
 }
 
-template<utf8_input_iterator It, std::sentinel_for<It> Se, class OutIt>  // TODO: add constraints
-constexpr OutIt utf8to16(It start, Se end, OutIt result)
+template<utf8_input_iterator It, std::sentinel_for<It> Se, utf16_output_iterator OutIt>
+constexpr OutIt utf8to16(It start, Se end, OutIt out)
 {
     while (start != end) {
-        const char32_t cp = unicode::next(start, end);
+        char32_t const cp = unicode::next(start, end);
         if (cp > 0xffff) { // make a surrogate pair
-            *result++ = static_cast<char16_t>((cp >> 10) + detail::LEAD_OFFSET);
-            *result++ = static_cast<char16_t>((cp & 0x3ff) + detail::TRAIL_SURROGATE_MIN);
-        } else
-            *result++ = static_cast<char16_t>(cp);
+            *out++ = static_cast<char16_t>((cp >> 10) + detail::LEAD_OFFSET);
+            *out++ = static_cast<char16_t>((cp & 0x3ff) + detail::TRAIL_SURROGATE_MIN);
+        } else {
+            *out++ = static_cast<char16_t>(cp);
+        }
     }
-    return result;
+    return out;
 }
 
 [[nodiscard]] constexpr std::u16string utf8to16(std::string_view s)
@@ -840,13 +926,13 @@ constexpr OutIt utf8to16(It start, Se end, OutIt result)
     return result;
 }
 
-template<utf32_input_iterator It, std::sentinel_for<It> Se, class OutIt>  // TODO: add constraints
-constexpr OutIt utf32to8(It start, Se end, OutIt result)
+template<utf32_input_iterator It, std::sentinel_for<It> Se, octet_output_iterator OutIt>
+constexpr OutIt utf32to8(It start, Se end, OutIt out)
 {
-    while (start != end)
-        result = unicode::append(*(start++), result);
-
-    return result;
+    while (start != end) {
+        out = unicode::append8(*start++, out);
+    }
+    return out;
 }
 
 [[nodiscard]] constexpr std::string utf32to8(std::u32string_view s)
@@ -864,12 +950,12 @@ constexpr OutIt utf32to8(It start, Se end, OutIt result)
 }
 
 template<utf8_input_iterator It, std::sentinel_for<It> Se, class OutIt>
-constexpr OutIt utf8to32(It start, Se end, OutIt result)
+constexpr OutIt utf8to32(It start, Se end, OutIt out)
 {
-    while (start != end)
-        (*result++) = unicode::next(start, end);
-
-    return result;
+    while (start != end) {
+        *out++ = unicode::next(start, end);
+    }
+    return out;
 }
 
 [[nodiscard]] constexpr std::u32string utf8to32(std::string_view s)
@@ -900,17 +986,20 @@ public:
     using reference = char32_t&;
     using difference_type = std::ptrdiff_t;
     using iterator_category = std::bidirectional_iterator_tag;
+
     constexpr iterator()
         requires std::is_default_constructible_v<It>
     = default;
+
     constexpr explicit iterator(It octet_it, It rangestart, It rangeend)
         : it(std::move(octet_it))
         , range_start(std::move(rangestart))
         , range_end(std::move(rangeend))
     {
         if constexpr (std::random_access_iterator<It>) {
-            if (it < range_start || it > range_end)
+            if (it < range_start || it > range_end) {
                 throw std::out_of_range("Invalid utf-8 iterator position");
+            }
         }
     }
     // the default "big three" are OK

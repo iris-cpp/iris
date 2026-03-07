@@ -1,6 +1,4 @@
-#include "utf8.h"
-
-using namespace iris::utflib;
+#include <iris/unicode/string.hpp>
 
 #include <string>
 #include <iostream>
@@ -8,14 +6,16 @@ using namespace iris::utflib;
 #include <algorithm>
 
 using namespace std;
+using namespace iris::unicode;
 
 const unsigned INVALID_LINES[] = { 75, 76, 83, 84, 85, 93, 102, 103, 105, 106, 107, 108, 109, 110, 114, 115, 116, 117, 124, 125, 130, 135, 140, 145, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 169, 175, 176, 177, 207, 208, 209, 210, 211, 220, 221, 222, 223, 224, 232, 233, 234, 235, 236, 247, 248, 249, 250, 251, 252, 253, 257, 258, 259, 260, 261, 262, 263, 264};
 const unsigned* INVALID_LINES_END = INVALID_LINES + sizeof(INVALID_LINES)/sizeof(unsigned);
 
+#if 0
 int main(int argc, char** argv)
 {
     string test_file_path;
-    if (argc == 2) 
+    if (argc == 2)
         test_file_path = argv[1];
     else {
         cout << "Wrong number of arguments" << endl;
@@ -59,3 +59,5 @@ int main(int argc, char** argv)
         }
     }
 }
+
+#endif

@@ -2,66 +2,90 @@
 
 #include <iris/unicode/string.hpp>
 
+#include <algorithm>
 #include <string>
+#include <array>
+#include <ranges>
+
+#include <cstdint>
 
 namespace iris_unicode_test {
 
 namespace unicode = iris::unicode;
 
-using namespace iris::unicode;
-using namespace std;
+template<class T, class... Chars>
+constexpr std::array<T, sizeof...(Chars)> to_array_cast(Chars... cs)
+{
+    return std::array<T, sizeof...(Chars)>{
+        static_cast<T>(cs)...
+    };
+}
 
 TEST_CASE("append")
 {
-    unsigned char u[5] = {0, 0, 0, 0, 0};
-    unicode::append(0x0448, u);
-    EXPECT_EQ (u[0], 0xd1);
-    EXPECT_EQ (u[1], 0x88);
-    EXPECT_EQ (u[2], 0);
-    EXPECT_EQ (u[3], 0);
-    EXPECT_EQ (u[4], 0);
+    constexpr auto do_test = []<class T>() {
+        STATIC_CHECK([] {
+            std::array<T, 5> u{};
+            unicode::append(0x0448U, u);
+            return u;
+        }() == to_array_cast<T>(0xd1, 0x88, 0, 0, 0));
 
-    unicode::append(0x65e5, u);
-    EXPECT_EQ (u[0], 0xe6);
-    EXPECT_EQ (u[1], 0x97);
-    EXPECT_EQ (u[2], 0xa5);
-    EXPECT_EQ (u[3], 0);
-    EXPECT_EQ (u[4], 0);
+        STATIC_CHECK([] {
+            std::array<T, 5> u{};
+            unicode::append(0x65e5U, u);
+            return u;
+        }() == to_array_cast<T>(0xe6, 0x97, 0xa5, 0, 0));
 
-    unicode::append(0x3044, u);
-    EXPECT_EQ (u[0], 0xe3);
-    EXPECT_EQ (u[1], 0x81);
-    EXPECT_EQ (u[2], 0x84);
-    EXPECT_EQ (u[3], 0);
-    EXPECT_EQ (u[4], 0);
+        STATIC_CHECK([] {
+            std::array<T, 5> u{};
+            unicode::append(0x3044U, u);
+            return u;
+        }() == to_array_cast<T>(0xe3, 0x81, 0x84, 0, 0));
 
-    unicode::append(0x10346, u);
-    EXPECT_EQ (u[0], 0xf0);
-    EXPECT_EQ (u[1], 0x90);
-    EXPECT_EQ (u[2], 0x8d);
-    EXPECT_EQ (u[3], 0x86);
-    EXPECT_EQ (u[4], 0);
+        STATIC_CHECK([] {
+            std::array<T, 5> u{};
+            unicode::append(0x10346U, u);
+            return u;
+        }() == to_array_cast<T>(0xf0, 0x90, 0x8d, 0x86, 0));
+    };
+
+    do_test.operator()<char8_t>();
+    do_test.operator()<char>();
+    do_test.operator()<unsigned char>();
+    do_test.operator()<std::int8_t>();
+    do_test.operator()<std::uint8_t>();
+}
+
+TEST_CASE("append16")
+{
+    constexpr auto do_test = []<class T>() {
+        STATIC_CHECK([] {
+            std::array<T, 5> u{};
+            unicode::append(0x0448U, u);
+            return u;
+        }() == to_array_cast<T>(0x0448, 0, 0, 0, 0));
+
+        STATIC_CHECK([] {
+            std::array<T, 5> u{};
+            unicode::append(0x65e5U, u);
+            return u;
+        }() == to_array_cast<T>(0x65e5, 0, 0, 0, 0));
+
+        STATIC_CHECK([] {
+            std::array<T, 5> u{};
+            unicode::append(0x10346U, u);
+            return u;
+        }() == to_array_cast<T>(0xd800, 0xdf46, 0, 0, 0));
+    };
+
+    do_test.operator()<char16_t>();
+    do_test.operator()<std::int16_t>();
+    do_test.operator()<std::uint16_t>();
 }
 
 #if 0
 
-TEST(CheckedAPITests, test_append16)
-{
-    char16_t u[5] = {0, 0};
-    append16(0x0448, u);
-    EXPECT_EQ (u[0], 0x0448);
-    EXPECT_EQ (u[1], 0x0000);
-
-    append16(0x65e5, u);
-    EXPECT_EQ (u[0], 0x65e5);
-    EXPECT_EQ (u[1], 0x0000);
-
-    append16(0x10346, u);
-    EXPECT_EQ (u[0], 0xd800);
-    EXPECT_EQ (u[1], 0xdf46);
-}
-
-TEST(CheckedAPITests, test_next)
+TEST_CASE("next")
 {
     const char* twochars = "\xe6\x97\xa5\xd1\x88";
     const char* w = twochars;
@@ -85,7 +109,7 @@ TEST(CheckedAPITests, test_next)
     EXPECT_EQ (w, threechars + 9);
 }
 
-TEST(CheckedAPITests, test_next16)
+TEST_CASE("next16")
 {
     const char16_t u[3] = {0x65e5, 0xd800, 0xdf46};
     const char16_t* w = u;
@@ -98,14 +122,14 @@ TEST(CheckedAPITests, test_next16)
     EXPECT_EQ (w, u + 3);
 }
 
-TEST(CheckedAPITests, test_peek_next)
+TEST_CASE("peek_next")
 {
     const char* const cw = "\xe6\x97\xa5\xd1\x88";
     unsigned int cp = peek_next(cw, cw + 6);
     EXPECT_EQ (cp, 0x65e5);
 }
 
-TEST(CheckedAPITests, test_prior)
+TEST_CASE("prior")
 {
     const char* twochars = "\xe6\x97\xa5\xd1\x88";
     const char* w = twochars + 3;
@@ -126,7 +150,7 @@ TEST(CheckedAPITests, test_prior)
     EXPECT_EQ (w, threechars);
 }
 
-TEST(CheckedAPITests, test_advance)
+TEST_CASE("advance")
 {
     const char* threechars = "\xf0\x90\x8d\x86\xe6\x97\xa5\xd1\x88";
     const char* w = threechars;
@@ -142,14 +166,14 @@ TEST(CheckedAPITests, test_advance)
     EXPECT_EQ(w, threechars);
 }
 
-TEST(CheckedAPITests, test_distance)
+TEST_CASE("distance")
 {
     const char* twochars = "\xe6\x97\xa5\xd1\x88";
     size_t dist = static_cast<size_t>(iris::utflib::distance(twochars, twochars + 5));
     EXPECT_EQ (dist, 2);
 }
 
-TEST(CheckedAPITests, test_utf32to8)
+TEST_CASE("utf32to8")
 {
     char32_t utf32string[] = {0x448, 0x65E5, 0x10346, 0};
     string utf8result;
@@ -157,7 +181,7 @@ TEST(CheckedAPITests, test_utf32to8)
     EXPECT_EQ (utf8result.size(), 9);
 }
 
-TEST(CheckedAPITests, test_utf8to32)
+TEST_CASE("utf8to32")
 {
     const char* twochars = "\xe6\x97\xa5\xd1\x88";
     vector<unsigned int> utf32result;
@@ -165,7 +189,7 @@ TEST(CheckedAPITests, test_utf8to32)
     EXPECT_EQ (utf32result.size(), 2);
 }
 
-TEST(CheckedAPITests, test_utf16to8)
+TEST_CASE("utf16to8")
 {
     char16_t utf16string[] = {0x41, 0x0448, 0x65e5, 0xd834, 0xdd1e};
     string utf8result;
@@ -173,7 +197,7 @@ TEST(CheckedAPITests, test_utf16to8)
     EXPECT_EQ (utf8result.size(), 10);
 }
 
-TEST(CheckedAPITests, test_utf8to16)
+TEST_CASE("utf8to16")
 {
     char utf8_with_surrogates[] = "\xe6\x97\xa5\xd1\x88\xf0\x9d\x84\x9e";
     vector <char16_t> utf16result;
@@ -183,7 +207,7 @@ TEST(CheckedAPITests, test_utf8to16)
     EXPECT_EQ (utf16result[3], 0xdd1e);
 }
 
-TEST(CheckedAPITests, test_replace_invalid)
+TEST_CASE("replace_invalid")
 {
     char invalid_sequence[] = "a\x80\xe0\xa0\xc0\xaf\xed\xa0\x80z";
     vector<char> replace_invalid_result;
@@ -195,7 +219,7 @@ TEST(CheckedAPITests, test_replace_invalid)
     EXPECT_TRUE (std::equal(replace_invalid_result.begin(), replace_invalid_result.begin() + sizeof(fixed_invalid_sequence), fixed_invalid_sequence));
 }
 
-TEST(CheckedAPITests, test_find_invalid)
+TEST_CASE("find_invalid")
 {
     char utf_invalid[] = "\xe6\x97\xa5\xd1\x88\xfa";
     const char* invalid = find_invalid(utf_invalid, utf_invalid + 6);
@@ -204,7 +228,7 @@ TEST(CheckedAPITests, test_find_invalid)
     EXPECT_EQ (invalid, utf_invalid + 5);
 }
 
-TEST(CheckedAPITests, test_is_valid)
+TEST_CASE("is_valid")
 {
     char utf_invalid[] = "\xe6\x97\xa5\xd1\x88\xfa";
     bool bvalid = is_valid(utf_invalid, utf_invalid + 6);
@@ -218,7 +242,7 @@ TEST(CheckedAPITests, test_is_valid)
     EXPECT_TRUE (bvalid);
 }
 
-TEST(CheckedAPITests, test_starts_with_bom)
+TEST_CASE("starts_with_bom")
 {
     unsigned char byte_order_mark[] = {0xef, 0xbb, 0xbf};
     bool bbom = starts_with_bom(byte_order_mark, byte_order_mark + sizeof(byte_order_mark));
@@ -228,7 +252,7 @@ TEST(CheckedAPITests, test_starts_with_bom)
     EXPECT_FALSE (no_bbom);
 }
 
-TEST(CheckedIteratrTests, test_increment)
+TEST_CASE("increment")
 {
     const char* threechars = "\xf0\x90\x8d\x86\xe6\x97\xa5\xd1\x88";
     iris::utflib::iterator<const char*> it(threechars, threechars, threechars + 9);
@@ -243,7 +267,7 @@ TEST(CheckedIteratrTests, test_increment)
     EXPECT_EQ (++it, endit);
 }
 
-TEST(CheckedIteratrTests, test_decrement)
+TEST_CASE("decrement")
 {
     const char* threechars = "\xf0\x90\x8d\x86\xe6\x97\xa5\xd1\x88";
     iris::utflib::iterator<const char*> it(threechars+9, threechars, threechars + 9);
@@ -254,22 +278,14 @@ TEST(CheckedIteratrTests, test_decrement)
     EXPECT_EQ (*it, 0x10346);
 }
 
-TEST(CPP11APITests, test_append16)
-{
-    u16string u;
-    append16(0x0448, u);
-    EXPECT_EQ (u[0], char16_t(0x0448));
-    EXPECT_EQ (u.length(), 1);
-}
-
-TEST(CPP11APITests, test_utf16to8)
+TEST_CASE("utf16to8")
 {
     u16string utf16string = {0x41, 0x0448, 0x65e5, 0xd834, 0xdd1e};
     string u = utf16to8(utf16string);
     EXPECT_EQ (u.size(), 10);
 }
 
-TEST(CPP11APITests, test_utf8to16)
+TEST_CASE("utf8to16")
 {
     string utf8_with_surrogates = "\xe6\x97\xa5\xd1\x88\xf0\x9d\x84\x9e";
     u16string utf16result = utf8to16(utf8_with_surrogates);
@@ -281,28 +297,28 @@ TEST(CPP11APITests, test_utf8to16)
     EXPECT_EQ(utf8to16("simple"), u"simple");
 }
 
-TEST(CPP11APITests, test_utf32to8)
+TEST_CASE("utf32to8")
 {
     u32string utf32string = {0x448, 0x65E5, 0x10346};
     string utf8result = utf32to8(utf32string);
     EXPECT_EQ (utf8result.size(), 9);
 }
 
-TEST(CPP11APITests, test_utf8to32)
+TEST_CASE("utf8to32")
 {
     const char* twochars = "\xe6\x97\xa5\xd1\x88";
     u32string utf32result = utf8to32(twochars);
     EXPECT_EQ (utf32result.size(), 2);
 }
 
-TEST(CPP11APITests, test_find_invalid)
+TEST_CASE("find_invalid")
 {
     string utf_invalid = "\xe6\x97\xa5\xd1\x88\xfa";
     auto invalid = find_invalid(utf_invalid);
     EXPECT_EQ (invalid, 5);
 }
 
-TEST(CPP11APITests, test_is_valid)
+TEST_CASE("is_valid")
 {
     string utf_invalid = "\xe6\x97\xa5\xd1\x88\xfa";
     bool bvalid = is_valid(utf_invalid);
@@ -312,7 +328,7 @@ TEST(CPP11APITests, test_is_valid)
     EXPECT_TRUE (bvalid);
 }
 
-TEST(CPP11APITests, test_replace_invalid)
+TEST_CASE("replace_invalid")
 {
     string invalid_sequence = "a\x80\xe0\xa0\xc0\xaf\xed\xa0\x80z";
     string replace_invalid_result = replace_invalid(invalid_sequence, '?');
@@ -322,7 +338,7 @@ TEST(CPP11APITests, test_replace_invalid)
     EXPECT_EQ(fixed_invalid_sequence, replace_invalid_result);
 }
 
-TEST(CPP11APITests, test_starts_with_bom)
+TEST_CASE("starts_with_bom")
 {
     string byte_order_mark = {char(0xef), char(0xbb), char(0xbf)};
     bool bbom = starts_with_bom(byte_order_mark);
@@ -333,7 +349,7 @@ TEST(CPP11APITests, test_starts_with_bom)
 }
 
 
-TEST(CPP17APITests, test_utf16to8)
+TEST_CASE("utf16to8")
 {
     u16string utf16string = {0x41, 0x0448, 0x65e5, 0xd834, 0xdd1e};
     u16string_view utf16stringview(utf16string);
@@ -341,7 +357,7 @@ TEST(CPP17APITests, test_utf16to8)
     EXPECT_EQ (u.size(), 10);
 }
 
-TEST(CPP17APITests, test_utf8to16)
+TEST_CASE("utf8to16")
 {
     string_view utf8_with_surrogates = "\xe6\x97\xa5\xd1\x88\xf0\x9d\x84\x9e";
     u16string utf16result = utf8to16(utf8_with_surrogates);
@@ -350,7 +366,7 @@ TEST(CPP17APITests, test_utf8to16)
     EXPECT_EQ (utf16result[3], 0xdd1e);
 }
 
-TEST(CPP17APITests, test_utf32to8)
+TEST_CASE("utf32to8")
 {
     u32string utf32string = {0x448, 0x65E5, 0x10346};
     u32string_view utf32stringview(utf32string);
@@ -358,21 +374,21 @@ TEST(CPP17APITests, test_utf32to8)
     EXPECT_EQ (utf8result.size(), 9);
 }
 
-TEST(CPP17APITests, test_utf8to32)
+TEST_CASE("utf8to32")
 {
     string_view twochars = "\xe6\x97\xa5\xd1\x88";
     u32string utf32result = utf8to32(twochars);
     EXPECT_EQ (utf32result.size(), 2);
 }
 
-TEST(CPP17APITests, test_find_invalid)
+TEST_CASE("find_invalid")
 {
     string_view utf_invalid = "\xe6\x97\xa5\xd1\x88\xfa";
     auto invalid = find_invalid(utf_invalid);
     EXPECT_EQ (invalid, 5);
 }
 
-TEST(CPP17APITests, test_is_valid)
+TEST_CASE("is_valid")
 {
     string_view utf_invalid = "\xe6\x97\xa5\xd1\x88\xfa";
     bool bvalid = is_valid(utf_invalid);
@@ -382,7 +398,7 @@ TEST(CPP17APITests, test_is_valid)
     EXPECT_TRUE (bvalid);
 }
 
-TEST(CPP17APITests, test_replace_invalid)
+TEST_CASE("replace_invalid")
 {
     string_view invalid_sequence = "a\x80\xe0\xa0\xc0\xaf\xed\xa0\x80z";
     string replace_invalid_result = replace_invalid(invalid_sequence, '?');
@@ -392,7 +408,7 @@ TEST(CPP17APITests, test_replace_invalid)
     EXPECT_EQ(fixed_invalid_sequence, replace_invalid_result);
 }
 
-TEST(CPP17APITests, test_starts_with_bom)
+TEST_CASE("starts_with_bom")
 {
     string byte_order_mark = {char(0xef), char(0xbb), char(0xbf)};
     string_view byte_order_mark_view(byte_order_mark);
@@ -412,7 +428,7 @@ TEST(CPP17APITests, string_class_and_literals)
 }
 
 
-TEST(CPP20APITests, test_utf16tou8)
+TEST_CASE("utf16tou8")
 {
     u16string utf16string = {0x41, 0x0448, 0x65e5, 0xd834, 0xdd1e};
     u16string_view utf16stringview{utf16string};
@@ -431,7 +447,7 @@ TEST(CPP20APITests, tes20t_utf8to16)
     EXPECT_EQ (utf16result[3], 0xdd1e);
 }
 
-TEST(CPP20APITests, test_utf32tou8)
+TEST_CASE("utf32tou8")
 {
     u32string utf32string = {0x448, 0x65E5, 0x10346};
     u32string_view utf32stringview{utf32string};
@@ -439,21 +455,21 @@ TEST(CPP20APITests, test_utf32tou8)
     EXPECT_EQ (utf8result.size(), 9);
 }
 
-TEST(CPP20APITests, test_utf8to32)
+TEST_CASE("utf8to32")
 {
     u8string twochars = reinterpret_cast<const char8_t*>("\xe6\x97\xa5\xd1\x88");
     u32string utf32result = utf8to32(twochars);
     EXPECT_EQ (utf32result.size(), 2);
 }
 
-TEST(CPP20APITests, test_find_invalid)
+TEST_CASE("find_invalid")
 {
     u8string utf_invalid = reinterpret_cast<const char8_t*>("\xe6\x97\xa5\xd1\x88\xfa");
     auto invalid = find_invalid(utf_invalid);
     EXPECT_EQ (invalid, 5);
 }
 
-TEST(CPP20APITests, test_is_valid)
+TEST_CASE("is_valid")
 {
     u8string utf_invalid = reinterpret_cast<const char8_t*>("\xe6\x97\xa5\xd1\x88\xfa");
     bool bvalid = is_valid(utf_invalid);
@@ -463,7 +479,7 @@ TEST(CPP20APITests, test_is_valid)
     EXPECT_TRUE (bvalid);
 }
 
-TEST(CPP20APITests, test_replace_invalid)
+TEST_CASE("replace_invalid")
 {
     u8string invalid_sequence = reinterpret_cast<const char8_t*>("a\x80\xe0\xa0\xc0\xaf\xed\xa0\x80z");
     u8string replace_invalid_result = replace_invalid(invalid_sequence, u8'?');
@@ -473,7 +489,7 @@ TEST(CPP20APITests, test_replace_invalid)
     EXPECT_EQ(fixed_invalid_sequence, replace_invalid_result);
 }
 
-TEST(CPP20APITests, test_starts_with_bom)
+TEST_CASE("starts_with_bom")
 {
     u8string byte_order_mark = reinterpret_cast<const char8_t*>("\xef\xbb\xbf");
     bool bbom = starts_with_bom(byte_order_mark);
