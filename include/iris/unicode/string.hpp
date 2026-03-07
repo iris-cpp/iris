@@ -1071,7 +1071,7 @@ template<class CharT>
 [[nodiscard]] constexpr std::basic_string<CharT> transcode(std::string_view str)
 {
     if constexpr (std::same_as<CharT, char8_t>) {
-        return std::u8string{std::from_range, str};
+        return std::u8string{str.begin(), str.end()};
     } else if constexpr (std::same_as<CharT, char16_t>) {
         return unicode::utf8to16(str);
     } else if constexpr (std::same_as<CharT, char32_t>) {
@@ -1093,7 +1093,7 @@ template<class CharT>
         return unicode::utf8to32(str);
     } else {
         static_assert(std::same_as<CharT, char>);
-        return std::string{std::from_range, str};
+        return std::string{str.begin(), str.end()};
     }
 }
 
