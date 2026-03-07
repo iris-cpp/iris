@@ -38,6 +38,8 @@ DEALINGS IN THE SOFTWARE.
 #include <utility>
 #include <ranges>
 
+#include <cassert>
+
 namespace iris::unicode {
 
 template<class T>
@@ -434,11 +436,11 @@ constexpr utf_error validate_next(It& it, Se end, char32_t& code_point)
 
     // Save the original value of it so we can go back in case of failure
     // Of course, it does not make much sense with i.e. stream iterators
-    It original_it = it;
+    It const original_it = it;
 
     char32_t cp = 0;
     // Determine the sequence length based on the lead octet
-    const int length = detail::sequence_length(it);
+    int const length = detail::sequence_length(it);
 
     // Get trail octets and calculate the code point
     utf_error err{};
@@ -460,26 +462,24 @@ constexpr utf_error validate_next(It& it, Se end, char32_t& code_point)
     default:
         std::unreachable();
     }
-
-    if (err == utf_error::OK) {
-        // Decoding succeeded. Now, security checks...
-        if (detail::is_code_point_valid(cp)) {
-            if (!detail::is_overlong_sequence(cp, length)) {
-                // Passed! Return here.
-                code_point = cp;
-                ++it;
-                return utf_error::OK;
-            } else {
-                err = utf_error::OVERLONG_SEQUENCE;
-            }
-        } else {
-            err = utf_error::INVALID_CODE_POINT;
-        }
+    if (err != utf_error::OK) {
+        it = original_it;
+        return err;
     }
 
-    // Failure branch - restore the original value of the iterator
+    if (detail::is_code_point_valid(cp)) {
+        if (!detail::is_overlong_sequence(cp, length)) {
+            code_point = cp;
+            ++it;
+            return utf_error::OK;
+        }
+
+        it = original_it;
+        return utf_error::OVERLONG_SEQUENCE;
+    }
+
     it = original_it;
-    return err;
+    return utf_error::INVALID_CODE_POINT;
 }
 
 template<octet_input_iterator It, std::sentinel_for<It> Se>
@@ -798,14 +798,18 @@ template<octet_input_iterator It, std::sentinel_for<It> Se>
     switch (detail::validate_next(it, end, cp)) {
     case detail::utf_error::OK:
         break;
+
     case detail::utf_error::NOT_ENOUGH_SPACE:
         throw not_enough_space();
+
     case detail::utf_error::INVALID_LEAD:
     case detail::utf_error::INCOMPLETE_SEQUENCE:
     case detail::utf_error::OVERLONG_SEQUENCE:
         throw invalid_utf8(static_cast<char8_t>(*it));
+
     case detail::utf_error::INVALID_CODE_POINT:
         throw invalid_code_point(cp);
+
     default:
         std::unreachable();
     }
@@ -1017,35 +1021,40 @@ public:
             }
         }
     }
-    // the default "big three" are OK
+
     [[nodiscard]] constexpr It base() const { return it; }
+
     [[nodiscard]] constexpr char32_t operator*() const
     {
         It temp = it;
         return unicode::next(temp, range_end);
     }
-    [[nodiscard]] constexpr bool operator==(const iterator& rhs) const
+
+    [[nodiscard]] constexpr bool operator==(iterator const& rhs) const noexcept
     {
-        if (range_start != rhs.range_start || range_end != rhs.range_end)
-            throw std::logic_error("Comparing utf-8 iterators defined with different ranges");
-        return (it == rhs.it);
+        assert(range_start == rhs.range_start && range_end == rhs.range_end && "comparing incompatible iterator range is not allowed");
+        return it == rhs.it;
     }
+
     constexpr iterator& operator++()
     {
         (void)unicode::next(it, range_end);
         return *this;
     }
+
     constexpr iterator operator++(int)
     {
         iterator temp = *this;
         (void)unicode::next(it, range_end);
         return temp;
     }
+
     constexpr iterator& operator--()
     {
         (void)unicode::prev(it, range_start);
         return *this;
     }
+
     constexpr iterator operator--(int)
     {
         iterator temp = *this;
