@@ -878,7 +878,7 @@ distance(It first, Se last)
 // ------------------------------------
 
 template<octet_input_iterator It>
-class iterator
+class code_point_iterator
 {
     It it;
     It range_start;
@@ -891,17 +891,17 @@ public:
     using difference_type = std::ptrdiff_t;
     using iterator_category = std::bidirectional_iterator_tag;
 
-    constexpr iterator()
+    constexpr code_point_iterator()
         requires std::is_default_constructible_v<It>
     = default;
 
-    constexpr explicit iterator(It octet_it, It rangestart, It rangeend)
-        : it(std::move(octet_it))
-        , range_start(std::move(rangestart))
-        , range_end(std::move(rangeend))
+    constexpr code_point_iterator(It it, It range_start, It range_end)
+        : it(std::move(it))
+        , range_start(std::move(range_start))
+        , range_end(std::move(range_end))
     {
         if constexpr (std::random_access_iterator<It>) {
-            if (it < range_start || it > range_end) {
+            if (this->it < this->range_start || this->it > this->range_end) {
                 throw std::out_of_range("Invalid utf-8 iterator position");
             }
         }
@@ -915,34 +915,34 @@ public:
         return unicode::next(temp, range_end);
     }
 
-    [[nodiscard]] constexpr bool operator==(iterator const& rhs) const noexcept
+    [[nodiscard]] constexpr bool operator==(code_point_iterator const& rhs) const noexcept
     {
         assert(range_start == rhs.range_start && range_end == rhs.range_end && "comparing incompatible iterator range is not allowed");
         return it == rhs.it;
     }
 
-    constexpr iterator& operator++()
+    constexpr code_point_iterator& operator++()
     {
         (void)unicode::next(it, range_end);
         return *this;
     }
 
-    [[nodiscard]] constexpr iterator operator++(int)
+    [[nodiscard]] constexpr code_point_iterator operator++(int)
     {
-        iterator temp = *this;
+        code_point_iterator temp = *this;
         (void)unicode::next(it, range_end);
         return temp;
     }
 
-    constexpr iterator& operator--()
+    constexpr code_point_iterator& operator--()
     {
         (void)unicode::prev(it, range_start);
         return *this;
     }
 
-    [[nodiscard]] constexpr iterator operator--(int)
+    [[nodiscard]] constexpr code_point_iterator operator--(int)
     {
-        iterator temp = *this;
+        code_point_iterator temp = *this;
         (void)unicode::prev(it, range_start);
         return temp;
     }
@@ -1066,6 +1066,7 @@ constexpr OutIt utf32to8(It start, Se end, OutIt out)
     return result;
 }
 
+// TODO: add single char variations
 
 template<class CharT>
 [[nodiscard]] constexpr std::basic_string<CharT> transcode(std::string_view str)
