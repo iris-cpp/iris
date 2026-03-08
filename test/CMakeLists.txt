@@ -116,11 +116,32 @@ function(_iris_define_test_impl test_name libs)
     target_link_libraries(${test_name}_test PRIVATE Iris::Iris iris_cxx_test ${libs})
     add_test(NAME ${test_name}_test COMMAND ${test_name}_test --colour-mode=ansi)
 
+    set_tests_properties(
+        ${test_name}_test PROPERTIES
+        ENVIRONMENT "IRIS_ROOT=${IRIS_ROOT}"
+    )
     if(MSVC)
+        set(
+            VS_DEBUGGER_ENVIRONMENT_LIST
+            "PATH=$(VC_ExecutablePath_x64)\;%PATH%"
+            "ASAN_SYMBOLIZER_PATH=$(VC_ExecutablePath_x64)\\llvm-symbolizer.exe"
+            "IRIS_ROOT=$<SHELL_PATH:${IRIS_ROOT}>"
+        )
+        list(JOIN VS_DEBUGGER_ENVIRONMENT_LIST "\n" VS_DEBUGGER_ENVIRONMENT)
+
+        set_target_properties(
+            ${test_name}_test PROPERTIES
+            VS_DEBUGGER_ENVIRONMENT "${VS_DEBUGGER_ENVIRONMENT}"
+        )
+
         get_property(IRIS_MSVC_ASAN_DIR GLOBAL PROPERTY IRIS_MSVC_ASAN_DIR)
+        set(
+            ENV_MODIFICATION
+            "PATH=path_list_append:${IRIS_MSVC_ASAN_DIR}"
+        )
         set_tests_properties(
             ${test_name}_test PROPERTIES
-            ENVIRONMENT "PATH=${IRIS_MSVC_ASAN_DIR};$ENV{PATH}"
+            ENVIRONMENT_MODIFICATION "${ENV_MODIFICATION}"
         )
     endif()
 endfunction()
@@ -169,5 +190,7 @@ if(PROJECT_IS_TOP_LEVEL)
         foreach(test_name IN LISTS IRIS_TEST_IRIS_TESTS)
             iris_define_test_headers(iris_${test_name} iris_test.hpp)
         endforeach()
+
+        add_subdirectory(unicode)
     endif()
 endif()
