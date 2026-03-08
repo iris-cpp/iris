@@ -280,26 +280,26 @@ TEST_CASE("starts_with_bom")
 TEST_CASE("increment")
 {
     constexpr char const* threechars = "\xf0\x90\x8d\x86\xe6\x97\xa5\xd1\x88";
-    unicode::iterator<char const*> it(threechars, threechars, threechars + 9);
-    unicode::iterator<char const*> it2 = it;
+    unicode::code_point_iterator<char const*> it(threechars, threechars, threechars + 9);
+    unicode::code_point_iterator<char const*> it2 = it;
     CHECK(it2 == it);
     CHECK(*it == 0x10346);
     CHECK(*++it == 0x65e5);
     CHECK(*it++ == 0x65e5);
     CHECK(*it == 0x0448);
     CHECK(it != it2);
-    unicode::iterator<char const*> endit(threechars + 9, threechars, threechars + 9);
+    unicode::code_point_iterator<char const*> endit(threechars + 9, threechars, threechars + 9);
     CHECK(++it == endit);
 }
 
 TEST_CASE("decrement")
 {
     constexpr char const* threechars = "\xf0\x90\x8d\x86\xe6\x97\xa5\xd1\x88";
-    unicode::iterator<char const*> it(threechars + 9, threechars, threechars + 9);
+    unicode::code_point_iterator<char const*> it(threechars + 9, threechars, threechars + 9);
     CHECK(*--it == 0x0448);
     CHECK(*it-- == 0x0448);
     CHECK(*it == 0x65e5);
-    CHECK(--it == unicode::iterator<char const*>(threechars, threechars, threechars + 9));
+    CHECK(--it == unicode::code_point_iterator<char const*>(threechars, threechars, threechars + 9));
     CHECK(*it == 0x10346);
 }
 

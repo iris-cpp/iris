@@ -252,7 +252,7 @@ constexpr char32_t SURROGATE_OFFSET    = 0xfca02400u; // 0x10000u - (LEAD_SURROG
 // Maximum valid value for a Unicode code point
 constexpr char32_t CODE_POINT_MAX = 0x0010ffffu;
 
-enum class utf_error
+enum class [[nodiscard]] utf_error
 {
     OK,
     NOT_ENOUGH_SPACE,
@@ -353,7 +353,7 @@ constexpr utf_error increase_safely(It& it, Se end)
         return ret;                                                                                                                                                                                                                        \
     } while (false)
 
-/// get_sequence_x functions decode utf-8 sequences of the length x
+// get_sequence_x functions decode utf-8 sequences of the length x
 template<octet_input_iterator It, std::sentinel_for<It> Se>
 constexpr utf_error get_sequence_1(It& it, Se end, char32_t& code_point)
     noexcept(std::conjunction_v<
@@ -485,10 +485,60 @@ constexpr utf_error validate_next(It& it, Se end, char32_t& code_point)
 template<octet_input_iterator It, std::sentinel_for<It> Se>
     requires std::forward_iterator<It>
 constexpr utf_error validate_next(It& it, Se end)
-    noexcept(noexcept(detail::validate_next(it, end, std::declval<char32_t&>())))
+    noexcept(std::conjunction_v<
+        is_nothrow_dereferenceable<It&>,
+        is_nothrow_prefix_incrementable<It&>,
+        is_nothrow_sentinel<It, Se>,
+        std::is_nothrow_copy_constructible<It>
+    >)
 {
-    char32_t ignored;
-    return detail::validate_next(it, end, ignored);
+    if (it == end) return utf_error::NOT_ENOUGH_SPACE;
+
+    // Save the original value of it so we can go back in case of failure
+    // Of course, it does not make much sense with i.e. stream iterators
+    It const original_it = it;
+
+    char32_t cp = 0;
+    // Determine the sequence length based on the lead octet
+    int const length = detail::sequence_length(it);
+
+    // Get trail octets and calculate the code point
+    utf_error err{};
+    switch (length) {
+    case 0:
+        return utf_error::INVALID_LEAD;
+    case 1:
+        err = detail::get_sequence_1(it, end, cp);
+        break;
+    case 2:
+        err = detail::get_sequence_2(it, end, cp);
+        break;
+    case 3:
+        err = detail::get_sequence_3(it, end, cp);
+        break;
+    case 4:
+        err = detail::get_sequence_4(it, end, cp);
+        break;
+    default:
+        std::unreachable();
+    }
+    if (err != utf_error::OK) {
+        it = original_it;
+        return err;
+    }
+
+    if (detail::is_code_point_valid(cp)) {
+        if (!detail::is_overlong_sequence(cp, length)) {
+            ++it;
+            return utf_error::OK;
+        }
+
+        it = original_it;
+        return utf_error::OVERLONG_SEQUENCE;
+    }
+
+    it = original_it;
+    return utf_error::INVALID_CODE_POINT;
 }
 
 template<utf16_input_iterator It, std::sentinel_for<It> Se>
@@ -816,6 +866,35 @@ template<octet_input_iterator It, std::sentinel_for<It> Se>
     return cp;
 }
 
+template<octet_input_iterator It>
+[[nodiscard]] constexpr std::pair<It, typename std::iterator_traits<It>::difference_type>
+bounded_next(It it, It const last, typename std::iterator_traits<It>::difference_type off = 1)
+{
+    typename std::iterator_traits<It>::difference_type count = 0;
+    for (; it != last && count < off; ++count) {
+        char32_t cp = 0;
+        switch (detail::validate_next(it, last, cp)) {
+        case detail::utf_error::OK:
+            break;
+
+        case detail::utf_error::NOT_ENOUGH_SPACE:
+            throw not_enough_space();
+
+        case detail::utf_error::INVALID_LEAD:
+        case detail::utf_error::INCOMPLETE_SEQUENCE:
+        case detail::utf_error::OVERLONG_SEQUENCE:
+            throw invalid_utf8(static_cast<char8_t>(*it));
+
+        case detail::utf_error::INVALID_CODE_POINT:
+            throw invalid_code_point(cp);
+
+        default:
+            std::unreachable();
+        }
+    }
+    return {it, count};
+}
+
 template<utf16_input_iterator It, std::sentinel_for<It> Se>
 [[nodiscard]] constexpr char32_t next16(It& it, Se end)
 {
@@ -845,6 +924,19 @@ template<octet_input_iterator It, std::sentinel_for<It> Se>
         if (it == start) throw invalid_utf8(*it); // error - no lead byte in the sequence
     }
     return unicode::peek_next(it, end);
+}
+
+template<octet_input_iterator It>
+[[nodiscard]] constexpr std::pair<It, typename std::iterator_traits<It>::difference_type>
+bounded_prev(It const start, It it, typename std::iterator_traits<It>::difference_type off = 1)
+{
+    typename std::iterator_traits<It>::difference_type count = 0;
+    for (; it != start && count < off; ++count) {
+        while (detail::is_trail(*--it)) {
+            if (it == start) throw invalid_utf8(*it); // error - no lead byte in the sequence
+        }
+    }
+    return {it, count};
 }
 
 template<octet_input_iterator It, std::sentinel_for<It> Se, class distance_type>

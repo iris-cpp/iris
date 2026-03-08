@@ -97,6 +97,11 @@ function(iris_define_test_headers test_name)
 endfunction()
 
 function(_iris_define_test_impl test_name libs)
+    get_property(IRIS_ROOT GLOBAL PROPERTY IRIS_ROOT)
+    if(NOT DEFINED IRIS_ROOT OR IRIS_ROOT STREQUAL "")
+        message(FATAL_ERROR "IRIS_ROOT is not defined")
+    endif()
+
     add_executable(${test_name}_test ${ARGN})
     target_include_directories(${test_name}_test PRIVATE ${CMAKE_CURRENT_FUNCTION_LIST_DIR})
     target_include_directories(${test_name}_test PRIVATE ${CMAKE_CURRENT_LIST_DIR})
