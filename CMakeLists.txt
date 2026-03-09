@@ -113,6 +113,13 @@ unset(IRIS_CXX_FEATURE_BEFORE_LATEST)
 # -----------------------------------------------------------------
 # Advanced compile/link settings
 
+if(WIN32)
+    target_compile_definitions(
+        _iris_cxx_common
+        INTERFACE NOMINMAX WIN32_LEAN_AND_MEAN
+    )
+endif()
+
 if(MSVC)
     # Don't set too strict flags for testing! They must go to `iris_cxx_test`.
     # ABI-dependent configurations MUST be set here.
@@ -123,7 +130,7 @@ if(MSVC)
     target_compile_options(
         _iris_cxx_common
         INTERFACE
-            /EHsc /MP /utf-8 /Zc:preprocessor /permissive-
+            /EHsc /MP /utf-8 /Zc:__cplusplus /Zc:preprocessor /permissive-
             # $<$<CONFIG:Debug,RelWithDebInfo>:/fsanitize=address> # TODO
     )
     target_link_options(
