@@ -130,7 +130,7 @@ if(MSVC)
     target_compile_options(
         _iris_cxx_common
         INTERFACE
-            /EHsc /MP /utf-8 /Zc:preprocessor /permissive-
+            /EHsc /MP /utf-8 /Zc:__cplusplus /Zc:preprocessor /permissive-
             # $<$<CONFIG:Debug,RelWithDebInfo>:/fsanitize=address> # TODO
     )
     target_link_options(
