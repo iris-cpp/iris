@@ -8,9 +8,9 @@ endif()
 
 project(iris VERSION 0.0.1 LANGUAGES CXX)
 
-if(NOT DEFINED IRIS_ROOT)
-    set(IRIS_ROOT "${CMAKE_CURRENT_LIST_DIR}")
-endif()
+set(IRIS_ROOT "${CMAKE_CURRENT_LIST_DIR}")
+set_property(GLOBAL PROPERTY IRIS_ROOT "${IRIS_ROOT}")
+
 
 # -----------------------------------------------------------------
 # Global settings
