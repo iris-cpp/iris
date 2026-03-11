@@ -283,6 +283,24 @@ struct aggregate_initialize_resolution<
 template<class T, class... Ts>
 struct aggregate_initialize_resolution : detail::aggregate_initialize_resolution<void, T, Ts...> {};
 
+// P0870R7: is_convertible_without_narrowing
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p0870r7.html
+template<class From, class To>
+struct is_convertible_without_narrowing
+    : std::false_type
+{};
+
+template<class From, class To>
+    requires
+        std::is_convertible_v<From, To> &&
+        requires { std::type_identity_t<To[]>{std::declval<From>()}; }
+struct is_convertible_without_narrowing<From, To>
+    : std::true_type
+{};
+
+template<class From, class To>
+inline constexpr bool is_convertible_without_narrowing_v = is_convertible_without_narrowing<From, To>::value;
+
 } // iris
 
 #endif
