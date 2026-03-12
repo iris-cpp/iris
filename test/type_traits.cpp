@@ -86,6 +86,37 @@ TEST_CASE("is_convertible_without_narrowing")
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int, scoped_enum>);
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<scoped_enum, int>);
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<unscoped_enum, int>);
+
+    // `To[]{from}` works, but not convertible
+    {
+        {
+            struct S {
+                union {
+                    int x;
+                    float y;
+                } u;
+            };
+            [[maybe_unused]] S s{42};
+            STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int, S>);
+        }
+        {
+            struct S {
+                int x[1];
+            };
+            [[maybe_unused]] S s{42};
+            STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int, S>);
+        }
+        {
+            struct S {
+                struct {
+                    int x;
+                } inner;
+            };
+            [[maybe_unused]] S s{42};
+            STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int, S>);
+        }
+    }
+
 }
 
 
