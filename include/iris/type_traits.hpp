@@ -244,8 +244,13 @@ inline constexpr bool is_convertible_without_narrowing_v = is_convertible_withou
 // is_assignable_without_narrowing<Dest, Source>
 //
 // True when `Dest = Source` is valid AND does not involve a narrowing conversion.
-// For non-arithmetic Dest types, narrowing is not checked — we trust that the
-// user-defined conversion handles the assignment correctly.
+//
+// The arithmetic guard is intentional: narrowing conversions are only defined for
+// arithmetic types ([dcl.init.list]), and the underlying `is_convertible_without_narrowing`
+// uses brace-initialization (`To[]{from}`) which may select a different construction
+// path than what `is_assignable` tests (e.g. initializer_list hijacking). Restricting
+// the narrowing check to arithmetic Dest avoids false rejections for non-arithmetic
+// types where the brace-init semantics diverge from assignment semantics.
 template<class Dest, class Source>
 struct is_assignable_without_narrowing
     : std::bool_constant<

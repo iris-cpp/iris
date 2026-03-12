@@ -26,6 +26,23 @@ struct convertible_from_int
 
 struct not_convertible_from_int {};
 
+struct explicit_from_int
+{
+    explicit explicit_from_int() = default;
+    explicit explicit_from_int(int);
+    explicit_from_int& operator=(int) { return *this; }
+};
+
+// "Broken" implementation: is_assignable_without_narrowing without the arithmetic guard.
+// This demonstrates why the guard is needed.
+template<class Dest, class Source>
+struct broken_is_assignable_without_narrowing
+    : std::bool_constant<
+        std::is_assignable_v<Dest, Source> &&
+        iris::is_convertible_without_narrowing_v<std::remove_cvref_t<Source>, std::remove_reference_t<Dest>>
+    >
+{};
+
 enum class scoped_enum {};
 enum unscoped_enum {};
 
@@ -149,6 +166,18 @@ TEST_CASE("is_assignable_without_narrowing")
     // Not assignable at all
     STATIC_CHECK(!iris::is_assignable_without_narrowing_v<not_convertible_from_int&, int>);
     STATIC_CHECK(!iris::is_assignable_without_narrowing_v<int&, std::string>);
+
+    // Non-arithmetic dest with explicit ctor + assignment operator.
+    // Without the arithmetic guard, is_assignable_without_narrowing would
+    // incorrectly return false because is_convertible_without_narrowing
+    // rejects explicit conversions (brace-init uses copy-list-init).
+    STATIC_CHECK(std::is_assignable_v<explicit_from_int&, int>);
+    STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int, explicit_from_int>);
+    STATIC_CHECK(iris::is_assignable_without_narrowing_v<explicit_from_int&, int>);
+
+    // Verify the "false" implementation (without arithmetic guard) breaks here:
+    // it incorrectly rejects this valid, non-narrowing assignment.
+    STATIC_CHECK(!broken_is_assignable_without_narrowing<explicit_from_int&, int>::value);
 }
 
 
