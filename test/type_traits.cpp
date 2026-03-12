@@ -42,13 +42,13 @@ TEST_CASE("is_convertible_without_narrowing")
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<int, long long>);
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<short, int>);
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<char, int>);
-    STATIC_CHECK(iris::is_convertible_without_narrowing_v<unsigned, unsigned long>);
+    STATIC_CHECK(iris::is_convertible_without_narrowing_v<unsigned, unsigned long long>);
 
     // Narrowing integer conversions: rejected
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<long long, int>);
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int, short>);
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int, char>);
-    STATIC_CHECK(!iris::is_convertible_without_narrowing_v<unsigned long, unsigned>);
+    STATIC_CHECK(!iris::is_convertible_without_narrowing_v<unsigned long long, unsigned>);
 
     // Floating-point widening: OK
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<float, double>);
