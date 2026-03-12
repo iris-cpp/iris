@@ -19,7 +19,8 @@ struct n_tuple;
 template<int... Ns>
 struct n_list;
 
-struct convertible_from_int {
+struct convertible_from_int
+{
     convertible_from_int(int);
 };
 
