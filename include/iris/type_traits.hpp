@@ -241,6 +241,24 @@ template<class From, class To>
 inline constexpr bool is_convertible_without_narrowing_v = is_convertible_without_narrowing<From, To>::value;
 
 
+// is_assignable_without_narrowing<Dest, Source>
+//
+// True when `Dest = Source` is valid AND does not involve a narrowing conversion.
+// For non-arithmetic Dest types, narrowing is not checked — we trust that the
+// user-defined conversion handles the assignment correctly.
+template<class Dest, class Source>
+struct is_assignable_without_narrowing
+    : std::bool_constant<
+        std::is_assignable_v<Dest, Source> &&
+        (!std::is_arithmetic_v<std::remove_reference_t<Dest>> ||
+         is_convertible_without_narrowing_v<std::remove_cvref_t<Source>, std::remove_reference_t<Dest>>)
+    >
+{};
+
+template<class Dest, class Source>
+inline constexpr bool is_assignable_without_narrowing_v = is_assignable_without_narrowing<Dest, Source>::value;
+
+
 namespace detail {
 
 template<std::size_t I, class Ti>
