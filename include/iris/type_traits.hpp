@@ -222,6 +222,25 @@ template<class T>
 constexpr bool is_trivially_swappable_v = is_trivially_swappable<T>::value;
 
 
+// P0870R7: is_convertible_without_narrowing
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p0870r7.html
+template<class From, class To>
+struct is_convertible_without_narrowing
+    : std::false_type
+{};
+
+template<class From, class To>
+    requires
+        std::is_convertible_v<From, To> &&
+        requires { std::type_identity_t<To[]>{std::declval<From>()}; }
+struct is_convertible_without_narrowing<From, To>
+    : std::true_type
+{};
+
+template<class From, class To>
+inline constexpr bool is_convertible_without_narrowing_v = is_convertible_without_narrowing<From, To>::value;
+
+
 namespace detail {
 
 template<std::size_t I, class Ti>
@@ -231,19 +250,12 @@ struct aggregate_initialize_tag
     using type = Ti;
 };
 
-// This version works better than MSVC's, does not break IntelliSense or ReSharper
 template<std::size_t I, class Ti>
 struct aggregate_initialize_overload
 {
-    using TiA = Ti[];
-
-    // https://eel.is/c++draft/dcl.init.general#14
-    // https://eel.is/c++draft/dcl.init.list#3.4
-    // https://eel.is/c++draft/dcl.init.aggr#3
-
     template<class T>
     auto operator()(Ti, T&&) -> aggregate_initialize_tag<I, Ti>
-        requires requires(T&& t) { { TiA{std::forward<T>(t)} }; } // emulate `Ti x[] = {std::forward<T>(t)};`
+        requires is_convertible_without_narrowing_v<T, Ti>
     {
         return {}; // silence MSVC warning
     }
@@ -282,24 +294,6 @@ struct aggregate_initialize_resolution<
 // legitimate infinite recursion errors on recursive types.
 template<class T, class... Ts>
 struct aggregate_initialize_resolution : detail::aggregate_initialize_resolution<void, T, Ts...> {};
-
-// P0870R7: is_convertible_without_narrowing
-// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p0870r7.html
-template<class From, class To>
-struct is_convertible_without_narrowing
-    : std::false_type
-{};
-
-template<class From, class To>
-    requires
-        std::is_convertible_v<From, To> &&
-        requires { std::type_identity_t<To[]>{std::declval<From>()}; }
-struct is_convertible_without_narrowing<From, To>
-    : std::true_type
-{};
-
-template<class From, class To>
-inline constexpr bool is_convertible_without_narrowing_v = is_convertible_without_narrowing<From, To>::value;
 
 } // iris
 
