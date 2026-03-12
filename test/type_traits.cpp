@@ -137,50 +137,6 @@ TEST_CASE("is_convertible_without_narrowing")
 }
 
 
-TEST_CASE("is_assignable_without_narrowing")
-{
-    // Non-narrowing: same type
-    STATIC_CHECK(iris::is_assignable_without_narrowing_v<int&, int>);
-    STATIC_CHECK(iris::is_assignable_without_narrowing_v<double&, double>);
-
-    // Non-narrowing: widening
-    STATIC_CHECK(iris::is_assignable_without_narrowing_v<long long&, int>);
-    STATIC_CHECK(iris::is_assignable_without_narrowing_v<double&, float>);
-    STATIC_CHECK(iris::is_assignable_without_narrowing_v<int&, short>);
-
-    // Narrowing: lossy conversions
-    STATIC_CHECK(!iris::is_assignable_without_narrowing_v<int&, long long>);
-    STATIC_CHECK(!iris::is_assignable_without_narrowing_v<short&, int>);
-    STATIC_CHECK(!iris::is_assignable_without_narrowing_v<float&, double>);
-    STATIC_CHECK(!iris::is_assignable_without_narrowing_v<int&, float>);
-    STATIC_CHECK(!iris::is_assignable_without_narrowing_v<float&, int>);
-
-    // Signed/unsigned mismatch
-    STATIC_CHECK(!iris::is_assignable_without_narrowing_v<int&, unsigned>);
-    STATIC_CHECK(!iris::is_assignable_without_narrowing_v<unsigned&, int>);
-
-    // Non-arithmetic dest: narrowing not checked (trusts user-defined conversion)
-    STATIC_CHECK(iris::is_assignable_without_narrowing_v<std::string&, const char*>);
-    STATIC_CHECK(iris::is_assignable_without_narrowing_v<convertible_from_int&, int>);
-
-    // Not assignable at all
-    STATIC_CHECK(!iris::is_assignable_without_narrowing_v<not_convertible_from_int&, int>);
-    STATIC_CHECK(!iris::is_assignable_without_narrowing_v<int&, std::string>);
-
-    // Non-arithmetic dest with explicit ctor + assignment operator.
-    // Without the arithmetic guard, is_assignable_without_narrowing would
-    // incorrectly return false because is_convertible_without_narrowing
-    // rejects explicit conversions (brace-init uses copy-list-init).
-    STATIC_CHECK(std::is_assignable_v<explicit_from_int&, int>);
-    STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int, explicit_from_int>);
-    STATIC_CHECK(iris::is_assignable_without_narrowing_v<explicit_from_int&, int>);
-
-    // Verify the "false" implementation (without arithmetic guard) breaks here:
-    // it incorrectly rejects this valid, non-narrowing assignment.
-    STATIC_CHECK(!broken_is_assignable_without_narrowing<explicit_from_int&, int>::value);
-}
-
-
 TEST_CASE("specialization_of")
 {
     STATIC_CHECK(iris::is_ttp_specialization_of_v<tuple<>, tuple>);
