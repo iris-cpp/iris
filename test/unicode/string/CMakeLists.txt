@@ -7,7 +7,7 @@ set(
 )
 
 foreach(test_name IN LISTS IRIS_TEST_UNICODE_STRING_TESTS)
-    iris_define_test(unicode_string_${test_name} ${test_name}.cpp)
+    iris_define_internal_test(unicode_string_${test_name} ${test_name}.cpp)
     set_target_properties(unicode_string_${test_name}_test PROPERTIES FOLDER "test/unicode/string")
 endforeach()
 

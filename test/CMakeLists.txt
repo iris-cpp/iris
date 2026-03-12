@@ -3,63 +3,33 @@
 # -----------------------------------------------------------------
 # Setup the basic targets
 
-# For internal common settings
-add_library(_iris_cxx_test_common INTERFACE)
-set_target_properties(_iris_cxx_test_common PROPERTIES CXX_EXTENSIONS OFF)
-target_link_libraries(_iris_cxx_test_common INTERFACE _iris_cxx_common)
 
+# For internal common settings
 
 # For Iris-specific tests
 add_library(iris_cxx_test INTERFACE)
 set_target_properties(iris_cxx_test PROPERTIES CXX_EXTENSIONS OFF)
-target_link_libraries(iris_cxx_test INTERFACE _iris_cxx_test_common)
+target_link_libraries(iris_cxx_test INTERFACE iris_cxx_abi)
 
 # For external libraries. Excludes strict warning, etc.
 add_library(iris_cxx_test_external INTERFACE)
 set_target_properties(iris_cxx_test_external PROPERTIES CXX_EXTENSIONS OFF)
-target_link_libraries(iris_cxx_test_external INTERFACE _iris_cxx_test_common)
+target_link_libraries(iris_cxx_test_external INTERFACE iris_cxx_abi)
 
 if(MSVC)
-    target_compile_options(
-        _iris_cxx_test_common
-        INTERFACE
-            /wd5072 # ASan intentionally enabled on Release build
-            /fsanitize=address
-    )
-    target_link_options(
-        _iris_cxx_test_common
-        INTERFACE
-            /ignore:4302 # ASan intentionally enabled on Release build
-            /INCREMENTAL:NO # required for ASan
-    )
-
-    target_compile_options(
-        iris_cxx_test
-        INTERFACE /W4 /analyze /analyze:external-
-    )
-
     target_compile_options(
         iris_cxx_test_external
         INTERFACE /analyze-
     )
+endif()
 
-else() # non-MSVC
-    target_compile_options(
-        _iris_cxx_test_common
-        INTERFACE
-            -fsanitize=undefined,address
-    )
-    target_link_options(
-        _iris_cxx_test_common
-        INTERFACE
-            -fsanitize=undefined,address
-    )
-
-    target_compile_options(
-        iris_cxx_test
-        INTERFACE
-            -Wall -Wextra -pedantic
-    )
+#
+# TODO: separate sanitizer and non-sanitizer versions
+#
+option(IRIS_TEST_USE_SANITIZER "Enable ASan/UBSan" ON)
+if(${IRIS_TEST_USE_SANITIZER})
+    target_link_libraries(iris_cxx_test INTERFACE iris_cxx_sanitizer)
+    target_link_libraries(iris_cxx_test_external INTERFACE iris_cxx_sanitizer)
 endif()
 
 
@@ -84,10 +54,32 @@ set_target_properties(Catch2 PROPERTIES CXX_EXTENSIONS OFF)
 set_target_properties(Catch2 Catch2WithMain PROPERTIES FOLDER "_deps")
 
 target_compile_definitions(Catch2 PUBLIC DO_NOT_USE_WMAIN)
+
+if(MSVC)
+    target_compile_options(Catch2 PRIVATE /wd6054)
+endif()
+
 target_link_libraries(Catch2 PRIVATE iris_cxx_test_external)
 target_link_libraries(Catch2WithMain PRIVATE iris_cxx_test_external)
 
 target_link_libraries(iris_cxx_test INTERFACE Catch2::Catch2)
+
+
+# -----------------------------------------------------------------
+# Iris internal test targets
+
+add_library(_iris_internal_test INTERFACE)
+target_include_directories(_iris_internal_test INTERFACE ${CMAKE_CURRENT_LIST_DIR})
+
+if(MSVC)
+    target_sources(_iris_internal_test INTERFACE "${CMAKE_CURRENT_LIST_DIR}/cpp.hint")
+endif()
+
+function(iris_define_internal_test test_name)
+    iris_define_test(${test_name} ${ARGN})
+    target_link_libraries(${test_name}_test PRIVATE _iris_internal_test)
+endfunction()
+
 
 # -----------------------------------------------------------------
 # Common CMake utilities for testing
@@ -102,9 +94,8 @@ function(_iris_define_test_impl test_name libs)
         message(FATAL_ERROR "IRIS_ROOT is not defined")
     endif()
 
-    add_executable(${test_name}_test ${ARGN})
-    target_include_directories(${test_name}_test PRIVATE ${CMAKE_CURRENT_FUNCTION_LIST_DIR})
     target_include_directories(${test_name}_test PRIVATE ${CMAKE_CURRENT_LIST_DIR})
+    target_link_libraries(${test_name}_test PRIVATE Iris::Iris iris_cxx_test ${libs})
     set_target_properties(${test_name}_test PROPERTIES CXX_EXTENSIONS OFF)
 
     if(MSVC)
@@ -114,12 +105,8 @@ function(_iris_define_test_impl test_name libs)
             TARGET_DIRECTORY ${test_name}_test
             PROPERTIES VS_SETTINGS "ExcludedFromBuild=true"
         )
-
-        target_sources(${test_name}_test PRIVATE "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/cpp.hint")
     endif()
 
-    target_link_libraries(${test_name}_test PRIVATE Iris::Iris iris_cxx_test ${libs})
-    add_test(NAME ${test_name}_test COMMAND ${test_name}_test --colour-mode=ansi)
 
     set_tests_properties(
         ${test_name}_test PROPERTIES
@@ -151,25 +138,28 @@ function(_iris_define_test_impl test_name libs)
     endif()
 endfunction()
 
+function(_iris_define_executable_test test_name libs)
+    add_executable(${test_name}_test ${ARGN})
+    add_test(NAME ${test_name}_test COMMAND ${test_name}_test --colour-mode=ansi)
+    _iris_define_test_impl(${test_name} ${libs})
+endfunction()
+
+
+# -----------------------------------------------------------------
+# Public test adder functions
+
 function(iris_define_test test_name)
-    _iris_define_test_impl(${test_name} Catch2::Catch2WithMain ${ARGN})
+    _iris_define_executable_test(${test_name} Catch2::Catch2WithMain ${ARGN})
 endfunction()
 
 function(iris_define_test_no_main test_name)
-    _iris_define_test_impl(${test_name} "" ${ARGN})
+    _iris_define_executable_test(${test_name} Catch2::Catch2 ${ARGN})
 endfunction()
 
-function(iris_define_tests)
-    foreach(test_name IN LISTS ARGV)
-        iris_define_test(${test_name} ${test_name}.cpp)
-    endforeach()
-endfunction()
-
-function(iris_define_sub_tests prefix)
-    foreach(test_name IN LISTS ARGN)
-        iris_define_test(${prefix}_${test_name} ${test_name}.cpp)
-        set_target_properties(${prefix}_${test_name}_test PROPERTIES FOLDER "test/${prefix}")
-    endforeach()
+function(iris_define_library_test library_type test_name srcs)
+    add_library(${test_name}_test ${library_type} ${srcs})
+    add_test(NAME ${test_name}_test COMMAND ${ARGN})
+    _iris_define_test_impl(${test_name} Catch2::Catch2)
 endfunction()
 
 
@@ -190,10 +180,10 @@ if(PROJECT_IS_TOP_LEVEL)
             preprocess
         )
 
-        iris_define_sub_tests(iris ${IRIS_TEST_IRIS_TESTS})
-
         foreach(test_name IN LISTS IRIS_TEST_IRIS_TESTS)
+            iris_define_internal_test(iris_${test_name} ${test_name}.cpp)
             iris_define_test_headers(iris_${test_name} iris_test.hpp)
+            set_target_properties(iris_${test_name}_test PROPERTIES FOLDER "test/iris")
         endforeach()
 
         add_subdirectory(unicode)
