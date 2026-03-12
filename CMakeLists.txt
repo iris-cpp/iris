@@ -20,6 +20,10 @@ set_property(GLOBAL PROPERTY IRIS_ROOT "${IRIS_ROOT}")
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+if(NOT DEFINED CMAKE_CXX_EXTENSIONS)
+    set(CMAKE_CXX_EXTENSIONS OFF)
+endif()
+
 option(IRIS_REMOVE_MINSIZEREL_CONFIG "Remove rarely used MinSizeRel config" ON)
 
 if(MSVC)
@@ -36,9 +40,52 @@ endif()
 # -----------------------------------------------------------------
 # Create common base targets
 
-# Iris-specific common target
-add_library(_iris_cxx_common INTERFACE)
-set_target_properties(_iris_cxx_common PROPERTIES CXX_EXTENSIONS OFF)
+# ABI compatibility target
+add_library(iris_cxx_abi INTERFACE)
+set_target_properties(iris_cxx_abi PROPERTIES CXX_EXTENSIONS OFF)
+
+# In contrast to the flags defined in `iris_cxx_abi`, certain
+# miscellaneous flags aren't strictly required for ABI compatibility.
+#
+# However, we're going to merge them into `Iris::Iris` anyway, because
+# the whole point of using Iris is to simplify C++ build system and use
+# common flags everywhere; enforcing best-practices is our goal.
+add_library(_iris_cxx_best_practices INTERFACE)
+set_target_properties(_iris_cxx_best_practices PROPERTIES CXX_EXTENSIONS OFF)
+
+# ASan/UBSan
+add_library(iris_cxx_sanitizer INTERFACE)
+set_target_properties(iris_cxx_sanitizer PROPERTIES CXX_EXTENSIONS OFF)
+target_link_libraries(iris_cxx_sanitizer INTERFACE iris_cxx_abi)
+
+if(MSVC)
+    # TODO: use $<$<CONFIG:Debug,RelWithDebInfo>:......>
+
+    target_compile_options(
+        iris_cxx_sanitizer
+        INTERFACE
+            /wd5072 # ASan intentionally enabled on Release build
+            /fsanitize=address
+    )
+    target_link_options(
+        iris_cxx_sanitizer
+        INTERFACE
+            /ignore:4302 # ASan intentionally enabled on Release build
+            /INCREMENTAL:NO # required for ASan
+    )
+
+else() # non-MSVC
+    target_compile_options(
+        iris_cxx_sanitizer
+        INTERFACE
+            -fsanitize=undefined,address
+    )
+    target_link_options(
+        iris_cxx_sanitizer
+        INTERFACE
+            -fsanitize=undefined,address
+    )
+endif()
 
 
 # -----------------------------------------------------------------
@@ -56,11 +103,11 @@ if(MSVC)
             "${CMAKE_CURRENT_LIST_DIR}/iris.natvis"
     )
 
-    target_link_libraries(iris PUBLIC _iris_cxx_common)
+    target_link_libraries(iris PUBLIC iris_cxx_abi _iris_cxx_best_practices)
 
 else()
     add_library(iris INTERFACE)
-    target_link_libraries(iris INTERFACE _iris_cxx_common)
+    target_link_libraries(iris INTERFACE iris_cxx_abi _iris_cxx_best_practices)
 endif()
 
 add_library(Iris::Iris ALIAS iris)
@@ -88,21 +135,21 @@ if(MSVC)
         set(CMAKE_CXX${IRIS_CXX_VERSION_BEFORE_LATEST}_STANDARD_COMPILE_OPTION ${CMAKE_CXX${IRIS_CXX_VERSION_BEFORE_LATEST}_STANDARD_COMPILE_OPTION} PARENT_SCOPE)
         set(CMAKE_CXX${IRIS_CXX_VERSION_BEFORE_LATEST}_EXTENSION_COMPILE_OPTION ${CMAKE_CXX${IRIS_CXX_VERSION_BEFORE_LATEST}_EXTENSION_COMPILE_OPTION} PARENT_SCOPE)
 
-        target_compile_options(_iris_cxx_common INTERFACE /std:c++${IRIS_CXX_VERSION_BEFORE_LATEST}preview)
+        target_compile_options(iris_cxx_abi INTERFACE /std:c++${IRIS_CXX_VERSION_BEFORE_LATEST}preview)
 
     else()
         # MSVC's CMake support does not provide the latest `cxx_std_XX`
         # feature until the very last stage of the implementation. Instead,
         # the feature number that is one version behind the latest usually
         # resolves to `/std:c++latest`.
-        target_compile_features(_iris_cxx_common INTERFACE cxx_std_${IRIS_CXX_VERSION_BEFORE_LATEST})
+        target_compile_features(iris_cxx_abi INTERFACE cxx_std_${IRIS_CXX_VERSION_BEFORE_LATEST})
     endif()
 
 else() # Non-MSVC
     if(DEFINED CMAKE_CXX_STANDARD)
-        target_compile_features(_iris_cxx_common INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
+        target_compile_features(iris_cxx_abi INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
     else()
-        target_compile_features(_iris_cxx_common INTERFACE cxx_std_${IRIS_CXX_VERSION_LATEST})
+        target_compile_features(iris_cxx_abi INTERFACE cxx_std_${IRIS_CXX_VERSION_LATEST})
     endif()
 endif()
 
@@ -115,47 +162,45 @@ unset(IRIS_CXX_FEATURE_BEFORE_LATEST)
 
 if(WIN32)
     target_compile_definitions(
-        _iris_cxx_common
+        iris_cxx_abi
         INTERFACE NOMINMAX WIN32_LEAN_AND_MEAN
     )
 endif()
 
 if(MSVC)
-    # Don't set too strict flags for testing! They must go to `iris_cxx_test`.
-    # ABI-dependent configurations MUST be set here.
+    # Some flags affect ABI-compatibility, which means they are mandatory
+    # for any kind of downstream applications.
+
     target_compile_definitions(
-        _iris_cxx_common
+        iris_cxx_abi
         INTERFACE UNICODE _UNICODE
     )
     target_compile_options(
-        _iris_cxx_common
+        iris_cxx_abi
         INTERFACE
             /EHsc /MP /utf-8 /Zc:__cplusplus /Zc:preprocessor /permissive-
-            # $<$<CONFIG:Debug,RelWithDebInfo>:/fsanitize=address> # TODO
     )
-    target_link_options(
-        _iris_cxx_common
+
+    target_compile_options(
+        _iris_cxx_best_practices
         INTERFACE
-            # $<$<CONFIG:Debug,RelWithDebInfo>:/INCREMENTAL:NO> # TODO
+            /W4 /analyze /analyze:external-
     )
+
 else()
     if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
         target_compile_options(
-            _iris_cxx_common
+            iris_cxx_abi
             INTERFACE
                 -fno-builtin-std-forward_like
                 -Wno-c++26-extensions # workaround for warnings emitted when using pack indexing
         )
     endif()
+
     target_compile_options(
-        _iris_cxx_common
+        _iris_cxx_best_practices
         INTERFACE
-            # $<$<CONFIG:Debug>:-fsanitize=undefined,address> # TODO
-    )
-    target_link_options(
-        _iris_cxx_common
-        INTERFACE
-            # $<$<CONFIG:Debug>:-fsanitize=undefined,address> # TODO
+            -Wall -Wextra -pedantic
     )
 endif()
 
