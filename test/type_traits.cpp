@@ -33,16 +33,6 @@ struct explicit_from_int
     explicit_from_int& operator=(int) { return *this; }
 };
 
-// "Broken" implementation: is_assignable_without_narrowing without the arithmetic guard.
-// This demonstrates why the guard is needed.
-template<class Dest, class Source>
-struct broken_is_assignable_without_narrowing
-    : std::bool_constant<
-        std::is_assignable_v<Dest, Source> &&
-        iris::is_convertible_without_narrowing_v<std::remove_cvref_t<Source>, std::remove_reference_t<Dest>>
-    >
-{};
-
 enum class scoped_enum {};
 enum unscoped_enum {};
 

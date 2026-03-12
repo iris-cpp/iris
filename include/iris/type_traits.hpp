@@ -10,6 +10,7 @@
 
 #include <iris/requirements.hpp>
 
+#include <concepts>
 #include <type_traits>
 #include <utility>
 
@@ -232,7 +233,9 @@ struct is_convertible_without_narrowing
 template<class From, class To>
     requires
         std::is_convertible_v<From, To> &&
-        requires { std::type_identity_t<To[]>{std::declval<From>()}; }
+        requires (From&& x) {
+            { std::type_identity_t<To[]>{std::forward<From>(x)} } -> std::same_as<To[1]>;
+        }
 struct is_convertible_without_narrowing<From, To>
     : std::true_type
 {};
