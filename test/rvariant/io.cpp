@@ -2,42 +2,7 @@
 
 #include "iris_rvariant_test.hpp"
 
-#include <iostream>
-
-namespace {
-
-namespace NonStreamable_ns {
-
-// Not streamable via ADL, but...
-struct NonStreamable {};
-
-} // NonStreamable_ns
-
-// Bad global overload; can be avoided by the poison pill
-[[maybe_unused]] std::ostream& operator<<(std::ostream& os, NonStreamable_ns::NonStreamable&)
-{
-    return os << "polluted &";
-}
-
-// Bad global overload; can be avoided by the poison pill
-[[maybe_unused]] std::ostream& operator<<(std::ostream& os, NonStreamable_ns::NonStreamable const&)
-{
-    return os << "polluted const&";
-}
-
-// Bad global overload; can be avoided by the poison pill
-[[maybe_unused]] std::ostream& operator<<(std::ostream& os, [[maybe_unused]] NonStreamable_ns::NonStreamable&&)
-{
-    return os << "polluted &&";
-}
-
-// Bad global overload; can be avoided by the poison pill
-[[maybe_unused]] std::ostream& operator<<(std::ostream& os, NonStreamable_ns::NonStreamable const&&)
-{
-    return os << "polluted const&&";
-}
-
-} // anonymous global
+#include "iris_io_test.hpp" // this injects bad global overloads
 
 #include <iris/io_fwd.hpp> // this finds `operator<<` in the global ns
 
@@ -121,12 +86,12 @@ TEST_CASE("rvariant.io, simple")
     }
     {
         // ReSharper disable once CppStaticAssertFailure
-        STATIC_REQUIRE(!iris::req::ADL_ostreamable<NonStreamable_ns::NonStreamable>);
+        STATIC_REQUIRE(!iris::req::ADL_ostreamable<DirectNonStreamable_ns::DirectNonStreamable>);
         // ReSharper disable once CppStaticAssertFailure
-        STATIC_REQUIRE(!iris::req::ADL_ostreamable<iris::rvariant<NonStreamable_ns::NonStreamable>>);
+        STATIC_REQUIRE(!iris::req::ADL_ostreamable<iris::rvariant<DirectNonStreamable_ns::DirectNonStreamable>>);
 
         std::ostringstream oss;
-        NonStreamable_ns::NonStreamable const non_streamable;
+        DirectNonStreamable_ns::DirectNonStreamable const non_streamable;
         oss << non_streamable;
         CHECK(oss.str() == "polluted const&");
     }
