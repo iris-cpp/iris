@@ -10,6 +10,7 @@
 
 #include <iris/requirements.hpp>
 
+#include <concepts>
 #include <type_traits>
 #include <utility>
 
@@ -222,55 +223,87 @@ template<class T>
 constexpr bool is_trivially_swappable_v = is_trivially_swappable<T>::value;
 
 
+// P0870R7: is_convertible_without_narrowing
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p0870r7.html
+namespace detail {
+
+template<class From, class To>
+struct is_convertible_without_narrowing_impl
+    : std::false_type
+{};
+
+// void to void "conversion" is valid since `is_convertible` is defined
+// as "returning `From` is valid for function whose return type is `To`?"
+template<>
+struct is_convertible_without_narrowing_impl<void, void>
+    : std::true_type
+{};
+
+template<class From, class To>
+    requires
+        requires (From&& x) {
+            { std::type_identity_t<To[]>{std::forward<From>(x)} } -> std::same_as<To[1]>;
+        }
+struct is_convertible_without_narrowing_impl<From, To>
+    : std::true_type
+{};
+
+} // namespace detail
+
+template<class From, class To>
+struct is_convertible_without_narrowing
+    : std::conjunction<
+        std::is_convertible<From, To>,
+        detail::is_convertible_without_narrowing_impl<From, To>
+    >
+{};
+
+template<class From, class To>
+inline constexpr bool is_convertible_without_narrowing_v = is_convertible_without_narrowing<From, To>::value;
+
+
 namespace detail {
 
 template<std::size_t I, class Ti>
-struct aggregate_initialize_tag
+struct no_narrowing_tag
 {
     static constexpr std::size_t index = I;
     using type = Ti;
 };
 
-// This version works better than MSVC's, does not break IntelliSense or ReSharper
 template<std::size_t I, class Ti>
-struct aggregate_initialize_overload
+struct no_narrowing_overload
 {
-    using TiA = Ti[];
-
-    // https://eel.is/c++draft/dcl.init.general#14
-    // https://eel.is/c++draft/dcl.init.list#3.4
-    // https://eel.is/c++draft/dcl.init.aggr#3
-
     template<class T>
-    auto operator()(Ti, T&&) -> aggregate_initialize_tag<I, Ti>
-        requires requires(T&& t) { { TiA{std::forward<T>(t)} }; } // emulate `Ti x[] = {std::forward<T>(t)};`
+    auto operator()(Ti, T&&) -> no_narrowing_tag<I, Ti>
+        requires is_convertible_without_narrowing_v<T, Ti>
     {
         return {}; // silence MSVC warning
     }
 };
 
 template<class Is, class... Ts>
-struct aggregate_initialize_fun;
+struct no_narrowing_fun;
 
 // Imaginary function FUN of https://eel.is/c++draft/variant#ctor-14
 template<std::size_t... Is, class... Ts>
-struct aggregate_initialize_fun<std::index_sequence<Is...>, Ts...>
-    : aggregate_initialize_overload<Is, Ts>...
+struct no_narrowing_fun<std::index_sequence<Is...>, Ts...>
+    : no_narrowing_overload<Is, Ts>...
 {
-    using aggregate_initialize_overload<Is, Ts>::operator()...;
+    using no_narrowing_overload<Is, Ts>::operator()...;
 };
 
 template<class... Ts>
-using aggregate_initialize_fun_for = aggregate_initialize_fun<std::index_sequence_for<Ts...>, Ts...>;
+using no_narrowing_fun_for = no_narrowing_fun<std::index_sequence_for<Ts...>, Ts...>;
 
 template<class Enabled, class T, class... Ts>
-struct aggregate_initialize_resolution {};
+struct no_narrowing_resolution {};
 
 template<class T, class... Ts>
-struct aggregate_initialize_resolution<
-    std::void_t<decltype(aggregate_initialize_fun_for<Ts...>{}(std::declval<T>(), std::declval<T>()))>, T, Ts...
+struct no_narrowing_resolution<
+    std::void_t<decltype(no_narrowing_fun_for<Ts...>{}(std::declval<T>(), std::declval<T>()))>, T, Ts...
 > {
-    using tag = decltype(aggregate_initialize_fun_for<Ts...>{}(std::declval<T>(), std::declval<T>()));
+    using tag = decltype(no_narrowing_fun_for<Ts...>{}(std::declval<T>(), std::declval<T>()));
     using type = tag::type;
     static constexpr std::size_t index = tag::index;
 };
@@ -281,7 +314,7 @@ struct aggregate_initialize_resolution<
 // because they would lead to unnecessarily nested instantiation for
 // legitimate infinite recursion errors on recursive types.
 template<class T, class... Ts>
-struct aggregate_initialize_resolution : detail::aggregate_initialize_resolution<void, T, Ts...> {};
+struct no_narrowing_resolution : detail::no_narrowing_resolution<void, T, Ts...> {};
 
 } // iris
 
