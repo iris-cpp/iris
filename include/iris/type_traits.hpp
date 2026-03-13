@@ -272,10 +272,10 @@ struct aggregate_initialize_tag
 };
 
 template<std::size_t I, class Ti>
-struct no_narrowing_overload
+struct aggregate_initialize_overload
 {
     template<class T>
-    auto operator()(T&&) -> aggregate_initialize_tag<I, Ti>
+    auto operator()(Ti, T&&) -> aggregate_initialize_tag<I, Ti>
         requires is_convertible_without_narrowing_v<T, Ti>
     {
         return {}; // silence MSVC warning
@@ -283,27 +283,26 @@ struct no_narrowing_overload
 };
 
 template<class Is, class... Ts>
-struct no_narrowing_fun;
+struct aggregate_initialize_fun;
 
 // Imaginary function FUN of https://eel.is/c++draft/variant#ctor-14
 template<std::size_t... Is, class... Ts>
-struct no_narrowing_fun<std::index_sequence<Is...>, Ts...>
-    : no_narrowing_overload<Is, Ts>...
+struct aggregate_initialize_fun<std::index_sequence<Is...>, Ts...>
+    : aggregate_initialize_overload<Is, Ts>...
 {
-    using no_narrowing_overload<Is, Ts>::operator()...;
+    using aggregate_initialize_overload<Is, Ts>::operator()...;
 };
 
 template<class... Ts>
-using aggregate_initialize_fun_for = no_narrowing_fun<std::index_sequence_for<Ts...>, Ts...>;
+using aggregate_initialize_fun_for = aggregate_initialize_fun<std::index_sequence_for<Ts...>, Ts...>;
 
 template<class Enabled, class T, class... Ts>
-struct no_narrowing_resolution {};
+struct aggregate_initialize_resolution {};
 
 template<class T, class... Ts>
-struct no_narrowing_resolution<
+struct aggregate_initialize_resolution<
     std::void_t<decltype(aggregate_initialize_fun_for<Ts...>{}(std::declval<T>(), std::declval<T>()))>, T, Ts...
->
-{
+> {
     using tag = decltype(aggregate_initialize_fun_for<Ts...>{}(std::declval<T>(), std::declval<T>()));
     using type = tag::type;
     static constexpr std::size_t index = tag::index;
@@ -315,7 +314,7 @@ struct no_narrowing_resolution<
 // because they would lead to unnecessarily nested instantiation for
 // legitimate infinite recursion errors on recursive types.
 template<class T, class... Ts>
-struct no_narrowing_resolution : detail::no_narrowing_resolution<void, T, Ts...> {};
+struct aggregate_initialize_resolution : detail::aggregate_initialize_resolution<void, T, Ts...> {};
 
 } // iris
 
