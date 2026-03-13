@@ -183,7 +183,7 @@ if(PROJECT_IS_TOP_LEVEL)
 
         foreach(test_name IN LISTS IRIS_TEST_IRIS_TESTS)
             iris_define_internal_test(iris_${test_name} ${test_name}.cpp)
-            iris_define_test_headers(iris_${test_name} iris_test.hpp)
+            iris_define_test_headers(iris_${test_name} iris_test.hpp iris_io_test.hpp)
             set_target_properties(iris_${test_name}_test PROPERTIES FOLDER "test/iris")
         endforeach()
 
