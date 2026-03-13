@@ -178,6 +178,7 @@ if(PROJECT_IS_TOP_LEVEL)
             indirect
             colorize_format
             preprocess
+            io
         )
 
         foreach(test_name IN LISTS IRIS_TEST_IRIS_TESTS)
