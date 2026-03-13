@@ -241,12 +241,12 @@ TEST_CASE("is_convertible_without_narrowing: pointer types")
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<void*, int*>);
 
     // Adding const via pointer
-    STATIC_CHECK(iris::is_convertible_without_narrowing_v<int*, const int*>);
-    STATIC_CHECK(!iris::is_convertible_without_narrowing_v<const int*, int*>);
+    STATIC_CHECK(iris::is_convertible_without_narrowing_v<int*, int const*>);
+    STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int const*, int*>);
 
     // nullptr_t
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<std::nullptr_t, int*>);
-    STATIC_CHECK(iris::is_convertible_without_narrowing_v<std::nullptr_t, const void*>);
+    STATIC_CHECK(iris::is_convertible_without_narrowing_v<std::nullptr_t, void const*>);
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int*, std::nullptr_t>);
 
     // pointer to bool: narrowing (all pointers/nullptr to bool is narrowing)
@@ -372,7 +372,7 @@ TEST_CASE("is_convertible_without_narrowing: reference types as From")
 {
     // Lvalue reference
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<int&, int>);
-    STATIC_CHECK(iris::is_convertible_without_narrowing_v<const int&, int>);
+    STATIC_CHECK(iris::is_convertible_without_narrowing_v<int const&, int>);
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<int&, long long>);
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<long long&, int>);
 
@@ -403,7 +403,7 @@ TEST_CASE("is_convertible_without_narrowing: array and function types")
 {
     // Array types as From decay to pointers
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<int[3], int*>);
-    STATIC_CHECK(iris::is_convertible_without_narrowing_v<int[3], const int*>);
+    STATIC_CHECK(iris::is_convertible_without_narrowing_v<int[3], int const*>);
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int*, int[3]>);
 
     // char[] to string
