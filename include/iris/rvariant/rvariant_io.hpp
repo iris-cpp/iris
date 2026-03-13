@@ -46,7 +46,7 @@ template<class... Ts>
         // Required to work around MSVC bug where it instantiates this function
         // for completely irrelevant call, e.g. `std::cout << "foo"sv << 'c' << std::endl;`
         (sizeof...(Ts) > 0) &&
-        std::conjunction_v<req::ADL_ostreamable<unwrap_recursive_type<Ts>>...>
+        std::conjunction_v<req::is_ADL_ostreamable<unwrap_recursive_type<Ts>>...>
 std::ostream& operator<<(std::ostream& os, rvariant<Ts...> const& v)
 {
     std::ostream::sentry sentry(os);
