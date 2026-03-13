@@ -9,5 +9,6 @@
 
 TEST_CASE("io")
 {
+    STATIC_CHECK(iris::req::ADL_ostreamable<char>);
     STATIC_CHECK(iris::req::ADL_ostreamable<std::filesystem::path>);
 }
