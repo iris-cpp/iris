@@ -406,6 +406,9 @@ TEST_CASE("is_convertible_without_narrowing: array and function types")
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<int[3], int const*>);
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int*, int[3]>);
 
+    // Element types to array types
+    STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int, int[3]>);
+
     // char[] to string
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<char[5], std::string>);
 
