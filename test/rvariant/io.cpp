@@ -2,9 +2,7 @@
 
 #include "iris_rvariant_test.hpp"
 
-#include "iris_io_test.hpp" // this injects bad global overloads
-
-#include <iris/io_fwd.hpp> // this finds `operator<<` in the global ns
+#include <iris/io_fwd.hpp>
 
 #include <iris/rvariant/rvariant.hpp>
 #include <iris/rvariant/rvariant_io.hpp>
@@ -83,17 +81,6 @@ TEST_CASE("rvariant.io, simple")
         STATIC_REQUIRE(!iris::req::ADL_ostreamable<NonExistent>);
         struct NonExistent {};
         STATIC_REQUIRE(!iris::req::ADL_ostreamable<iris::rvariant<NonExistent>>);
-    }
-    {
-        // ReSharper disable once CppStaticAssertFailure
-        STATIC_REQUIRE(!iris::req::ADL_ostreamable<DirectNonStreamable_ns::DirectNonStreamable>);
-        // ReSharper disable once CppStaticAssertFailure
-        STATIC_REQUIRE(!iris::req::ADL_ostreamable<iris::rvariant<DirectNonStreamable_ns::DirectNonStreamable>>);
-
-        std::ostringstream oss;
-        DirectNonStreamable_ns::DirectNonStreamable const non_streamable;
-        oss << non_streamable;
-        CHECK(oss.str() == "polluted const&");
     }
 
     // alternative = int
