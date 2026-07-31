@@ -28,6 +28,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef IRIS_UNICODE_STRING_HPP
 #define IRIS_UNICODE_STRING_HPP
 
+#include <algorithm>
 #include <concepts>
 #include <stdexcept>
 #include <iterator>
@@ -895,6 +896,24 @@ bounded_next(It it, It const last, typename std::iterator_traits<It>::difference
     return {it, count};
 }
 
+template<utf32_input_iterator It>
+[[nodiscard]] constexpr std::pair<It, typename std::iterator_traits<It>::difference_type>
+bounded_next(It it, It const last, typename std::iterator_traits<It>::difference_type off = 1)
+{
+    if constexpr (std::random_access_iterator<It>) {
+        auto const count = std::min(std::distance(it, last), off);
+        std::advance(it, count);
+        return {it, count};
+
+    } else {
+        typename std::iterator_traits<It>::difference_type count = 0;
+        for (; it != last && count < off; ++count) {
+            ++it;
+        }
+        return {it, count};
+    }
+}
+
 template<utf16_input_iterator It, std::sentinel_for<It> Se>
 [[nodiscard]] constexpr char32_t next16(It& it, Se end)
 {
@@ -939,6 +958,24 @@ bounded_prev(It const start, It it, typename std::iterator_traits<It>::differenc
     return {it, count};
 }
 
+template<utf32_input_iterator It>
+[[nodiscard]] constexpr std::pair<It, typename std::iterator_traits<It>::difference_type>
+bounded_prev(It const start, It it, typename std::iterator_traits<It>::difference_type off = 1)
+{
+    if constexpr (std::random_access_iterator<It>) {
+        auto const count = std::min(std::distance(start, it), off);
+        std::advance(it, -count);
+        return {it, count};
+
+    } else {
+        typename std::iterator_traits<It>::difference_type count = 0;
+        for (; it != start && count < off; ++count) {
+            --it;
+        }
+        return {it, count};
+    }
+}
+
 template<octet_input_iterator It, std::sentinel_for<It> Se, class distance_type>
 constexpr void advance(It& it, distance_type n, Se end)
 {
@@ -969,8 +1006,11 @@ distance(It first, Se last)
 
 // ------------------------------------
 
+template<class It>
+class code_point_iterator;
+
 template<octet_input_iterator It>
-class code_point_iterator
+class code_point_iterator<It>
 {
     It it;
     It range_start;
@@ -994,7 +1034,7 @@ public:
     {
         if constexpr (std::random_access_iterator<It>) {
             if (this->it < this->range_start || this->it > this->range_end) {
-                throw std::out_of_range("Invalid utf-8 iterator position");
+                throw std::out_of_range("invalid iterator position");
             }
         }
     }
@@ -1037,6 +1077,72 @@ public:
         code_point_iterator temp = *this;
         (void)unicode::prev(it, range_start);
         return temp;
+    }
+};
+
+template<utf32_input_iterator It>
+class code_point_iterator<It>
+{
+    It it;
+    It range_start;
+    It range_end;
+
+public:
+    using value_type = char32_t;
+    using pointer = char32_t*;
+    using reference = char32_t&;
+    using difference_type = std::ptrdiff_t;
+    using iterator_category = std::bidirectional_iterator_tag;
+
+    constexpr code_point_iterator()
+        requires std::is_default_constructible_v<It>
+    = default;
+
+    constexpr code_point_iterator(It it, It range_start, It range_end)
+        : it(std::move(it))
+        , range_start(std::move(range_start))
+        , range_end(std::move(range_end))
+    {
+        if constexpr (std::random_access_iterator<It>) {
+            if (this->it < this->range_start || this->it > this->range_end) {
+                throw std::out_of_range("invalid iterator position");
+            }
+        }
+    }
+
+    [[nodiscard]] constexpr It base() const { return it; }
+
+    [[nodiscard]] constexpr char32_t operator*() const noexcept(noexcept(*it))
+    {
+        return *it;
+    }
+
+    [[nodiscard]] constexpr bool operator==(code_point_iterator const& rhs) const noexcept
+    {
+        assert(range_start == rhs.range_start && range_end == rhs.range_end && "comparing incompatible iterator range is not allowed");
+        return it == rhs.it;
+    }
+
+    constexpr code_point_iterator& operator++()
+    {
+        ++it;
+        return *this;
+    }
+
+    [[nodiscard]] constexpr code_point_iterator operator++(int)
+    {
+        return code_point_iterator{it++, range_start, range_end};
+    }
+
+    constexpr code_point_iterator& operator--()
+    {
+        --it;
+        return *this;
+    }
+
+    [[nodiscard]] constexpr code_point_iterator operator--(int)
+    {
+        return code_point_iterator{it--, range_start, range_end};
     }
 };
 
@@ -1170,7 +1276,7 @@ template<class CharT>
     } else if constexpr (std::same_as<CharT, char32_t>) {
         return unicode::utf8to32(str);
     } else {
-        static_assert(std::same_as<CharT, char>);
+        static_assert(std::same_as<CharT, char>, "unsupported character type");
         return std::string{str};
     }
 }
@@ -1185,7 +1291,7 @@ template<class CharT>
     } else if constexpr (std::same_as<CharT, char32_t>) {
         return unicode::utf8to32(str);
     } else {
-        static_assert(std::same_as<CharT, char>);
+        static_assert(std::same_as<CharT, char>, "unsupported character type");
         return std::string{str.begin(), str.end()};
     }
 }
@@ -1202,7 +1308,7 @@ template<class CharT>
         return {}; // dummy
         //return unicode::utf16to32(str);
     } else {
-        static_assert(std::same_as<CharT, char>);
+        static_assert(std::same_as<CharT, char>, "unsupported character type");
         return unicode::utf16to8(str);
     }
 }
@@ -1219,9 +1325,67 @@ template<class CharT>
     } else if constexpr (std::same_as<CharT, char32_t>) {
         return std::u32string{str};
     } else {
-        static_assert(std::same_as<CharT, char>);
+        static_assert(std::same_as<CharT, char>, "unsupported character type");
         return unicode::utf32to8(str);
     }
+}
+
+// ----------------------------------
+
+template<class CharT>
+    requires (!std::same_as<CharT, char>)
+[[nodiscard]] constexpr std::basic_string<CharT> transcode_ref(std::string_view str)
+{
+    return unicode::transcode<CharT>(str);
+}
+
+template<class CharT>
+    requires std::same_as<CharT, char>
+[[nodiscard]] constexpr std::string_view transcode_ref(std::string_view str)
+{
+    return str;
+}
+
+template<class CharT>
+    requires (!std::same_as<CharT, char8_t>)
+[[nodiscard]] constexpr std::basic_string<CharT> transcode_ref(std::u8string_view str)
+{
+    return unicode::transcode<CharT>(str);
+}
+
+template<class CharT>
+    requires std::same_as<CharT, char8_t>
+[[nodiscard]] constexpr std::u8string_view transcode_ref(std::u8string_view str)
+{
+    return str;
+}
+
+template<class CharT>
+    requires (!std::same_as<CharT, char16_t>)
+[[nodiscard]] constexpr std::basic_string<CharT> transcode_ref(std::u16string_view str)
+{
+    return unicode::transcode<CharT>(str);
+}
+
+template<class CharT>
+    requires std::same_as<CharT, char16_t>
+[[nodiscard]] constexpr std::u16string_view transcode_ref(std::u16string_view str)
+{
+    return str;
+}
+
+template<class CharT>
+    requires (!std::same_as<CharT, char32_t>)
+[[nodiscard]] constexpr std::basic_string<CharT> transcode_ref(std::u32string_view str)
+{
+    return unicode::transcode<CharT>(str);
+}
+
+template<class CharT>
+    requires std::same_as<CharT, char32_t>
+[[nodiscard]] constexpr std::u32string_view transcode_ref(std::u32string_view str)
+{
+    return str;
 }
 
 } // iris::unicode
