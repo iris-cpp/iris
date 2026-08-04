@@ -598,6 +598,7 @@ template<octet_input_iterator It, std::sentinel_for<It> Se>
     return it;
 }
 
+template<int = 0>
 [[nodiscard]] constexpr std::size_t find_invalid(std::string_view s)
     noexcept(noexcept(unicode::find_invalid(s.begin(), s.end())))
 {
@@ -605,6 +606,7 @@ template<octet_input_iterator It, std::sentinel_for<It> Se>
     return invalid == s.end() ? std::string_view::npos : static_cast<std::size_t>(invalid - s.begin());
 }
 
+template<int = 0>
 [[nodiscard]] constexpr std::size_t find_invalid(std::u8string_view s)
     noexcept(noexcept(unicode::find_invalid(s.begin(), s.end())))
 {
@@ -619,12 +621,14 @@ template<octet_input_iterator It, std::sentinel_for<It> Se>
     return unicode::find_invalid(it, se) == se;
 }
 
+template<int = 0>
 [[nodiscard]] constexpr bool is_valid(std::string_view s)
     noexcept(noexcept(unicode::is_valid(s.begin(), s.end())))
 {
     return unicode::is_valid(s.begin(), s.end());
 }
 
+template<int = 0>
 [[nodiscard]] constexpr bool is_valid(std::u8string_view s)
     noexcept(noexcept(unicode::is_valid(s.begin(), s.end())))
 {
@@ -648,12 +652,14 @@ template<octet_input_range R>
     return unicode::starts_with_bom(std::ranges::begin(r), std::ranges::end(r));
 }
 
+template<int = 0>
 [[nodiscard]] constexpr bool starts_with_bom(std::string_view s)
     noexcept(noexcept(unicode::starts_with_bom(s.begin(), s.end())))
 {
     return unicode::starts_with_bom(s.begin(), s.end());
 }
 
+template<int = 0>
 [[nodiscard]] constexpr bool starts_with_bom(std::u8string_view s)
     noexcept(noexcept(unicode::starts_with_bom(s.begin(), s.end())))
 {
@@ -752,16 +758,19 @@ append(char32_t cp, OutR&& r)
     return unicode::append16(cp, std::forward<OutR>(r));
 }
 
+template<int = 0>
 constexpr void append(char32_t cp, std::string& str)
 {
     unicode::append8(cp, std::back_inserter(str));
 }
 
+template<int = 0>
 constexpr void append(char32_t cp, std::u8string& str)
 {
     unicode::append8(cp, std::back_inserter(str));
 }
 
+template<int = 0>
 constexpr void append(char32_t cp, std::u16string& str)
 {
     unicode::append16(cp, std::back_inserter(str));
@@ -814,6 +823,7 @@ constexpr Out replace_invalid(It start, Se end, Out out)
     return unicode::replace_invalid(start, end, out, replacement_marker);
 }
 
+template<int = 0>
 [[nodiscard]] constexpr std::string replace_invalid(std::string_view s, char32_t replacement)
 {
     std::string result;
@@ -821,6 +831,7 @@ constexpr Out replace_invalid(It start, Se end, Out out)
     return result;
 }
 
+template<int = 0>
 [[nodiscard]] constexpr std::u8string replace_invalid(std::u8string_view s, char32_t replacement)
 {
     std::u8string result;
@@ -828,6 +839,7 @@ constexpr Out replace_invalid(It start, Se end, Out out)
     return result;
 }
 
+template<int = 0>
 [[nodiscard]] constexpr std::string replace_invalid(std::string_view s)
 {
     std::string result;
@@ -835,6 +847,7 @@ constexpr Out replace_invalid(It start, Se end, Out out)
     return result;
 }
 
+template<int = 0>
 [[nodiscard]] constexpr std::u8string replace_invalid(std::u8string_view s)
 {
     std::u8string result;
@@ -1163,6 +1176,7 @@ constexpr OutIt utf8to16(It start, Se end, OutIt out)
     return out;
 }
 
+template<int = 0>
 [[nodiscard]] constexpr std::u16string utf8to16(std::string_view str)
 {
     std::u16string result;
@@ -1170,6 +1184,7 @@ constexpr OutIt utf8to16(It start, Se end, OutIt out)
     return result;
 }
 
+template<int = 0>
 [[nodiscard]] constexpr std::u16string utf8to16(std::u8string_view str)
 {
     std::u16string result;
@@ -1204,6 +1219,7 @@ constexpr OutIt utf16to8(It start, Se end, OutIt out)
     return out;
 }
 
+template<int = 0>
 [[nodiscard]] constexpr std::string utf16to8(std::u16string_view str)
 {
     std::string result;
@@ -1211,6 +1227,7 @@ constexpr OutIt utf16to8(It start, Se end, OutIt out)
     return result;
 }
 
+template<int = 0>
 [[nodiscard]] constexpr std::u8string utf16tou8(std::u16string_view str)
 {
     std::u8string result;
@@ -1227,6 +1244,7 @@ constexpr OutIt utf8to32(It start, Se end, OutIt out)
     return out;
 }
 
+template<int = 0>
 [[nodiscard]] constexpr std::u32string utf8to32(std::string_view str)
 {
     std::u32string result;
@@ -1234,6 +1252,7 @@ constexpr OutIt utf8to32(It start, Se end, OutIt out)
     return result;
 }
 
+template<int = 0>
 [[nodiscard]] constexpr std::u32string utf8to32(std::u8string_view str)
 {
     std::u32string result;
@@ -1250,6 +1269,7 @@ constexpr OutIt utf32to8(It start, Se end, OutIt out)
     return out;
 }
 
+template<int = 0>
 [[nodiscard]] constexpr std::string utf32to8(std::u32string_view str)
 {
     std::string result;
@@ -1257,6 +1277,7 @@ constexpr OutIt utf32to8(It start, Se end, OutIt out)
     return result;
 }
 
+template<int = 0>
 [[nodiscard]] constexpr std::u8string utf32tou8(std::u32string_view str)
 {
     std::u8string result;
@@ -1345,6 +1366,9 @@ template<class CharT>
 {
     return str;
 }
+template<class CharT>
+    requires std::same_as<CharT, char>
+constexpr std::string_view transcode_ref(std::string const&&) = delete;
 
 template<class CharT>
     requires (!std::same_as<CharT, char8_t>)
@@ -1359,6 +1383,9 @@ template<class CharT>
 {
     return str;
 }
+template<class CharT>
+    requires std::same_as<CharT, char8_t>
+constexpr std::u8string_view transcode_ref(std::u8string const&&) = delete;
 
 template<class CharT>
     requires (!std::same_as<CharT, char16_t>)
@@ -1373,6 +1400,9 @@ template<class CharT>
 {
     return str;
 }
+template<class CharT>
+    requires std::same_as<CharT, char16_t>
+constexpr std::u16string_view transcode_ref(std::u16string const&&) = delete;
 
 template<class CharT>
     requires (!std::same_as<CharT, char32_t>)
@@ -1387,7 +1417,66 @@ template<class CharT>
 {
     return str;
 }
+template<class CharT>
+    requires std::same_as<CharT, char32_t>
+constexpr std::u32string_view transcode_ref(std::u32string const&&) = delete;
 
 } // iris::unicode
+
+namespace iris {
+
+template<int = 0>
+[[nodiscard]] constexpr std::string_view to_string_ref(std::string_view str)
+{
+    return str;
+}
+template<int = 0>
+constexpr std::string_view to_string_ref(std::string const&&) = delete;
+
+template<int = 0>
+[[nodiscard]] constexpr std::string to_string_ref(std::u8string_view str)
+{
+    return unicode::transcode<char>(str);
+}
+
+template<int = 0>
+[[nodiscard]] constexpr std::string to_string_ref(std::u16string_view str)
+{
+    return unicode::transcode<char>(str);
+}
+
+template<int = 0>
+[[nodiscard]] constexpr std::string to_string_ref(std::u32string_view str)
+{
+    return unicode::transcode<char>(str);
+}
+
+template<int = 0>
+[[nodiscard]] constexpr std::u32string to_u32string_ref(std::string_view str)
+{
+    return unicode::transcode<char32_t>(str);
+}
+
+template<int = 0>
+[[nodiscard]] constexpr std::u32string to_u32string_ref(std::u8string_view str)
+{
+    return unicode::transcode<char32_t>(str);
+}
+
+template<int = 0>
+[[nodiscard]] constexpr std::u32string to_u32string_ref(std::u16string_view str)
+{
+    return unicode::transcode<char32_t>(str);
+}
+
+template<int = 0>
+[[nodiscard]] constexpr std::u32string_view to_u32string_ref(std::u32string_view str)
+{
+    return str;
+}
+template<int = 0>
+constexpr std::u32string_view to_string_ref(std::u32string const&&) = delete;
+
+} // iris
 
 #endif
