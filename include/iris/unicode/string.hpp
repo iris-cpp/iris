@@ -1387,22 +1387,22 @@ template<class CharT>
     requires std::same_as<CharT, char8_t>
 constexpr std::u8string_view transcode_ref(std::u8string const&&) = delete;
 
-template<class CharT>
-    requires (!std::same_as<CharT, char16_t>)
-[[nodiscard]] constexpr std::basic_string<CharT> transcode_ref(std::u16string_view str)
-{
-    return unicode::transcode<CharT>(str);
-}
+//template<class CharT>
+//    requires (!std::same_as<CharT, char16_t>)
+//[[nodiscard]] constexpr std::basic_string<CharT> transcode_ref(std::u16string_view str)
+//{
+//    return unicode::transcode<CharT>(str);
+//}
 
-template<class CharT>
-    requires std::same_as<CharT, char16_t>
-[[nodiscard]] constexpr std::u16string_view transcode_ref(std::u16string_view str)
-{
-    return str;
-}
-template<class CharT>
-    requires std::same_as<CharT, char16_t>
-constexpr std::u16string_view transcode_ref(std::u16string const&&) = delete;
+//template<class CharT>
+//    requires std::same_as<CharT, char16_t>
+//[[nodiscard]] constexpr std::u16string_view transcode_ref(std::u16string_view str)
+//{
+//    return str;
+//}
+//template<class CharT>
+//    requires std::same_as<CharT, char16_t>
+//constexpr std::u16string_view transcode_ref(std::u16string const&&) = delete;
 
 template<class CharT>
     requires (!std::same_as<CharT, char32_t>)
@@ -1439,11 +1439,11 @@ template<int = 0>
     return unicode::transcode<char>(str);
 }
 
-template<int = 0>
-[[nodiscard]] constexpr std::string to_string_ref(std::u16string_view str)
-{
-    return unicode::transcode<char>(str);
-}
+//template<int = 0>
+//[[nodiscard]] constexpr std::string to_string_ref(std::u16string_view str)
+//{
+//    return unicode::transcode<char>(str);
+//}
 
 template<int = 0>
 [[nodiscard]] constexpr std::string to_string_ref(std::u32string_view str)
@@ -1463,11 +1463,11 @@ template<int = 0>
     return unicode::transcode<char32_t>(str);
 }
 
-template<int = 0>
-[[nodiscard]] constexpr std::u32string to_u32string_ref(std::u16string_view str)
-{
-    return unicode::transcode<char32_t>(str);
-}
+//template<int = 0>
+//[[nodiscard]] constexpr std::u32string to_u32string_ref(std::u16string_view str)
+//{
+//    return unicode::transcode<char32_t>(str);
+//}
 
 template<int = 0>
 [[nodiscard]] constexpr std::u32string_view to_u32string_ref(std::u32string_view str)
