@@ -620,10 +620,10 @@ public:
             (!std::is_same_v<std::remove_cvref_t<T>, rvariant>) &&
             (!is_ttp_specialization_of_v<std::remove_cvref_t<T>, std::in_place_type_t>) &&
             (!is_ctp_specialization_of_v<std::remove_cvref_t<T>, std::in_place_index_t>) &&
-            std::is_constructible_v<typename aggregate_initialize_resolution<T, Ts...>::type, T>
+            std::is_constructible_v<typename no_narrowing_resolution<T, Ts...>::type, T>
     constexpr /* not explicit */ rvariant(T&& t)
-        noexcept(std::is_nothrow_constructible_v<typename aggregate_initialize_resolution<T, Ts...>::type, T>)
-        : base_type(std::in_place_index<aggregate_initialize_resolution<T, Ts...>::index>, std::forward<T>(t))
+        noexcept(std::is_nothrow_constructible_v<typename no_narrowing_resolution<T, Ts...>::type, T>)
+        : base_type(std::in_place_index<no_narrowing_resolution<T, Ts...>::index>, std::forward<T>(t))
     {}
 
 IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
@@ -632,12 +632,12 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
     template<class T>
         requires
             (!std::is_same_v<std::remove_cvref_t<T>, rvariant>) &&
-            detail::variant_assignable<typename aggregate_initialize_resolution<T, Ts...>::type, T>::value
+            detail::variant_assignable<typename no_narrowing_resolution<T, Ts...>::type, T>::value
     constexpr rvariant& operator=(T&& t)
-        noexcept(detail::variant_nothrow_assignable<typename aggregate_initialize_resolution<T, Ts...>::type, T>::value)
+        noexcept(detail::variant_nothrow_assignable<typename no_narrowing_resolution<T, Ts...>::type, T>::value)
     {
-        using Tj = aggregate_initialize_resolution<T, Ts...>::type; // either plain type or wrapped with recursive_wrapper
-        constexpr std::size_t j = aggregate_initialize_resolution<T, Ts...>::index;
+        using Tj = no_narrowing_resolution<T, Ts...>::type; // either plain type or wrapped with recursive_wrapper
+        constexpr std::size_t j = no_narrowing_resolution<T, Ts...>::index;
         static_assert(j != std::variant_npos);
 
         this->raw_visit([this, &t]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti& ti)
