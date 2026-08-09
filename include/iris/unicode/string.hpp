@@ -1285,7 +1285,7 @@ template<int = 0>
     return result;
 }
 
-// TODO: add single char variations
+// ---------------------------------------------------
 
 template<class CharT>
 [[nodiscard]] constexpr std::basic_string<CharT> transcode(std::string_view str)
@@ -1349,6 +1349,33 @@ template<class CharT>
         static_assert(std::same_as<CharT, char>, "unsupported character type");
         return unicode::utf32to8(str);
     }
+}
+
+
+// ---------------------------------------------------
+
+template<class CharT>
+[[nodiscard]] constexpr std::basic_string<CharT> transcode(char ch)
+{
+    return unicode::transcode<CharT>(std::string_view{&ch, 1});
+}
+
+template<class CharT>
+[[nodiscard]] constexpr std::basic_string<CharT> transcode(char8_t ch)
+{
+    return unicode::transcode<CharT>(std::u8string_view{&ch, 1});
+}
+
+template<class CharT>
+[[nodiscard]] constexpr std::basic_string<CharT> transcode(char16_t ch)
+{
+    return unicode::transcode<CharT>(std::u16string_view{&ch, 1});
+}
+
+template<class CharT>
+[[nodiscard]] constexpr std::basic_string<CharT> transcode(char32_t ch)
+{
+    return unicode::transcode<CharT>(std::u32string_view{&ch, 1});
 }
 
 // ----------------------------------
