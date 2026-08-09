@@ -19,20 +19,6 @@ struct n_tuple;
 template<int... Ns>
 struct n_list;
 
-struct convertible_from_int
-{
-    convertible_from_int(int);
-};
-
-struct not_convertible_from_int {};
-
-struct explicit_from_int
-{
-    explicit explicit_from_int() = default;
-    explicit explicit_from_int(int);
-    explicit_from_int& operator=(int) { return *this; }
-};
-
 enum class scoped_enum {};
 enum unscoped_enum {};
 enum class scoped_enum_uint8 : unsigned char {};
@@ -51,25 +37,8 @@ struct explicit_conversion_op
     explicit operator int() const;
 };
 
-struct abstract_class
-{
-    virtual void f() = 0;
-};
-
-struct multi_arg_implicit
-{
-    multi_arg_implicit(int, double);
-};
-
-struct has_initializer_list_ctor
-{
-    has_initializer_list_ctor(std::initializer_list<int>);
-};
-
 struct member_ptr_test
 {
-    int member;
-    void func();
 };
 
 } // anonymous
@@ -266,8 +235,26 @@ TEST_CASE("is_convertible_without_narrowing: pointer types")
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<void (member_ptr_test::*)(), int>);
 }
 
-TEST_CASE("is_convertible_without_narrowing: class types with implicit ctor")
+TEST_CASE("is_convertible_without_narrowing: constexpr caveat")
 {
+    STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int, float>);
+    STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int const, float>);
+
+    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2026/p0870r8.html#ch5.9
+    // The paper wants true in this case.
+    // TODO: GCC/Clang and MSVC(2026) disagree; unfixable
+    //STATIC_CHECK(iris::is_convertible_without_narrowing_v<std::integral_constant<int, 42>, float>);
+}
+
+TEST_CASE("is_convertible_without_narrowing: class types with conversion")
+{
+    struct convertible_from_int
+    {
+        convertible_from_int(int);
+    };
+
+    struct not_convertible_from_int {};
+
     // Implicit converting constructor
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<int, convertible_from_int>);
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<convertible_from_int, int>);
@@ -276,14 +263,30 @@ TEST_CASE("is_convertible_without_narrowing: class types with implicit ctor")
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int, not_convertible_from_int>);
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<not_convertible_from_int, int>);
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int, std::string>);
-}
 
-TEST_CASE("is_convertible_without_narrowing: class types with explicit ctor")
-{
+    // ------------------------------------------
+
+    struct explicit_from_int
+    {
+        explicit explicit_from_int() = default;
+        explicit explicit_from_int(int) {}
+        explicit_from_int& operator=(int) { return *this; }
+    };
+
     // Explicit ctor: is_convertible is false, so trait is false
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int, explicit_from_int>);
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<explicit_from_int, int>);
+
+    // ------------------------------------------
+
+    struct convertible_to_double
+    {
+        operator double();
+    };
+    STATIC_CHECK(!iris::is_convertible_without_narrowing<double, float>::value);
+    STATIC_CHECK(!iris::is_convertible_without_narrowing<convertible_to_double, float>::value);
 }
+
 
 TEST_CASE("is_convertible_without_narrowing: class types with conversion operator")
 {
@@ -304,7 +307,7 @@ TEST_CASE("is_convertible_without_narrowing: class types inheritance")
 
     // Derived& to base: implicitly convertible
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<derived&, base>);
-    STATIC_CHECK(iris::is_convertible_without_narrowing_v<const derived&, base>);
+    STATIC_CHECK(iris::is_convertible_without_narrowing_v<derived const&, base>);
 }
 
 TEST_CASE("is_convertible_without_narrowing: aggregate types")
@@ -350,6 +353,9 @@ TEST_CASE("is_convertible_without_narrowing: void")
 {
     // void to void: is_convertible_v<void, void> is true per the standard.
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<void, void>);
+    STATIC_CHECK(iris::is_convertible_without_narrowing_v<void, void const>);
+    STATIC_CHECK(iris::is_convertible_without_narrowing_v<void const, void const>);
+    STATIC_CHECK(iris::is_convertible_without_narrowing_v<void const, void>);
 
     // void to/from anything else: not convertible
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<void, int>);
@@ -360,12 +366,12 @@ TEST_CASE("is_convertible_without_narrowing: void")
 TEST_CASE("is_convertible_without_narrowing: cv-qualified types")
 {
     // const arithmetic: same narrowing rules
-    STATIC_CHECK(iris::is_convertible_without_narrowing_v<const int, int>);
-    STATIC_CHECK(iris::is_convertible_without_narrowing_v<int, const int>);
-    STATIC_CHECK(iris::is_convertible_without_narrowing_v<const int, long long>);
-    STATIC_CHECK(!iris::is_convertible_without_narrowing_v<const long long, int>);
-    STATIC_CHECK(iris::is_convertible_without_narrowing_v<volatile int, int>);
-    STATIC_CHECK(iris::is_convertible_without_narrowing_v<const volatile int, int>);
+    STATIC_CHECK(iris::is_convertible_without_narrowing_v<int const, int>);
+    STATIC_CHECK(iris::is_convertible_without_narrowing_v<int, int const>);
+    STATIC_CHECK(iris::is_convertible_without_narrowing_v<int const, long long>);
+    STATIC_CHECK(!iris::is_convertible_without_narrowing_v<long long const, int>);
+    STATIC_CHECK(iris::is_convertible_without_narrowing_v<int volatile, int>);
+    STATIC_CHECK(iris::is_convertible_without_narrowing_v<int const volatile, int>);
 }
 
 TEST_CASE("is_convertible_without_narrowing: reference types as From")
@@ -380,6 +386,34 @@ TEST_CASE("is_convertible_without_narrowing: reference types as From")
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<int&&, int>);
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<int&&, long long>);
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<long long&&, int>);
+}
+
+TEST_CASE("is_convertible_without_narrowing: reference types as To")
+{
+    STATIC_CHECK(std::is_convertible_v<int&, int&>);
+    STATIC_CHECK(iris::is_convertible_without_narrowing_v<int&, int&>);
+
+    STATIC_CHECK(std::is_convertible_v<int&, int const&>);
+    STATIC_CHECK(iris::is_convertible_without_narrowing_v<int&, int const&>);
+
+    STATIC_CHECK(!std::is_convertible_v<int const&, int&>);
+    STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int const&, int&>);
+
+    STATIC_CHECK(!std::is_convertible_v<int, int&>);
+    STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int, int&>);
+
+    STATIC_CHECK(std::is_convertible_v<float, double const&>);
+    STATIC_CHECK(iris::is_convertible_without_narrowing_v<float, double const&>);
+
+    // --------------------------------------------------
+
+    using F = void();
+
+    STATIC_CHECK(std::is_convertible_v<F&, F&>);
+    STATIC_CHECK(iris::is_convertible_without_narrowing_v<F&, F&>);
+
+    STATIC_CHECK(std::is_convertible_v<F, F&>);
+    STATIC_CHECK(iris::is_convertible_without_narrowing_v<F, F&>);
 }
 
 TEST_CASE("is_convertible_without_narrowing: function pointers")

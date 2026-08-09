@@ -223,39 +223,116 @@ template<class T>
 constexpr bool is_trivially_swappable_v = is_trivially_swappable<T>::value;
 
 
-// P0870R7: is_convertible_without_narrowing
-// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p0870r7.html
 namespace detail {
 
+// Workaround for MSVC 2026's Intellisense
+template<class To, class From>
+inline constexpr bool reference_converts_from_temporary_workaround_v =
+#if defined(__cpp_lib_reference_from_temporary)
+    std::reference_converts_from_temporary_v<To, From>;
+#elif defined(__has_builtin) && __has_builtin(__reference_converts_from_temporary)
+    __reference_converts_from_temporary(To, From);
+#else
+    true;
+#endif
+
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2026/p0870r8.html
+
 template<class From, class To>
-struct is_convertible_without_narrowing_impl
+struct is_convertible_without_narrowing_array_check
     : std::false_type
 {};
 
-// void to void "conversion" is valid since `is_convertible` is defined
-// as "returning `From` is valid for function whose return type is `To`?"
-template<>
-struct is_convertible_without_narrowing_impl<void, void>
+template<class From, class To>
+    requires requires (From&& x) {
+        { std::type_identity_t<To[]>{std::forward<From>(x)} } -> std::same_as<To[1]>;
+    }
+struct is_convertible_without_narrowing_array_check<From, To>
+    : std::true_type
+{};
+
+// ----------------------------------------------
+
+// Array of reference cannot be formed, handle special case.
+template<class From, class To>
+struct is_convertible_without_narrowing_dispatch
+    : is_convertible_without_narrowing_array_check<From, To>
+{
+    static_assert(!std::is_reference_v<To>);
+};
+
+template<class From, class To>
+using is_never_narrowing_family = std::disjunction<
+    std::is_same<std::remove_cvref_t<From>, std::remove_cvref_t<To>>,
+    std::is_base_of<std::remove_cvref_t<From>, std::remove_cvref_t<To>>,
+    std::is_function<std::remove_cvref_t<To>>,
+    std::is_array<std::remove_cvref_t<To>>
+>;
+template<class From, class To>
+    requires
+        std::is_reference_v<To> &&
+        is_never_narrowing_family<From, To>::value
+struct is_convertible_without_narrowing_dispatch<From, To>
     : std::true_type
 {};
 
 template<class From, class To>
     requires
-        requires (From&& x) {
-            { std::type_identity_t<To[]>{std::forward<From>(x)} } -> std::same_as<To[1]>;
-        }
+        std::is_reference_v<To> &&
+        (!is_never_narrowing_family<From, To>::value) &&
+        (!reference_converts_from_temporary_workaround_v<To, From>)
+struct is_convertible_without_narrowing_dispatch<From, To>
+    : std::true_type
+{};
+
+template<class From, class To>
+    requires
+        std::is_reference_v<To> &&
+        (!is_never_narrowing_family<From, To>::value) &&
+        reference_converts_from_temporary_workaround_v<To, From>
+struct is_convertible_without_narrowing_dispatch<From, To>
+    : is_convertible_without_narrowing_array_check<
+        From,
+        std::remove_reference_t<To> // temporary type is copy-list-initialized
+    >
+{};
+
+// ----------------------------------------------
+
+template<class From, class To>
+struct is_convertible_without_narrowing_impl
+    : is_convertible_without_narrowing_dispatch<From, To>
+{};
+
+// Corner case mentioned on the paper: void
+// cv variants are already handled via `std::is_convertible`.
+template<class From, class To>
+    requires std::is_void_v<To>
 struct is_convertible_without_narrowing_impl<From, To>
     : std::true_type
+{};
+
+// DR11: Converting from T* to bool should be considered narrowing
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p1957r2.html
+//
+// This is already applied to all major vendors, but some implementations
+// disagree with `std::nullptr_t`. Note that `std::nullptr_t` is NOT a
+// pointer type, so it cannot be checked with `std::is_pointer`.
+template<class From, class To>
+    requires std::is_null_pointer_v<From> && std::same_as<std::remove_cvref_t<To>, bool>
+struct is_convertible_without_narrowing_impl<From, To> : std::false_type
 {};
 
 } // namespace detail
 
 template<class From, class To>
-struct is_convertible_without_narrowing
-    : std::conjunction<
-        std::is_convertible<From, To>,
-        detail::is_convertible_without_narrowing_impl<From, To>
-    >
+struct is_convertible_without_narrowing : std::false_type
+{};
+
+template<class From, class To>
+    requires std::is_convertible_v<From, To>
+struct is_convertible_without_narrowing<From, To>
+    : detail::is_convertible_without_narrowing_impl<From, To>
 {};
 
 template<class From, class To>
