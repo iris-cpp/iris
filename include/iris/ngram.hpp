@@ -29,7 +29,7 @@ struct std::formatter<iris::ngram_document_id, CharT>
 {
     using base_type = std::formatter<std::underlying_type_t<iris::ngram_document_id>, CharT>;
 
-    template <class Ctx>
+    template<class Ctx>
     Ctx::iterator format(iris::ngram_document_id doc_id, Ctx& ctx) const
     {
         return base_type::format(std::to_underlying(doc_id), ctx);
@@ -37,6 +37,12 @@ struct std::formatter<iris::ngram_document_id, CharT>
 };
 
 namespace iris {
+
+namespace detail {
+
+inline constexpr std::size_t N_GRAM_MAX_OPTIMIZED_N = 2;
+
+} // detail
 
 struct ngram_occurrence
 {
@@ -50,8 +56,27 @@ struct ngram_occurrence
 template<std::size_t N, class CharT>
 struct ngram
 {
+    static_assert(N >= 1);
+
     // TODO: optimize for N=1
     std::array<CharT, N> chars;
+
+    template<std::size_t Len>
+    [[nodiscard]] static constexpr ngram from_c_array(CharT const (&chars)[Len]) noexcept
+    {
+        assert(chars[Len - 1] == static_cast<CharT>(0));
+
+        if constexpr (N == 1) {
+            return ngram{chars[0]};
+        } else if constexpr (N == 2) {
+            return ngram{chars[0], chars[1]};
+        } else {
+            static_assert(detail::N_GRAM_MAX_OPTIMIZED_N == 2);
+            ngram ng;
+            std::ranges::copy_n(chars, Len - 1, ng.chars.begin());
+            return ng;
+        }
+    }
 
     [[nodiscard]] constexpr bool operator==(ngram const&) const noexcept = default;
     [[nodiscard]] constexpr std::strong_ordering operator<=>(ngram const&) const noexcept = default;
@@ -70,7 +95,19 @@ inline namespace ngram_literals {
     return ngram<2, char32_t>{str[0], str[1]};
 }
 
+[[nodiscard]] constexpr auto operator ""_1gram(char32_t const* str, std::size_t len) noexcept
+{
+    assert(len == 1);
+    return ngram<1, char32_t>{str[0]};
+}
+
 } // ngram_literals
+
+template<class CharT, std::size_t N>
+[[nodiscard]] ngram<N - 1, CharT> to_ngram(CharT const (&chars)[N]) noexcept
+{
+    return ngram<N - 1, CharT>::from_c_array(chars);
+}
 
 
 namespace detail {
@@ -114,7 +151,7 @@ public:
 
             ngram<N, CharT> ng;
             std::size_t i = 0;
-            for (; i < N; ++i) { // TODO: loop unroll
+            for (; i < N; ++i) {
                 ng.chars[i] = doc_text[i];
             }
             idx.append(ng, doc_id, 0);
@@ -126,6 +163,7 @@ public:
             }
         };
         do_ngram(get_index<2>());
+        static_assert(detail::N_GRAM_MAX_OPTIMIZED_N == 2);
 
         return doc_id;
     }
@@ -149,7 +187,7 @@ private:
         } else if constexpr (N == 2) {
             return self.store_.bi_idx;
         } else {
-            static_assert(false, "unhandled N");
+            static_assert(detail::N_GRAM_MAX_OPTIMIZED_N == 2);
         }
     }
 

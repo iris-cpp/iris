@@ -30,15 +30,55 @@ constexpr auto make_occurrences(std::initializer_list<ngram_occurrence> occs)
     return std::vector<ngram_occurrence>{occs};
 }
 
+#define IRIS_CHECK_NO_OCCURRENCE(ng_str) do { \
+        CHECK(!ngram_db.get_occurrences(iris::to_ngram(U ## ng_str))); \
+    } while (false);
+
 #define IRIS_CHECK_OCCURRENCE(ng_str, ...) do { \
         std::vector<ngram_occurrence> const* occs = nullptr; \
-        CHECK((occs = ngram_db.get_occurrences(U ## ng_str ## _2gram))); \
+        CHECK((occs = ngram_db.get_occurrences(iris::to_ngram(U ## ng_str)))); \
         if (occs) { \
             CHECK(*occs == make_occurrences({__VA_ARGS__})); \
         } \
     } while (false);
 
-TEST_CASE("ngram")
+TEST_CASE("ngram (minimal input)")
+{
+#ifdef _MSC_VER
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+
+    {
+        iris::ngram_database<> ngram_db;
+        (void)ngram_db.add_document(U"");
+        IRIS_CHECK_NO_OCCURRENCE("今");
+    }
+    {
+        iris::ngram_database<> ngram_db;
+        (void)ngram_db.add_document(U"今");
+        IRIS_CHECK_OCCURRENCE("今", {0_doc_id, 0});
+        IRIS_CHECK_NO_OCCURRENCE("無");
+        IRIS_CHECK_NO_OCCURRENCE("今日");
+    }
+    {
+        iris::ngram_database<> ngram_db;
+        (void)ngram_db.add_document(U"今");
+        IRIS_CHECK_OCCURRENCE("今", {0_doc_id, 0});
+        IRIS_CHECK_NO_OCCURRENCE("無");
+        IRIS_CHECK_NO_OCCURRENCE("今日");
+    }
+    {
+        iris::ngram_database<> ngram_db;
+        (void)ngram_db.add_document(U"今日");
+        IRIS_CHECK_OCCURRENCE("今", {0_doc_id, 0});
+        IRIS_CHECK_OCCURRENCE("日", {0_doc_id, 1});
+        IRIS_CHECK_NO_OCCURRENCE("無");
+        IRIS_CHECK_OCCURRENCE("今日", {0_doc_id, 0});
+        IRIS_CHECK_NO_OCCURRENCE("今無");
+    }
+}
+
+TEST_CASE("ngram (realistic input)")
 {
 #ifdef _MSC_VER
     SetConsoleOutputCP(CP_UTF8);
