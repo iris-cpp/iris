@@ -120,7 +120,7 @@ public:
             idx.append(ng, doc_id, 0);
 
             for (; i < doc_text.size(); ++i) {
-                std::ranges::shift_left(ng.chars, 1);
+                std::shift_left(ng.chars.begin(), ng.chars.end(), 1);
                 ng.chars[N - 1] = doc_text[i];
                 idx.append(ng, doc_id, int(i - N + 1));
             }
