@@ -14,7 +14,7 @@ namespace iris {
 
 inline std::ostream& operator<<(std::ostream& os, iris::ngram_occurrence const& occ)
 {
-    return os << std::format("{}:{}", occ.doc_id, occ.pos);
+    return os << std::format("{}", occ);
 }
 
 } // iris
@@ -31,12 +31,12 @@ constexpr auto make_occurrences(std::initializer_list<ngram_occurrence> occs)
 }
 
 #define IRIS_CHECK_NO_OCCURRENCE(ng_str) do { \
-        CHECK(!ngram_db.get_occurrences(iris::to_ngram(U ## ng_str))); \
+        CHECK(!ngram_db.find_occurrences(iris::to_ngram(U ## ng_str))); \
     } while (false);
 
 #define IRIS_CHECK_OCCURRENCE(ng_str, ...) do { \
         std::vector<ngram_occurrence> const* occs = nullptr; \
-        CHECK((occs = ngram_db.get_occurrences(iris::to_ngram(U ## ng_str)))); \
+        CHECK((occs = ngram_db.find_occurrences(iris::to_ngram(U ## ng_str)))); \
         if (occs) { \
             CHECK(*occs == make_occurrences({__VA_ARGS__})); \
         } \

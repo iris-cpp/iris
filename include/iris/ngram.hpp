@@ -1,7 +1,8 @@
 #ifndef IRIS_NGRAM_HPP
 #define IRIS_NGRAM_HPP
 
-#include <format>
+#include <iris/format.hpp>
+
 #include <span>
 #include <flat_map>
 #include <string>
@@ -21,6 +22,15 @@ namespace iris {
 
 enum struct ngram_document_id : unsigned {};
 
+struct ngram_occurrence
+{
+    ngram_document_id doc_id;
+    int pos;
+
+    [[nodiscard]] constexpr bool operator==(ngram_occurrence const&) const noexcept = default;
+    [[nodiscard]] constexpr std::strong_ordering operator<=>(ngram_occurrence const&) const noexcept = default;
+};
+
 } // iris
 
 template<class CharT>
@@ -36,6 +46,17 @@ struct std::formatter<iris::ngram_document_id, CharT>
     }
 };
 
+template<class CharT>
+struct std::formatter<iris::ngram_occurrence, CharT>
+    : iris::no_spec_formatter<CharT>
+{
+    template<class Ctx>
+    Ctx::iterator format(iris::ngram_occurrence const& occ, Ctx& ctx) const
+    {
+        return std::format_to(ctx.out(), "{}:{}", occ.doc_id, occ.pos);
+    }
+};
+
 namespace iris {
 
 namespace detail {
@@ -43,15 +64,6 @@ namespace detail {
 inline constexpr std::size_t N_GRAM_MAX_OPTIMIZED_N = 2;
 
 } // detail
-
-struct ngram_occurrence
-{
-    ngram_document_id doc_id;
-    int pos;
-
-    [[nodiscard]] constexpr bool operator==(ngram_occurrence const&) const noexcept = default;
-    [[nodiscard]] constexpr std::strong_ordering operator<=>(ngram_occurrence const&) const noexcept = default;
-};
 
 template<std::size_t N, class CharT>
 struct ngram
@@ -170,7 +182,7 @@ public:
 
     template<std::size_t N>
     [[nodiscard]]
-    std::vector<ngram_occurrence> const* get_occurrences(ngram<N, CharT> ng) const noexcept
+    std::vector<ngram_occurrence> const* find_occurrences(ngram<N, CharT> ng) const noexcept
     {
         auto const& idx = get_index<N>();
         auto const it = idx.occs.find(ng);
