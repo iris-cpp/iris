@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #include "iris_test.hpp"
 
 #include <iris/ngram.hpp>
@@ -12,9 +14,15 @@
 
 namespace iris {
 
-inline std::ostream& operator<<(std::ostream& os, iris::ngram_occurrence const& occ)
+inline std::ostream& operator<<(std::ostream& os, ngram_occurrence const& occ)
 {
     return os << std::format("{}", occ);
+}
+
+template<class T>
+inline std::ostream& operator<<(std::ostream& os, interval<T> const& iv)
+{
+    return os << std::format("{}", iv);
 }
 
 } // iris
@@ -31,15 +39,15 @@ constexpr auto make_occurrences(std::initializer_list<ngram_occurrence> occs)
 }
 
 #define IRIS_CHECK_NO_OCCURRENCE(ng_str) do { \
-        CHECK(!ngram_db.find_occurrences(iris::to_ngram(U ## ng_str))); \
+        std::vector<ngram_occurrence> occs; \
+        ngram_db.find_occurrences(iris::to_ngram(U ## ng_str), occs); \
+        CHECK(occs.empty()); \
     } while (false);
 
 #define IRIS_CHECK_OCCURRENCE(ng_str, ...) do { \
-        std::vector<ngram_occurrence> const* occs = nullptr; \
-        CHECK((occs = ngram_db.find_occurrences(iris::to_ngram(U ## ng_str)))); \
-        if (occs) { \
-            CHECK(*occs == make_occurrences({__VA_ARGS__})); \
-        } \
+        std::vector<ngram_occurrence> occs; \
+        ngram_db.find_occurrences(iris::to_ngram(U ## ng_str), occs); \
+        CHECK(occs == make_occurrences({__VA_ARGS__})); \
     } while (false);
 
 TEST_CASE("ngram (minimal input)")
@@ -160,5 +168,29 @@ TEST_CASE("ngram (realistic input)")
         IRIS_CHECK_OCCURRENCE("しょ", {2_doc_id, 11});
         IRIS_CHECK_OCCURRENCE("ょう", {2_doc_id, 12});
         IRIS_CHECK_OCCURRENCE("う。", {2_doc_id, 13});
+    }
+}
+
+TEST_CASE("ngram search")
+{
+    {
+        iris::ngram_database<> ngram_db;
+        (void)ngram_db.add_document(U"今日は良い天気です。");
+        //(void)ngram_db.add_document(U"今日は大雨です。");
+        //(void)ngram_db.add_document(U"今日の東海地方は大雨でしょう。");
+
+        iris::ngram_search_query<> query{U"良い天気"};
+
+        auto const search_res = ngram_db.search(query);
+
+        auto const& doc_matches = search_res.doc_matches();
+
+        REQUIRE(doc_matches.contains(0_doc_id));
+        auto const& word_map = doc_matches.at(0_doc_id);
+
+        REQUIRE(word_map.size() == 1);
+        CHECK(word_map[0].word_id == 0);
+        REQUIRE(word_map[0].matches.size() == 1);
+        CHECK(word_map[0].matches[0] == iris::interval{3, 7});
     }
 }
