@@ -57,7 +57,9 @@ struct at_c;
 template<std::size_t I, class T>
 using at_c_t = at_c<I, T>::type;
 
-#if __cpp_pack_indexing >= 202311L // has native pack indexing
+// Has native pack indexing?
+// Note: GCC 15 emits "sorry, unimplemented: mangling type pack index"
+#if !(defined(__GNUC__) && !defined(__clang__) && __GNUC__ <= 15) && __cpp_pack_indexing >= 202311L
 
 # define IRIS_CORE_PACK_INDEXING(I, Ts_ellipsis) Ts_ellipsis[I]
 

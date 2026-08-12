@@ -40,12 +40,13 @@ endif()
 set(CATCH_CONFIG_FAST_COMPILE ON)
 set(CATCH_CONFIG_NO_USE_BUILTIN_CONSTANT_P ON)
 set(CATCH_CONFIG_DISABLE_EXCEPTIONS ON) # disable default `catch(...)` to enable debugger
+set(CATCH_CONFIG_COUNTER OFF)
 
 include(FetchContent)
 FetchContent_Declare(
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2
-    GIT_TAG v3.12.0
+    GIT_TAG v3.15.3
     GIT_SHALLOW ON
 )
 FetchContent_MakeAvailable(Catch2)
@@ -53,7 +54,11 @@ FetchContent_MakeAvailable(Catch2)
 set_target_properties(Catch2 PROPERTIES CXX_EXTENSIONS OFF)
 set_target_properties(Catch2 Catch2WithMain PROPERTIES FOLDER "_deps")
 
-target_compile_definitions(Catch2 PUBLIC DO_NOT_USE_WMAIN)
+target_compile_definitions(
+    Catch2 PUBLIC
+    DO_NOT_USE_WMAIN
+    CATCH_CONFIG_NO_COUNTER=1
+)
 
 if(MSVC)
     target_compile_options(Catch2 PRIVATE /wd6054)
