@@ -45,7 +45,7 @@ include(FetchContent)
 FetchContent_Declare(
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2
-    GIT_TAG v3.12.0
+    GIT_TAG v3.15.3
     GIT_SHALLOW ON
 )
 FetchContent_MakeAvailable(Catch2)
