@@ -10,6 +10,7 @@
 #include <iris/unicode/string.hpp>
 #include <iris/format.hpp>
 
+#include <memory>
 #include <concepts>
 #include <span>
 #include <flat_map>
@@ -25,6 +26,7 @@
 #include <stdexcept>
 
 #include <cassert>
+#include <cstdint>
 
 namespace iris {
 
@@ -41,42 +43,131 @@ struct ngram_occurrence
 
 namespace detail {
 
-inline constexpr std::size_t N_GRAM_MAX_OPTIMIZED_N = 2;
+template<std::size_t Bytes> struct ngram_value;
+template<> struct ngram_value<1> { using type = std::uint8_t; };
+template<> struct ngram_value<2> { using type = std::uint16_t; };
+template<> struct ngram_value<4> { using type = std::uint32_t; };
+template<> struct ngram_value<8> { using type = std::uint64_t; };
+
+template<std::size_t Bytes>
+using ngram_value_t = ngram_value<Bytes>::type;
 
 } // detail
 
 template<std::size_t N, class CharT>
 struct ngram
 {
-    static_assert(N >= 1);
+    static_assert(N >= 3);
 
-    // TODO: optimize for N=1
-    std::array<CharT, N> chars;
+    std::array<CharT, N> data;
 
     template<std::forward_iterator It>
-    [[nodiscard]] static constexpr ngram from_copy_n(It it)
+    constexpr void copy_n(It it)
         noexcept(noexcept(*it++))
     {
-        if constexpr (N == 1) {
-            ngram ng;
-            ng.chars[0] = *it;
-            return ng;
-        } else if constexpr (N == 2) {
-            ngram ng;
-            ng.chars[0] = *it++;
-            ng.chars[1] = *it;
-            return ng;
-        } else {
-            static_assert(detail::N_GRAM_MAX_OPTIMIZED_N == 2);
-            ngram ng;
-            std::ranges::copy_n(it, N, ng.chars.begin());
-            return ng;
-        }
+        std::ranges::copy_n(it, N, data.begin());
+    }
+    template<std::forward_iterator It>
+    [[nodiscard]] static constexpr ngram from_copy_n(It it)
+        noexcept(noexcept(std::declval<ngram&>().copy_n(std::move(it))))
+    {
+        ngram ng;
+        ng.copy_n(std::move(it));
+        return ng;
+    }
+
+    template<std::forward_iterator It>
+    constexpr void shift_copy(It it, int const remaining_chars)
+        noexcept(
+            noexcept(std::shift_left(data.begin(), data.end(), remaining_chars)) &&
+            noexcept(std::ranges::copy_n(it, remaining_chars, data.begin() + (N - remaining_chars)))
+        )
+    {
+        assert(remaining_chars < N);
+        std::shift_left(data.begin(), data.end(), remaining_chars);
+        std::ranges::copy_n(it, remaining_chars, data.begin() + (N - remaining_chars));
     }
 
     template<std::size_t Len>
     [[nodiscard]] static constexpr ngram from_c_array(CharT const (&chars)[Len]) noexcept
     {
+        static_assert(Len == N + 1);
+        assert(chars[Len - 1] == static_cast<CharT>(0));
+        return ngram::from_copy_n(std::ranges::begin(chars));
+    }
+
+    [[nodiscard]] constexpr bool operator==(ngram const&) const noexcept = default;
+    [[nodiscard]] constexpr std::strong_ordering operator<=>(ngram const&) const noexcept = default;
+};
+
+template<class CharT>
+struct ngram<1, CharT>
+{
+    CharT data;
+
+    template<std::forward_iterator It>
+    constexpr void copy_n(It it)
+        noexcept(noexcept(*it))
+    {
+        data = *it;
+    }
+    template<std::forward_iterator It>
+    [[nodiscard]] static constexpr ngram from_copy_n(It it)
+        noexcept(noexcept(std::declval<ngram&>().copy_n(std::move(it))))
+    {
+        ngram ng;
+        ng.copy_n(std::move(it));
+        return ng;
+    }
+
+    template<std::size_t Len>
+    [[nodiscard]] static constexpr ngram from_c_array(CharT const (&chars)[Len]) noexcept
+    {
+        static_assert(Len == 1 + 1);
+        assert(chars[Len - 1] == static_cast<CharT>(0));
+        return ngram::from_copy_n(std::ranges::begin(chars));
+    }
+
+    [[nodiscard]] constexpr bool operator==(ngram const&) const noexcept = default;
+    [[nodiscard]] constexpr std::strong_ordering operator<=>(ngram const&) const noexcept = default;
+};
+
+template<class CharT>
+struct ngram<2, CharT>
+{
+    using value_type = detail::ngram_value_t<sizeof(CharT) * 2>;
+    value_type data;
+
+    template<std::forward_iterator It>
+    constexpr void copy_n(It it)
+        noexcept(noexcept(*it++))
+    {
+        using uchar = std::make_unsigned_t<CharT>;
+        data  = value_type(static_cast<uchar>(*it++)) << (sizeof(CharT) * 8);
+        data |= value_type(static_cast<uchar>(*it));
+    }
+    template<std::forward_iterator It>
+    [[nodiscard]] static constexpr ngram from_copy_n(It it)
+        noexcept(noexcept(std::declval<ngram&>().copy_n(std::move(it))))
+    {
+        ngram ng;
+        ng.copy_n(std::move(it));
+        return ng;
+    }
+
+    template<std::forward_iterator It>
+    constexpr void shift_copy(It it, int const remaining_chars)
+        noexcept(noexcept(*it))
+    {
+        assert(remaining_chars == 1);
+        (void)remaining_chars;
+        data = (data << (sizeof(CharT) * 8)) | value_type(static_cast<std::make_unsigned_t<CharT>>(*it));
+    }
+
+    template<std::size_t Len>
+    [[nodiscard]] static constexpr ngram from_c_array(CharT const (&chars)[Len]) noexcept
+    {
+        static_assert(Len == 2 + 1);
         assert(chars[Len - 1] == static_cast<CharT>(0));
         return ngram::from_copy_n(std::ranges::begin(chars));
     }
@@ -90,20 +181,6 @@ inline namespace ngram_literals {
 [[nodiscard]] constexpr ngram_document_id operator ""_doc_id(unsigned long long id) noexcept
 {
     return ngram_document_id{static_cast<std::underlying_type_t<ngram_document_id>>(id)};
-}
-
-[[nodiscard]] constexpr auto operator ""_2gram(char32_t const* str, std::size_t len) noexcept
-{
-    assert(len == 2);
-    (void)len;
-    return ngram<2, char32_t>{str[0], str[1]};
-}
-
-[[nodiscard]] constexpr auto operator ""_1gram(char32_t const* str, std::size_t len) noexcept
-{
-    assert(len == 1);
-    (void)len;
-    return ngram<1, char32_t>{str[0]};
 }
 
 } // ngram_literals
@@ -188,37 +265,101 @@ struct ngram_posting_list
 };
 
 template<std::size_t N, class CharT, class PostingListT = ngram_posting_list>
-struct ngram_index
+class ngram_index
 {
-    void append(ngram<N, CharT> const ng, ngram_document_id const doc_id, int const pos)
-    {
-        gram_entries[ng].append(doc_id, pos);
-    }
+    using entry_map = std::flat_map<ngram<N, CharT>, std::unique_ptr<PostingListT>>;
+    static constexpr std::size_t side_merge_threshold = 2048;
 
+public:
     [[nodiscard]]
-    bool empty() const noexcept
+    auto find_list(this auto&& self, ngram<N, CharT> const ng)
     {
-        return gram_entries.empty();
+        if (auto const it = self.gram_entries_.find(ng); it != self.gram_entries_.end()) {
+            return it->second.get();
+        }
+        if (auto const it = self.side_entries_.find(ng); it != self.side_entries_.end()) {
+            return it->second.get();
+        }
+        return static_cast<PostingListT*>(nullptr);
     }
 
     void find_occurrences(ngram<N, CharT> const ng, std::vector<ngram_occurrence>& occs) const
     {
         occs.clear();
-        auto const it = gram_entries.find(ng);
-        if (it == gram_entries.end()) return;
-
-        it->second.to_occurrence_list(occs);
+        auto const* list = this->find_list(ng);
+        if (!list) return;
+        list->to_occurrence_list(occs);
     }
 
     template<class F>
     void search(ngram<N, CharT> const ng, F&& f) const
     {
-        auto const it = gram_entries.find(ng);
-        if (it == gram_entries.end()) return;
-        it->second.for_each_documents(f);
+        auto const* list = this->find_list(ng);
+        if (!list) return;
+        list->for_each_documents(f);
     }
 
-    std::flat_map<ngram<N, CharT>, PostingListT> gram_entries;
+    [[nodiscard]]
+    bool empty() const noexcept
+    {
+        return gram_entries_.empty() && side_entries_.empty();
+    }
+
+    void merge_new_entries(std::vector<std::pair<ngram<N, CharT>, std::unique_ptr<PostingListT>>>& pending)
+    {
+        if (pending.empty()) return; // vocabulary saturated
+
+        for (auto& [key, pl] : pending) {
+            [[maybe_unused]]
+            auto const it = side_entries_.try_emplace(
+                side_entries_.end(), // hint
+                key, std::move(pl)
+            );
+            assert(it->second != nullptr && pl == nullptr);
+        }
+        if (side_entries_.size() >= side_merge_threshold) {
+            this->flush_side();
+        }
+    }
+
+private:
+    void flush_side()
+    {
+        if (side_entries_.empty()) return;
+
+        auto [skeys, svalues] = std::move(side_entries_).extract();
+        auto [keys, values] = std::move(gram_entries_).extract();
+
+        std::size_t const old_size = keys.size();
+        std::size_t const add = skeys.size();
+        keys.resize(old_size + add);
+        values.resize(old_size + add);
+
+        // Backward merge
+        std::size_t out = old_size + add;
+        std::size_t i = old_size;
+        std::size_t j = add;
+        while (j > 0) {
+            if (i > 0 && skeys[j - 1] < keys[i - 1]) {
+                --out;
+                --i;
+                keys[out] = keys[i];
+                values[out] = std::move(values[i]);
+            } else {
+                assert(i == 0 || keys[i - 1] < skeys[j - 1]);
+                --out;
+                --j;
+                keys[out] = skeys[j];
+                values[out] = std::move(svalues[j]);
+            }
+        }
+        assert(out == i);
+
+        gram_entries_.replace(std::move(keys), std::move(values));
+    }
+
+    // Double-buffered to reduce insertion cost
+    entry_map gram_entries_, side_entries_;
 };
 
 template<std::size_t N, class CharT>
@@ -255,7 +396,7 @@ struct ngram_index_storage
     }
 
     template<std::size_t N>
-    [[nodiscard]] auto& get_index(this auto& self) noexcept IRIS_LIFETIMEBOUND
+    [[nodiscard]] auto& get_index(this auto& self IRIS_LIFETIMEBOUND) noexcept
     {
         return self.template get_data<N>().idx;
     }
@@ -270,7 +411,7 @@ private:
         std::vector<ngram_pos_t<N, CharT>, default_init_allocator<ngram_pos_t<N, CharT>>>
         batch_grams;
 
-        std::vector<std::pair<ngram<N, CharT>, PostingListT>>
+        std::vector<std::pair<ngram<N, CharT>, std::unique_ptr<PostingListT>>>
         batch_pending;
     };
 
@@ -278,14 +419,14 @@ private:
     ngram_index_storage_data<2> bi_data_;
 
     template<std::size_t N>
-    [[nodiscard]] auto& get_data(this auto& self) noexcept IRIS_LIFETIMEBOUND
+    [[nodiscard]] auto& get_data(this auto& self IRIS_LIFETIMEBOUND) noexcept
     {
         if constexpr (N == 1) {
             return self.uni_data_;
         } else if constexpr (N == 2) {
             return self.bi_data_;
         } else {
-            static_assert(N_GRAM_MAX_OPTIMIZED_N == 2);
+            static_assert(false);
         }
     }
 
@@ -318,13 +459,13 @@ private:
 
         if constexpr (N == 1) {
             for (std::size_t i = 0; i < input.size(); ++i) {
-                data.batch_grams[i].ng.chars[0] = input[i];
+                data.batch_grams[i].ng.data = input[i];
                 data.batch_grams[i].pos = static_cast<int>(i);
             }
 
         } else {
             for (std::size_t i = 0; i + N <= input.size(); ++i) {
-                std::ranges::copy_n(input.begin() + i, N, data.batch_grams[i].ng.chars.begin());
+                data.batch_grams[i].ng.copy_n(input.begin() + i);
                 data.batch_grams[i].pos = static_cast<int>(i);
             }
         }
@@ -336,22 +477,20 @@ private:
             [](auto const& a, auto const& b) { return a.ng == b.ng; }
         )) {
             auto const& key = chunk.front().ng;
-            if (auto const it = data.idx.gram_entries.find(key); it != data.idx.gram_entries.end()) {
+            if (PostingListT* const pl = data.idx.find_list(key)) {
                 for (auto const& gp : chunk) {
-                    it->second.append(doc_id, gp.pos);
+                    pl->append(doc_id, gp.pos);
                 }
+
             } else {
-                auto& pl = data.batch_pending.emplace_back(key, PostingListT{}).second;
+                auto& new_pl = data.batch_pending.emplace_back(key, std::make_unique<PostingListT>()).second;
                 for (auto const& gp : chunk) {
-                    pl.append(doc_id, gp.pos);
+                    new_pl->append(doc_id, gp.pos);
                 }
             }
         }
-        data.idx.gram_entries.insert(
-            std::sorted_unique,
-            std::make_move_iterator(data.batch_pending.begin()),
-            std::make_move_iterator(data.batch_pending.end())
-        );
+
+        data.idx.merge_new_entries(data.batch_pending);
     }
 };
 
@@ -456,7 +595,10 @@ public:
     [[nodiscard]]
     bool has_document(ngram_document_id const doc_id) const noexcept
     {
-        return doc_matches_.contains(doc_id);
+        auto const it = doc_matches_.find(doc_id);
+        // An entry with no word matches is a tombstone (soft-erased document
+        // awaiting the next sweep), not a match.
+        return it != doc_matches_.end() && !it->second.empty();
     }
 
     [[nodiscard]]
@@ -474,9 +616,12 @@ public:
             assert(word_id == 0);
             assert(doc_matches_.empty() || doc_matches_.rbegin()->first < doc_id);
             doc_matches_it = doc_matches_.try_emplace(doc_matches_.end(), doc_id); // hint: append
+            ++live_doc_count_;
+
         } else {
             doc_matches_it = doc_matches_.find(doc_id);
             if (doc_matches_it == doc_matches_.end()) return false; // no new docs after word 0
+            if (doc_matches_it->second.empty()) return false; // tombstoned (soft-erased) document; skip
         }
 
         assert(!std::ranges::contains(doc_matches_it->second, word_id, &ngram_search_word_match::word_id));
@@ -513,7 +658,14 @@ public:
 
     void erase_document(word_matches_handle const& handle)
     {
-        doc_matches_.erase(handle.doc_it);
+        // This is slow because
+        // k erases x O(n) shift each =~ O(n^2) per word
+        //doc_matches_.erase(handle.doc_it);
+
+        assert(!handle.doc_it->second.empty()); // never double-tombstone
+        handle.doc_it->second.clear(); // make this tombstone
+        assert(live_doc_count_ >= 1);
+        --live_doc_count_;
     }
 
     void remove_stale_document_matches(int const word_id, unsigned const expected_ngrams)
@@ -523,13 +675,15 @@ public:
         std::size_t out = 0;
         for (std::size_t in = 0; in < keys.size(); ++in) {
             auto& word_matches = values[in];
-            bool has_word = false;
+            bool is_word_survived = false;
             std::erase_if(word_matches, [&](ngram_search_word_match const& wm) {
                 if (wm.word_id != word_id) return false;
-                has_word = true;
-                return wm.successful_ngrams != expected_ngrams;
+                if (wm.successful_ngrams != expected_ngrams) return true;
+                is_word_survived = true;
+                return false;
             });
-            if (!has_word || word_matches.empty()) continue;
+            if (!is_word_survived || word_matches.empty()) continue;
+
             if (out != in) {
                 keys[out] = keys[in];
                 values[out] = std::move(values[in]);
@@ -539,17 +693,19 @@ public:
         keys.resize(out);
         values.resize(out);
         doc_matches_.replace(std::move(keys), std::move(values));
+        live_doc_count_ = out;
     }
 
-    void clear() noexcept
+    void reset() noexcept
     {
         doc_matches_.clear();
+        live_doc_count_ = 0;
     }
 
     [[nodiscard]]
     bool empty() const noexcept
     {
-        return doc_matches_.empty();
+        return live_doc_count_ == 0;
     }
 
     [[nodiscard]]
@@ -560,6 +716,7 @@ public:
 
 private:
     doc_matches_map doc_matches_;
+    std::size_t live_doc_count_ = 0;
 };
 
 template<class CharT = char32_t>
@@ -577,7 +734,7 @@ public:
     }
 
     template<std::size_t N>
-    void find_occurrences(ngram<N, CharT> ng, std::vector<ngram_occurrence>& occs) const noexcept
+    void find_occurrences(ngram<N, CharT> ng, std::vector<ngram_occurrence>& occs) const
     {
         occs.clear();
         auto const& idx = store_.template get_index<N>();
@@ -596,12 +753,18 @@ public:
         auto it = query.words().begin();
         assert(!it->empty());
         this->search_word<true>(search_res, word_id++, *it++);
-        if (search_res.empty()) return search_res;
+        if (search_res.empty()) {
+            search_res.reset(); // remove tombstones
+            return search_res;
+        }
 
         for (; it != query.words().end(); ++it) {
             assert(!it->empty());
             this->search_word<false>(search_res, word_id++, *it);
-            if (search_res.empty()) break;
+            if (search_res.empty()) {
+                search_res.reset(); // remove tombstones
+                break;
+            }
         }
         return search_res;
     }
@@ -639,7 +802,7 @@ private:
                 }
             });
             if (available_doc_count == 0) {
-                search_res.clear();
+                search_res.reset();
                 return;
             }
         }
@@ -698,36 +861,41 @@ private:
 
         std::size_t i = N;
         for (; i + N <= word.size(); i += N) {
-            std::ranges::copy_n(word.begin() + i, N, ng.chars.begin());
+            ng.copy_n(word.begin() + i);
             store_.search(ng, do_search(N));
             if (search_res.empty()) return;
             ++current_ngram;
         }
 
-        // When the remaining character count is remainder of `word.size() % N`,
-        // search by the *slided* remaining characters.
-        //
-        // For example, when the document is "今日は晴れです":
-        //
-        // When doing 3-gram search with "今日は雨":
-        //   1. Search by "今日は" in the normal loop
-        //
-        //   2. Then,
-        //      i == 3
-        //      remaining_chars == word.size() - i == 1
-        //      overlapping_chars == N - remaining_chars == 2
-        //      next_search_pos = i - overlapping_chars == 1
-        //
-        //   3. Try to match "日は雨" in the last loop
-        if (int const remaining_chars = static_cast<int>(word.size() - i); remaining_chars > 0) {
-            assert(remaining_chars < N);
-            std::shift_left(ng.chars.begin(), ng.chars.end(), remaining_chars);
-            std::ranges::copy_n(word.begin() + i, remaining_chars, ng.chars.begin() + (N - remaining_chars));
-            store_.search(ng, do_search(remaining_chars));
-            if (search_res.empty()) return;
-            ++current_ngram;
+        if constexpr (N >= 2) {
+            // When the remaining character count is remainder of `word.size() % N`,
+            // search by the *slided* remaining characters.
+            //
+            // For example, when the document is "今日は晴れです":
+            //
+            // When doing 3-gram search with "今日は雨":
+            //   1. Search by "今日は" in the normal loop
+            //
+            //   2. Then,
+            //      i == 3
+            //      remaining_chars == word.size() - i == 1
+            //      overlapping_chars == N - remaining_chars == 2
+            //      next_search_pos = i - overlapping_chars == 1
+            //
+            //   3. Try to match "日は雨" in the last loop
+            if (int const remaining_chars = static_cast<int>(word.size() - i); remaining_chars > 0) {
+                assert(remaining_chars < N);
+                ng.shift_copy(word.begin() + i, remaining_chars);
+                store_.search(ng, do_search(remaining_chars));
+                if (search_res.empty()) return;
+                ++current_ngram;
+            }
         }
 
+        if constexpr (IsFirstWord) {
+            // A first word of exactly one n-gram runs no continuation searches
+            if (current_ngram == 1) return;
+        }
         search_res.remove_stale_document_matches(word_id, current_ngram);
     }
 

@@ -191,6 +191,9 @@ if(PROJECT_IS_TOP_LEVEL)
             interval_set
             snippet
             ngram
+            ngram_search_2
+            ngram_search_3
+            ngram_search_4_dep
         )
 
         foreach(test_name IN LISTS IRIS_TEST_IRIS_TESTS)
