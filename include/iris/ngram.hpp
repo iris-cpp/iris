@@ -83,7 +83,7 @@ struct ngram
             noexcept(std::ranges::copy_n(it, remaining_chars, data.begin() + (N - remaining_chars)))
         )
     {
-        assert(remaining_chars < N);
+        assert(remaining_chars < int(N));
         std::shift_left(data.begin(), data.end(), remaining_chars);
         std::ranges::copy_n(it, remaining_chars, data.begin() + (N - remaining_chars));
     }
@@ -884,7 +884,7 @@ private:
             //
             //   3. Try to match "日は雨" in the last loop
             if (int const remaining_chars = static_cast<int>(word.size() - i); remaining_chars > 0) {
-                assert(remaining_chars < N);
+                assert(remaining_chars < int(N));
                 ng.shift_copy(word.begin() + i, remaining_chars);
                 store_.search(ng, do_search(remaining_chars));
                 if (search_res.empty()) return;
