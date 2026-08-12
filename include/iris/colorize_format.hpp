@@ -35,6 +35,13 @@
 # define IRIS_COLORIZE_HAS_STATIC 0
 #endif
 
+// should be __cpp_lib_format >= 202603L
+// TODO: since 202603L, `runtime_format` has been renamed to
+// `dynamic_format`; our codebase needs renaming too. However
+// we lack decent compilers right now; making it practically
+// untestable.
+#define IRIS_HAS_DYNAMIC_FORMAT 0
+
 namespace iris {
 
 class colorize_error : public std::invalid_argument
@@ -905,7 +912,7 @@ struct basic_dynamic_colorized_string
 
 using dynamic_colorized_string = basic_dynamic_colorized_string<char>;
 
-#if __cpp_lib_format >= 202311L
+#if IRIS_HAS_DYNAMIC_FORMAT
 
 template<class CharT>
 struct basic_dynamic_colorized_format_string
@@ -956,7 +963,7 @@ struct basic_colorized_format_string
         scanner.scan();
     }
 
-#if __cpp_lib_format >= 202311L
+#if IRIS_HAS_DYNAMIC_FORMAT
     explicit constexpr basic_colorized_format_string(detail::basic_dynamic_colorized_format_string<CharT> dynamic_str)
         : fmt_(std::runtime_format(dynamic_str.str_))
     {
@@ -1018,7 +1025,7 @@ dynamic_colorize(std::string_view str)
     return detail::basic_dynamic_colorized_string{str};
 }
 
-#if __cpp_lib_format >= 202311L
+#if IRIS_HAS_DYNAMIC_FORMAT
 
 template<int = 0>
 [[nodiscard]] constexpr detail::dynamic_colorized_format_string
@@ -1099,7 +1106,7 @@ constexpr Out colorize_format_to(Out out, static_colorized_string<Str>, Args&&..
 template<class... Args>
 [[nodiscard]] constexpr std::string colorize_format(colorized_string_view str, Args&&... args)
 {
-#if __cpp_lib_format >= 202311L
+#if IRIS_HAS_DYNAMIC_FORMAT
     return std::format(std::runtime_format(ansi_colorize::colorize(str)), std::make_format_args(args...));
 #else
     return std::vformat(ansi_colorize::colorize(str), std::make_format_args(args...));
@@ -1109,7 +1116,7 @@ template<class... Args>
 template<class... Args>
 [[nodiscard]] constexpr std::string colorize_format(colorize_config const& cfg, std::string_view str, Args&&... args)
 {
-#if __cpp_lib_format >= 202311L
+#if IRIS_HAS_DYNAMIC_FORMAT
     return std::format(std::runtime_format(ansi_colorize::colorize(colorized_string_view{str, &cfg}, &cfg)), std::make_format_args(args...));
 #else
     return std::vformat(ansi_colorize::colorize(colorized_string_view{str, &cfg}, &cfg), std::make_format_args(args...));
@@ -1121,7 +1128,7 @@ template<class... Args>
 template<std::output_iterator<char const&> Out, class... Args>
 constexpr Out colorize_format_to(Out out, colorized_string_view str, Args&&... args)
 {
-#if __cpp_lib_format >= 202311L
+#if IRIS_HAS_DYNAMIC_FORMAT
     return std::format_to(std::move(out), std::runtime_format(ansi_colorize::colorize(str)), args...);
 #else
     return std::vformat_to(std::move(out), ansi_colorize::colorize(str), std::make_format_args(args...));
@@ -1131,7 +1138,7 @@ constexpr Out colorize_format_to(Out out, colorized_string_view str, Args&&... a
 template<std::output_iterator<char const&> Out, class... Args>
 constexpr Out colorize_format_to(Out out, colorize_config const& cfg, std::string_view str, Args&&... args)
 {
-#if __cpp_lib_format >= 202311L
+#if IRIS_HAS_DYNAMIC_FORMAT
     return std::format_to(std::move(out), std::runtime_format(ansi_colorize::colorize(colorized_string_view{str, &cfg}, &cfg)), args...);
 #else
     return std::vformat_to(std::move(out), ansi_colorize::colorize(colorized_string_view{str, &cfg}, &cfg), std::make_format_args(args...));
@@ -1166,7 +1173,7 @@ using ansi_colorize::static_colorized_string;
 
 using ansi_colorize::dynamic_colorize;
 
-#if __cpp_lib_format >= 202311L
+#if IRIS_HAS_DYNAMIC_FORMAT
 using ansi_colorize::dynamic_colorize_format;
 #endif
 
