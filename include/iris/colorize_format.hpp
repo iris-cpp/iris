@@ -957,7 +957,7 @@ struct basic_colorized_format_string
     }
 
 #if __cpp_lib_format >= 202311L
-    explicit constexpr basic_colorize_format_string(detail::basic_dynamic_colorized_format_string<CharT> dynamic_str)
+    explicit constexpr basic_colorized_format_string(detail::basic_dynamic_colorized_format_string<CharT> dynamic_str)
         : fmt_(std::runtime_format(dynamic_str.str_))
     {
     }
@@ -1021,10 +1021,10 @@ dynamic_colorize(std::string_view str)
 #if __cpp_lib_format >= 202311L
 
 template<int = 0>
-[[nodiscard]] constexpr detail::dynamic_colorize_format_string
+[[nodiscard]] constexpr detail::dynamic_colorized_format_string
 dynamic_colorize_format(std::string_view str)
 {
-    return detail::basic_dynamic_colorize_format_string{str};
+    return detail::basic_dynamic_colorized_format_string{str};
 }
 
 #endif
