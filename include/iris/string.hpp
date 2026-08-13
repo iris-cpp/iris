@@ -3,6 +3,8 @@
 
 // SPDX-License-Identifier: MIT
 
+#include <iris/config.hpp>
+
 #include <concepts>
 #include <string>
 #include <string_view>

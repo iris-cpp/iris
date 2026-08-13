@@ -1,4 +1,4 @@
-﻿#ifndef IRIS_ZZ_FORMAT_TRAITS_HPP
+#ifndef IRIS_ZZ_FORMAT_TRAITS_HPP
 #define IRIS_ZZ_FORMAT_TRAITS_HPP
 
 // SPDX-License-Identifier: MIT
@@ -16,8 +16,11 @@ template<>
 struct format_traits<char>
 {
     using char_type = char;
+    static constexpr char_type square_brace_open = '[';
+    static constexpr char_type paren_close = ')';
     static constexpr char_type brace_open = '{';
     static constexpr char_type brace_close = '}';
+    static constexpr char_type comma = ',';
 
     template<class T>
     static constexpr std::basic_format_string<char_type, std::type_identity_t<T>>
@@ -28,8 +31,11 @@ template<>
 struct format_traits<wchar_t>
 {
     using char_type = wchar_t;
+    static constexpr char_type square_brace_open = L'[';
+    static constexpr char_type paren_close = L')';
     static constexpr char_type brace_open = L'{';
     static constexpr char_type brace_close = L'}';
+    static constexpr char_type comma = L',';
 
     template<class T>
     static constexpr std::basic_format_string<char_type, std::type_identity_t<T>>
