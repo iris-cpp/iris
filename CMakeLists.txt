@@ -185,6 +185,12 @@ if(MSVC)
         _iris_cxx_best_practices
         INTERFACE
             /W4 /analyze /analyze:external-
+            $<$<CONFIG:Release>:/Zi /Zo>
+    )
+    target_link_options(
+        _iris_cxx_best_practices
+        INTERFACE
+            $<$<CONFIG:Release>:/DEBUG:FULL>
     )
 
 else()
