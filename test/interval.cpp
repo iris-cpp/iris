@@ -4,6 +4,11 @@
 
 #include <iris/interval.hpp>
 
+#include <string>
+#include <string_view>
+#include <ranges>
+#include <algorithm>
+#include <vector>
 #include <format>
 #include <utility>
 #include <concepts>
@@ -223,6 +228,36 @@ TEST_CASE("interval: tuple")
         auto&& lower = iris::get<0>(std::move(iv));
         STATIC_CHECK(std::same_as<decltype(lower), int const&&>);
         CHECK(lower == 1);
+    }
+}
+
+TEST_CASE("interval: subview")
+{
+    {
+        interval<int> const iv{};
+        std::string_view const sv = "abcdefg";
+        CHECK(iv.as_subview_of(sv) == ""sv);
+    }
+    {
+        interval const iv{2, 5};
+        std::string_view const sv = "abcdefg";
+        CHECK(iv.as_subview_of(sv) == "cde"sv);
+    }
+    {
+        interval const iv{2, 5};
+        std::string const str = "abcdefg";
+        CHECK(iv.as_subview_of(str) == "cde"sv);
+    }
+
+    {
+        interval<int> const iv{};
+        std::vector const ivec{0,1,2,3,4,5,6,7};
+        CHECK(std::ranges::equal(iv.as_subview_of(ivec), std::vector<int>{}));
+    }
+    {
+        interval<int> const iv{2, 5};
+        std::vector const ivec{0,1,2,3,4,5,6,7};
+        CHECK(std::ranges::equal(iv.as_subview_of(ivec), std::vector<int>{2, 3, 4}));
     }
 }
 

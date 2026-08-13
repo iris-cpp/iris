@@ -186,6 +186,7 @@ if(PROJECT_IS_TOP_LEVEL)
             string_algo
             interval
             interval_set
+            snippet
         )
 
         foreach(test_name IN LISTS IRIS_TEST_IRIS_TESTS)

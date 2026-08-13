@@ -5,8 +5,11 @@
 
 #include <iris/config.hpp>
 #include <iris/format_traits.hpp>
+#include <iris/string.hpp>
 
+#include <string_view>
 #include <iterator>
+#include <ranges>
 #include <format>
 #include <concepts>
 #include <compare>
@@ -40,6 +43,11 @@ struct interval
     [[nodiscard]] constexpr value_type length() const noexcept
     {
         return static_cast<value_type>(upper - lower);
+    }
+
+    [[nodiscard]] constexpr bool is_nonnegative() const noexcept
+    {
+        return empty() || lower >= 0;
     }
 
     template<std::signed_integral U = T>
@@ -85,6 +93,53 @@ struct interval
     [[nodiscard]] constexpr bool contains(value_type p) const noexcept
     {
         return lower <= p && p < upper;
+    }
+
+    template<std::ranges::sized_range R>
+    [[nodiscard]] constexpr bool within(R const& r) const noexcept
+    {
+        return empty() ||
+            (0 <= lower && static_cast<std::ranges::range_size_t<R>>(upper) <= std::ranges::size(r));
+    }
+
+    // -------------------------------------------
+
+    template<class R>
+        requires (!std::ranges::borrowed_range<R>)
+    constexpr void as_subview_of(R const&&) const = delete;
+
+    template<std::ranges::forward_range R>
+    [[nodiscard]] constexpr auto as_subview_of(R const& r) const
+    {
+        if constexpr (requires { r.subview(lower, length()); }) {
+            if (!is_nonnegative()) return r.subview(0, 0);
+            return r.subview(lower, length());
+
+        } else if constexpr (StringLike<R>) {
+            using SV = std::basic_string_view<std::ranges::range_value_t<R>>;
+            SV const sv(r);
+            if (!is_nonnegative() || lower > static_cast<int>(sv.size())) {
+                return SV{};
+            }
+            return sv.substr(
+                static_cast<std::size_t>(lower),
+                static_cast<std::size_t>(length())
+            );
+
+        } else {
+            auto const n = static_cast<std::ranges::range_difference_t<R>>(
+                is_nonnegative() ? length() : 0
+            );
+            auto first = std::ranges::next(
+                std::ranges::begin(r),
+                is_nonnegative() ? lower : 0,
+                std::ranges::end(r)
+            );
+            return std::ranges::subrange(
+                first,
+                std::ranges::next(first, n, std::ranges::end(r))
+            );
+        }
     }
 
     // -------------------------------------------
