@@ -3,8 +3,6 @@
 
 // SPDX-License-Identifier: MIT
 
-// SPDX-License-Identifier: MIT
-
 #include <iris/format_traits.hpp>
 
 #include <format>

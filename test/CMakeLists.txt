@@ -184,7 +184,6 @@ if(PROJECT_IS_TOP_LEVEL)
             indirect
             colorize_format
             preprocess
-            interval
             string_algo
             interval
             interval_algo

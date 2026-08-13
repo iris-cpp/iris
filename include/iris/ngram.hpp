@@ -1,5 +1,5 @@
-#ifndef IRIS_NGRAM_HPP
-#define IRIS_NGRAM_HPP
+#ifndef IRIS_ZZ_NGRAM_HPP
+#define IRIS_ZZ_NGRAM_HPP
 
 // SPDX-License-Identifier: MIT
 
@@ -834,9 +834,9 @@ private:
                 for (auto it = word_match->spans.begin(); it != word_match->spans.end();) {
                     auto& prev_pos = *it;
 
-                    if (std::ranges::binary_search(positions, prev_pos.right - overlapping_chars)) {
+                    if (std::ranges::binary_search(positions, prev_pos.upper - overlapping_chars)) {
                         // Matched; the current word's current n-gram is contiguous to the previous n-gram
-                        prev_pos.right += remaining_chars;
+                        prev_pos.upper += remaining_chars;
                         ++it;
                         continue;
                     }
