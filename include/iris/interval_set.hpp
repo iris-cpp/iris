@@ -1,7 +1,9 @@
-#ifndef IRIS_ZZ_IntervalT_SET_HPP
-#define IRIS_ZZ_IntervalT_SET_HPP
+#ifndef IRIS_ZZ_INTERVAL_SET_HPP
+#define IRIS_ZZ_INTERVAL_SET_HPP
 
-#include <iris/format.hpp>
+// SPDX-License-Identifier: MIT
+
+#include <iris/config.hpp>
 #include <iris/iterator.hpp>
 
 #include <format>

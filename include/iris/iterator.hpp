@@ -1,6 +1,10 @@
 #ifndef IRIS_ZZ_ITERATOR_HPP
 #define IRIS_ZZ_ITERATOR_HPP
 
+// SPDX-License-Identifier: MIT
+
+#include <iris/config.hpp>
+
 #include <iterator>
 #include <compare>
 

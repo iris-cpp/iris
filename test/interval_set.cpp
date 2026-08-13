@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 #include "iris_test.hpp"
 
 #include <iris/interval.hpp>
