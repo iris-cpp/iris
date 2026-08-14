@@ -1461,10 +1461,28 @@ template<int = 0>
 constexpr std::string_view to_string_ref(std::string const&&) = delete;
 
 template<int = 0>
+[[nodiscard]] constexpr std::string_view to_string_ref(char const& ch)
+{
+    return std::string_view{&ch, 1};
+}
+template<int = 0>
+constexpr std::string_view to_string_ref(char const&&) = delete;
+
+// -------------------------------------------------------
+
+template<int = 0>
 [[nodiscard]] constexpr std::string to_string_ref(std::u8string_view str)
 {
     return unicode::transcode<char>(str);
 }
+
+template<int = 0>
+[[nodiscard]] constexpr std::string to_string_ref(char8_t ch)
+{
+    return unicode::transcode<char>(ch);
+}
+
+// -------------------------------------------------------
 
 //template<int = 0>
 //[[nodiscard]] constexpr std::string to_string_ref(std::u16string_view str)
@@ -1472,11 +1490,21 @@ template<int = 0>
 //    return unicode::transcode<char>(str);
 //}
 
+// -------------------------------------------------------
+
 template<int = 0>
 [[nodiscard]] constexpr std::string to_string_ref(std::u32string_view str)
 {
     return unicode::transcode<char>(str);
 }
+
+template<int = 0>
+[[nodiscard]] constexpr std::string to_string_ref(char32_t ch)
+{
+    return unicode::transcode<char>(ch);
+}
+
+// -------------------------------------------------------
 
 template<int = 0>
 [[nodiscard]] constexpr std::u32string to_u32string_ref(std::string_view str)
@@ -1502,7 +1530,7 @@ template<int = 0>
     return str;
 }
 template<int = 0>
-constexpr std::u32string_view to_string_ref(std::u32string const&&) = delete;
+constexpr std::u32string_view to_u32string_ref(std::u32string const&&) = delete;
 
 } // iris
 

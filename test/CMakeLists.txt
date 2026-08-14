@@ -184,6 +184,10 @@ if(PROJECT_IS_TOP_LEVEL)
             colorize_format
             preprocess
             string_algo
+            interval
+            interval_algo
+            interval_set
+            snippet
         )
 
         foreach(test_name IN LISTS IRIS_TEST_IRIS_TESTS)
