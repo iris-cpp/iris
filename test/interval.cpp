@@ -362,39 +362,192 @@ TEST_CASE("interval: relationship")
     STATIC_CHECK(!interval{ 2, -5}.within("abcdef"));
 }
 
-TEST_CASE("interval: tuple")
+TEST_CASE("interval: intersection")
 {
-    {
-        interval const iv{1, 2};
-        auto const [lower, upper] = iv; // structured bindings
-        CHECK(lower == 1);
-        CHECK(upper == 2);
-    }
+    STATIC_CHECK(interval(2, 5).intersection({0, 1}) == interval{0, 0});
+    STATIC_CHECK(interval(2, 5).intersection({0, 2}) == interval{0, 0});
+    STATIC_CHECK(interval(2, 5).intersection({0, 3}) == interval{2, 3});
+    STATIC_CHECK(interval(2, 5).intersection({0, 4}) == interval{2, 4});
+    STATIC_CHECK(interval(2, 5).intersection({0, 5}) == interval{2, 5});
+    STATIC_CHECK(interval(2, 5).intersection({0, 6}) == interval{2, 5});
+    STATIC_CHECK(interval(2, 5).intersection({0, 7}) == interval{2, 5});
 
-    {
-        interval iv{1, 2};
-        auto&& lower = iris::get<0>(iv);
-        STATIC_CHECK(std::same_as<decltype(lower), int&>);
-        CHECK(lower == 1);
-    }
-    {
-        interval const iv{1, 2};
-        auto&& lower = iris::get<0>(iv);
-        STATIC_CHECK(std::same_as<decltype(lower), int const&>);
-        CHECK(lower == 1);
-    }
-    {
-        interval iv{1, 2};
-        auto&& lower = iris::get<0>(std::move(iv));
-        STATIC_CHECK(std::same_as<decltype(lower), int&&>);
-        CHECK(lower == 1);
-    }
-    {
-        interval const iv{1, 2};
-        auto&& lower = iris::get<0>(std::move(iv));
-        STATIC_CHECK(std::same_as<decltype(lower), int const&&>);
-        CHECK(lower == 1);
-    }
+    STATIC_CHECK(interval(2, 5).intersection({1, 2}) == interval{0, 0});
+    STATIC_CHECK(interval(2, 5).intersection({1, 3}) == interval{2, 3});
+    STATIC_CHECK(interval(2, 5).intersection({1, 4}) == interval{2, 4});
+    STATIC_CHECK(interval(2, 5).intersection({1, 5}) == interval{2, 5});
+    STATIC_CHECK(interval(2, 5).intersection({1, 6}) == interval{2, 5});
+    STATIC_CHECK(interval(2, 5).intersection({1, 7}) == interval{2, 5});
+
+    STATIC_CHECK(interval(2, 5).intersection({2, 3}) == interval{2, 3});
+    STATIC_CHECK(interval(2, 5).intersection({2, 4}) == interval{2, 4});
+    STATIC_CHECK(interval(2, 5).intersection({2, 5}) == interval{2, 5});
+    STATIC_CHECK(interval(2, 5).intersection({2, 6}) == interval{2, 5});
+    STATIC_CHECK(interval(2, 5).intersection({2, 7}) == interval{2, 5});
+
+    STATIC_CHECK(interval(2, 5).intersection({3, 4}) == interval{3, 4});
+    STATIC_CHECK(interval(2, 5).intersection({3, 5}) == interval{3, 5});
+    STATIC_CHECK(interval(2, 5).intersection({3, 6}) == interval{3, 5});
+    STATIC_CHECK(interval(2, 5).intersection({3, 7}) == interval{3, 5});
+
+    STATIC_CHECK(interval(2, 5).intersection({4, 5}) == interval{4, 5});
+    STATIC_CHECK(interval(2, 5).intersection({4, 6}) == interval{4, 5});
+    STATIC_CHECK(interval(2, 5).intersection({4, 7}) == interval{4, 5});
+
+    STATIC_CHECK(interval(2, 5).intersection({5, 6}) == interval{0, 0});
+    STATIC_CHECK(interval(2, 5).intersection({5, 7}) == interval{0, 0});
+
+    STATIC_CHECK(interval(2, 5).intersection({6, 7}) == interval{0, 0});
+
+    // Empty
+    STATIC_CHECK(interval(2, 5).intersection({0, 0}) == interval{0, 0});
+    STATIC_CHECK(interval(2, 5).intersection({1, 1}) == interval{0, 0});
+    STATIC_CHECK(interval(2, 5).intersection({2, 2}) == interval{0, 0});
+    STATIC_CHECK(interval(2, 5).intersection({3, 3}) == interval{0, 0});
+    STATIC_CHECK(interval(2, 5).intersection({4, 4}) == interval{0, 0});
+    STATIC_CHECK(interval(2, 5).intersection({5, 5}) == interval{0, 0});
+    STATIC_CHECK(interval(2, 5).intersection({6, 6}) == interval{0, 0});
+    STATIC_CHECK(interval(2, 5).intersection({7, 7}) == interval{0, 0});
+
+    // -----------------------------------------------------
+
+    STATIC_CHECK(interval(-5, -2).intersection({-7, -6}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, -2).intersection({-7, -5}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, -2).intersection({-7, -4}) == interval{-5, -4});
+    STATIC_CHECK(interval(-5, -2).intersection({-7, -3}) == interval{-5, -3});
+    STATIC_CHECK(interval(-5, -2).intersection({-7, -2}) == interval{-5, -2});
+    STATIC_CHECK(interval(-5, -2).intersection({-7, -1}) == interval{-5, -2});
+    STATIC_CHECK(interval(-5, -2).intersection({-7, 0}) == interval{-5, -2});
+
+    STATIC_CHECK(interval(-5, -2).intersection({-6, -5}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, -2).intersection({-6, -4}) == interval{-5, -4});
+    STATIC_CHECK(interval(-5, -2).intersection({-6, -3}) == interval{-5, -3});
+    STATIC_CHECK(interval(-5, -2).intersection({-6, -2}) == interval{-5, -2});
+    STATIC_CHECK(interval(-5, -2).intersection({-6, -1}) == interval{-5, -2});
+    STATIC_CHECK(interval(-5, -2).intersection({-6, 0}) == interval{-5, -2});
+
+    STATIC_CHECK(interval(-5, -2).intersection({-5, -4}) == interval{-5, -4});
+    STATIC_CHECK(interval(-5, -2).intersection({-5, -3}) == interval{-5, -3});
+    STATIC_CHECK(interval(-5, -2).intersection({-5, -2}) == interval{-5, -2});
+    STATIC_CHECK(interval(-5, -2).intersection({-5, -1}) == interval{-5, -2});
+    STATIC_CHECK(interval(-5, -2).intersection({-5, 0}) == interval{-5, -2});
+
+    STATIC_CHECK(interval(-5, -2).intersection({-4, -3}) == interval{-4, -3});
+    STATIC_CHECK(interval(-5, -2).intersection({-4, -2}) == interval{-4, -2});
+    STATIC_CHECK(interval(-5, -2).intersection({-4, -1}) == interval{-4, -2});
+    STATIC_CHECK(interval(-5, -2).intersection({-4, 0}) == interval{-4, -2});
+
+    STATIC_CHECK(interval(-5, -2).intersection({-3, -2}) == interval{-3, -2});
+    STATIC_CHECK(interval(-5, -2).intersection({-3, -1}) == interval{-3, -2});
+    STATIC_CHECK(interval(-5, -2).intersection({-3, 0}) == interval{-3, -2});
+
+    STATIC_CHECK(interval(-5, -2).intersection({-2, -1}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, -2).intersection({-2, 0}) == interval{0, 0});
+
+    STATIC_CHECK(interval(-5, -2).intersection({-1, 0}) == interval{0, 0});
+
+    // Empty
+    STATIC_CHECK(interval(-5, -2).intersection({-7, -7}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, -2).intersection({-6, -6}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, -2).intersection({-5, -5}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, -2).intersection({-4, -4}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, -2).intersection({-3, -3}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, -2).intersection({-2, -2}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, -2).intersection({-1, -1}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, -2).intersection({0, 0}) == interval{0, 0});
+
+    // -----------------------------------------------------
+
+    STATIC_CHECK(interval(-5, 2).intersection({-7, -6}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({-7, -5}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({-7, -4}) == interval{-5, -4});
+    STATIC_CHECK(interval(-5, 2).intersection({-7, -3}) == interval{-5, -3});
+    STATIC_CHECK(interval(-5, 2).intersection({-7, -2}) == interval{-5, -2});
+    STATIC_CHECK(interval(-5, 2).intersection({-7, -1}) == interval{-5, -1});
+    STATIC_CHECK(interval(-5, 2).intersection({-7, 0}) == interval{-5, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({-7, 1}) == interval{-5, 1});
+    STATIC_CHECK(interval(-5, 2).intersection({-7, 2}) == interval{-5, 2});
+    STATIC_CHECK(interval(-5, 2).intersection({-7, 3}) == interval{-5, 2});
+    STATIC_CHECK(interval(-5, 2).intersection({-7, 4}) == interval{-5, 2});
+
+    STATIC_CHECK(interval(-5, 2).intersection({-6, -5}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({-6, -4}) == interval{-5, -4});
+    STATIC_CHECK(interval(-5, 2).intersection({-6, -3}) == interval{-5, -3});
+    STATIC_CHECK(interval(-5, 2).intersection({-6, -2}) == interval{-5, -2});
+    STATIC_CHECK(interval(-5, 2).intersection({-6, -1}) == interval{-5, -1});
+    STATIC_CHECK(interval(-5, 2).intersection({-6, 0}) == interval{-5, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({-6, 1}) == interval{-5, 1});
+    STATIC_CHECK(interval(-5, 2).intersection({-6, 2}) == interval{-5, 2});
+    STATIC_CHECK(interval(-5, 2).intersection({-6, 3}) == interval{-5, 2});
+    STATIC_CHECK(interval(-5, 2).intersection({-6, 4}) == interval{-5, 2});
+
+    STATIC_CHECK(interval(-5, 2).intersection({-5, -4}) == interval{-5, -4});
+    STATIC_CHECK(interval(-5, 2).intersection({-5, -3}) == interval{-5, -3});
+    STATIC_CHECK(interval(-5, 2).intersection({-5, -2}) == interval{-5, -2});
+    STATIC_CHECK(interval(-5, 2).intersection({-5, -1}) == interval{-5, -1});
+    STATIC_CHECK(interval(-5, 2).intersection({-5, 0}) == interval{-5, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({-5, 1}) == interval{-5, 1});
+    STATIC_CHECK(interval(-5, 2).intersection({-5, 2}) == interval{-5, 2});
+    STATIC_CHECK(interval(-5, 2).intersection({-5, 3}) == interval{-5, 2});
+    STATIC_CHECK(interval(-5, 2).intersection({-5, 4}) == interval{-5, 2});
+
+    STATIC_CHECK(interval(-5, 2).intersection({-4, -3}) == interval{-4, -3});
+    STATIC_CHECK(interval(-5, 2).intersection({-4, -2}) == interval{-4, -2});
+    STATIC_CHECK(interval(-5, 2).intersection({-4, -1}) == interval{-4, -1});
+    STATIC_CHECK(interval(-5, 2).intersection({-4, 0}) == interval{-4, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({-4, 1}) == interval{-4, 1});
+    STATIC_CHECK(interval(-5, 2).intersection({-4, 2}) == interval{-4, 2});
+    STATIC_CHECK(interval(-5, 2).intersection({-4, 3}) == interval{-4, 2});
+    STATIC_CHECK(interval(-5, 2).intersection({-4, 4}) == interval{-4, 2});
+
+    STATIC_CHECK(interval(-5, 2).intersection({-3, -2}) == interval{-3, -2});
+    STATIC_CHECK(interval(-5, 2).intersection({-3, -1}) == interval{-3, -1});
+    STATIC_CHECK(interval(-5, 2).intersection({-3, 0}) == interval{-3, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({-3, 1}) == interval{-3, 1});
+    STATIC_CHECK(interval(-5, 2).intersection({-3, 2}) == interval{-3, 2});
+    STATIC_CHECK(interval(-5, 2).intersection({-3, 3}) == interval{-3, 2});
+    STATIC_CHECK(interval(-5, 2).intersection({-3, 4}) == interval{-3, 2});
+
+    STATIC_CHECK(interval(-5, 2).intersection({-2, -1}) == interval{-2, -1});
+    STATIC_CHECK(interval(-5, 2).intersection({-2, 0}) == interval{-2, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({-2, 1}) == interval{-2, 1});
+    STATIC_CHECK(interval(-5, 2).intersection({-2, 2}) == interval{-2, 2});
+    STATIC_CHECK(interval(-5, 2).intersection({-2, 3}) == interval{-2, 2});
+    STATIC_CHECK(interval(-5, 2).intersection({-2, 4}) == interval{-2, 2});
+
+    STATIC_CHECK(interval(-5, 2).intersection({-1, 0}) == interval{-1, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({-1, 1}) == interval{-1, 1});
+    STATIC_CHECK(interval(-5, 2).intersection({-1, 2}) == interval{-1, 2});
+    STATIC_CHECK(interval(-5, 2).intersection({-1, 3}) == interval{-1, 2});
+    STATIC_CHECK(interval(-5, 2).intersection({-1, 4}) == interval{-1, 2});
+
+    STATIC_CHECK(interval(-5, 2).intersection({0, 1}) == interval{0, 1});
+    STATIC_CHECK(interval(-5, 2).intersection({0, 2}) == interval{0, 2});
+    STATIC_CHECK(interval(-5, 2).intersection({0, 3}) == interval{0, 2});
+    STATIC_CHECK(interval(-5, 2).intersection({0, 4}) == interval{0, 2});
+
+    STATIC_CHECK(interval(-5, 2).intersection({1, 2}) == interval{1, 2});
+    STATIC_CHECK(interval(-5, 2).intersection({1, 3}) == interval{1, 2});
+    STATIC_CHECK(interval(-5, 2).intersection({1, 4}) == interval{1, 2});
+
+    STATIC_CHECK(interval(-5, 2).intersection({2, 3}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({2, 4}) == interval{0, 0});
+
+    STATIC_CHECK(interval(-5, 2).intersection({3, 4}) == interval{0, 0});
+
+    // Empty
+    STATIC_CHECK(interval(-5, 2).intersection({-7, -7}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({-6, -6}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({-5, -5}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({-4, -4}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({-3, -3}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({-2, -2}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({-1, -1}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({0, 0}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({1, 1}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({2, 2}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({3, 3}) == interval{0, 0});
+    STATIC_CHECK(interval(-5, 2).intersection({4, 4}) == interval{0, 0});
 }
 
 TEST_CASE("interval: subview")
@@ -415,14 +568,14 @@ TEST_CASE("interval: subview")
     // null character boundary
     {
         // raw char array
-    CHECK(interval(0, 2).as_subview_of("abc") == "ab"sv);
-    CHECK(interval(0, 3).as_subview_of("abc") == "abc"sv);
-    CHECK_THROWS_AS(interval(0, 4).as_subview_of("abc"), std::out_of_range);
+        CHECK(interval(0, 2).as_subview_of("abc") == "ab"sv);
+        CHECK(interval(0, 3).as_subview_of("abc") == "abc"sv);
+        CHECK_THROWS_AS(interval(0, 4).as_subview_of("abc"), std::out_of_range);
 
         // string_view
-    CHECK(interval(0, 2).as_subview_of("abc"sv) == "ab"sv);
-    CHECK(interval(0, 3).as_subview_of("abc"sv) == "abc"sv);
-    CHECK_THROWS_AS(interval(0, 4).as_subview_of("abc"sv), std::out_of_range);
+        CHECK(interval(0, 2).as_subview_of("abc"sv) == "ab"sv);
+        CHECK(interval(0, 3).as_subview_of("abc"sv) == "abc"sv);
+        CHECK_THROWS_AS(interval(0, 4).as_subview_of("abc"sv), std::out_of_range);
     }
 
     // Malformed

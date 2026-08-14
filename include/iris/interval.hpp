@@ -7,6 +7,7 @@
 #include <iris/format_traits.hpp>
 #include <iris/string.hpp>
 
+#include <algorithm>
 #include <string_view>
 #include <iterator>
 #include <ranges>
@@ -140,6 +141,19 @@ struct interval
 
     // -------------------------------------------
 
+    // A ∩ B. Result is canonical empty [0,0) when the sets share no point.
+    template<std::signed_integral U = T>
+    [[nodiscard]] constexpr interval intersection(interval<U> const other) const noexcept
+    {
+        auto const lo = std::max<value_type>(lower, static_cast<value_type>(other.lower));
+        auto const hi = std::min<value_type>(upper, static_cast<value_type>(other.upper));
+        return lo < hi ? interval{lo, hi} : interval{};
+    }
+    template<std::signed_integral U = T>
+    [[nodiscard]] constexpr interval operator&(interval<U> const other) const noexcept
+    {
+        return intersection(other);
+    }
 
     // -------------------------------------------
 
