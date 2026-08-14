@@ -14,6 +14,7 @@
 #include <concepts>
 #include <type_traits>
 
+using namespace std::string_literals;
 using namespace std::string_view_literals;
 
 using iris::interval;
@@ -45,6 +46,52 @@ TEST_CASE("interval: members")
         STATIC_CHECK(iv.upper == 0);
         STATIC_CHECK(iv.length() == 0);
         STATIC_CHECK(iv.empty());
+        STATIC_CHECK(iv.is_proper());
+        STATIC_CHECK(iv.equals(iv));
+        STATIC_CHECK(iv == iv);
+        STATIC_CHECK((iv <=> iv) == std::strong_ordering::equal);
+    }
+    {
+        constexpr interval<int> iv{1, 1};
+        STATIC_CHECK(iv.lower == 1);
+        STATIC_CHECK(iv.upper == 1);
+        STATIC_CHECK(iv.length() == 0);
+        STATIC_CHECK(iv.empty());
+        STATIC_CHECK(iv.is_proper());
+        STATIC_CHECK(iv.equals(iv));
+        STATIC_CHECK(iv == iv);
+        STATIC_CHECK((iv <=> iv) == std::strong_ordering::equal);
+    }
+    {
+        constexpr interval<int> iv{-1, -1};
+        STATIC_CHECK(iv.lower == -1);
+        STATIC_CHECK(iv.upper == -1);
+        STATIC_CHECK(iv.length() == 0);
+        STATIC_CHECK(iv.empty());
+        STATIC_CHECK(iv.is_proper());
+        STATIC_CHECK(iv.equals(iv));
+        STATIC_CHECK(iv == iv);
+        STATIC_CHECK((iv <=> iv) == std::strong_ordering::equal);
+    }
+    {
+        constexpr interval<int> iv{5, -1}; // malformed
+        STATIC_CHECK(iv.lower == 5);
+        STATIC_CHECK(iv.upper == -1);
+        STATIC_CHECK(iv.length() == 0);
+        STATIC_CHECK(iv.empty());
+        STATIC_CHECK(!iv.is_proper());
+        STATIC_CHECK(iv.equals(iv));
+        STATIC_CHECK(iv == iv);
+        STATIC_CHECK((iv <=> iv) == std::strong_ordering::equal);
+    }
+    {
+        constexpr interval<int> iv{-1, -5}; // malformed
+        STATIC_CHECK(iv.lower == -1);
+        STATIC_CHECK(iv.upper == -5);
+        STATIC_CHECK(iv.length() == 0);
+        STATIC_CHECK(iv.empty());
+        STATIC_CHECK(!iv.is_proper());
+        STATIC_CHECK(iv.equals(iv));
         STATIC_CHECK(iv == iv);
         STATIC_CHECK((iv <=> iv) == std::strong_ordering::equal);
     }
@@ -56,6 +103,8 @@ TEST_CASE("interval: members")
         STATIC_CHECK(iv.upper == -2);
         STATIC_CHECK(iv.length() == 3);
         STATIC_CHECK(!iv.empty());
+        STATIC_CHECK(iv.is_proper());
+        STATIC_CHECK(iv.equals(iv));
         STATIC_CHECK(iv == iv);
         STATIC_CHECK((iv <=> iv) == std::strong_ordering::equal);
     }
@@ -67,6 +116,8 @@ TEST_CASE("interval: members")
         STATIC_CHECK(iv.upper == 2);
         STATIC_CHECK(iv.length() == 7);
         STATIC_CHECK(!iv.empty());
+        STATIC_CHECK(iv.is_proper());
+        STATIC_CHECK(iv.equals(iv));
         STATIC_CHECK(iv == iv);
         STATIC_CHECK((iv <=> iv) == std::strong_ordering::equal);
     }
@@ -78,6 +129,8 @@ TEST_CASE("interval: members")
         STATIC_CHECK(iv.upper == 5);
         STATIC_CHECK(iv.length() == 3);
         STATIC_CHECK(!iv.empty());
+        STATIC_CHECK(iv.is_proper());
+        STATIC_CHECK(iv.equals(iv));
         STATIC_CHECK(iv == iv);
         STATIC_CHECK((iv <=> iv) == std::strong_ordering::equal);
     }
@@ -187,6 +240,40 @@ TEST_CASE("interval: relationship")
 
     // ----------------------------------------------------
 
+    STATIC_CHECK(interval{2, 5}.encloses({0, 1}) == interval{2, 5}.covers({0, 1}));
+    STATIC_CHECK(interval{2, 5}.encloses({0, 2}) == interval{2, 5}.covers({0, 2}));
+    STATIC_CHECK(interval{2, 5}.encloses({0, 3}) == interval{2, 5}.covers({0, 3}));
+
+    STATIC_CHECK(interval{2, 5}.encloses({1, 2}) == interval{2, 5}.covers({1, 2}));
+    STATIC_CHECK(interval{2, 5}.encloses({1, 3}) == interval{2, 5}.covers({1, 3}));
+
+    STATIC_CHECK(interval{2, 5}.encloses({2, 3}) == interval{2, 5}.covers({2, 3}));
+    STATIC_CHECK(interval{2, 5}.encloses({2, 4}) == interval{2, 5}.covers({2, 4}));
+    STATIC_CHECK(interval{2, 5}.encloses({2, 5}) == interval{2, 5}.covers({2, 5}));
+    STATIC_CHECK(interval{2, 5}.encloses({2, 6}) == interval{2, 5}.covers({2, 6}));
+
+    STATIC_CHECK(interval{2, 5}.encloses({3, 4}) == interval{2, 5}.covers({3, 4}));
+    STATIC_CHECK(interval{2, 5}.encloses({3, 5}) == interval{2, 5}.covers({3, 5}));
+    STATIC_CHECK(interval{2, 5}.encloses({3, 6}) == interval{2, 5}.covers({3, 6}));
+
+    STATIC_CHECK(interval{2, 5}.encloses({4, 5}) == interval{2, 5}.covers({4, 5}));
+    STATIC_CHECK(interval{2, 5}.encloses({4, 6}) == interval{2, 5}.covers({4, 6}));
+
+    STATIC_CHECK(interval{2, 5}.encloses({5, 6}) == interval{2, 5}.covers({5, 6}));
+
+    STATIC_CHECK(interval{2, 5}.encloses({6, 7}) == interval{2, 5}.covers({6, 7}));
+
+    // b = empty interval
+    STATIC_CHECK(!interval{2, 5}.encloses({0, 0}));
+    STATIC_CHECK(!interval{2, 5}.encloses({1, 1}));
+    STATIC_CHECK( interval{2, 5}.encloses({2, 2}));
+    STATIC_CHECK( interval{2, 5}.encloses({3, 3}));
+    STATIC_CHECK( interval{2, 5}.encloses({4, 4}));
+    STATIC_CHECK( interval{2, 5}.encloses({5, 5}));
+    STATIC_CHECK(!interval{2, 5}.encloses({6, 6}));
+
+    // ----------------------------------------------------
+
     STATIC_CHECK(!interval{2, 5}.contains(0));
     STATIC_CHECK(!interval{2, 5}.contains(1));
     STATIC_CHECK( interval{2, 5}.contains(2));
@@ -194,6 +281,50 @@ TEST_CASE("interval: relationship")
     STATIC_CHECK( interval{2, 5}.contains(4));
     STATIC_CHECK(!interval{2, 5}.contains(5));
     STATIC_CHECK(!interval{2, 5}.contains(6));
+
+    // ----------------------------------------------------
+
+    STATIC_CHECK( interval{0, 5}.within("abcdef"));
+    STATIC_CHECK( interval{0, 6}.within("abcdef"));
+    STATIC_CHECK(!interval{0, 7}.within("abcdef"));
+    STATIC_CHECK( interval{3, 6}.within("abcdef"));
+    STATIC_CHECK( interval{4, 6}.within("abcdef"));
+    STATIC_CHECK( interval{5, 6}.within("abcdef"));
+    STATIC_CHECK( interval{6, 6}.within("abcdef"));
+    STATIC_CHECK(!interval{8, 9}.within("abcdef"));
+
+    STATIC_CHECK( interval{0, 5}.within("abcdef"sv));
+    STATIC_CHECK( interval{0, 6}.within("abcdef"sv));
+    STATIC_CHECK(!interval{0, 7}.within("abcdef"sv));
+    STATIC_CHECK( interval{3, 6}.within("abcdef"sv));
+    STATIC_CHECK( interval{4, 6}.within("abcdef"sv));
+    STATIC_CHECK( interval{5, 6}.within("abcdef"sv));
+    STATIC_CHECK( interval{6, 6}.within("abcdef"sv));
+    STATIC_CHECK(!interval{8, 9}.within("abcdef"sv));
+
+    // Empty interval
+    STATIC_CHECK( interval{0, 0}.within("abcdef"));
+    STATIC_CHECK( interval{1, 1}.within("abcdef"));
+    STATIC_CHECK( interval{2, 2}.within("abcdef"));
+    STATIC_CHECK( interval{3, 3}.within("abcdef"));
+    STATIC_CHECK( interval{4, 4}.within("abcdef"));
+    STATIC_CHECK( interval{5, 5}.within("abcdef"));
+    STATIC_CHECK( interval{6, 6}.within("abcdef"));
+    STATIC_CHECK(!interval{7, 7}.within("abcdef"));
+
+    STATIC_CHECK( interval{0, 0}.within("abcdef"sv));
+    STATIC_CHECK( interval{1, 1}.within("abcdef"sv));
+    STATIC_CHECK( interval{2, 2}.within("abcdef"sv));
+    STATIC_CHECK( interval{3, 3}.within("abcdef"sv));
+    STATIC_CHECK( interval{4, 4}.within("abcdef"sv));
+    STATIC_CHECK( interval{5, 5}.within("abcdef"sv));
+    STATIC_CHECK( interval{6, 6}.within("abcdef"sv));
+    STATIC_CHECK(!interval{7, 7}.within("abcdef"sv));
+
+    // Malformed interval
+    STATIC_CHECK(!interval{-1, -5}.within("abcdef"));
+    STATIC_CHECK(!interval{ 5,  2}.within("abcdef"));
+    STATIC_CHECK(!interval{ 2, -5}.within("abcdef"));
 }
 
 TEST_CASE("interval: tuple")
@@ -258,6 +389,79 @@ TEST_CASE("interval: subview")
         interval<int> const iv{2, 5};
         std::vector const ivec{0,1,2,3,4,5,6,7};
         CHECK(std::ranges::equal(iv.as_subview_of(ivec), std::vector<int>{2, 3, 4}));
+    }
+
+    // null character boundary (raw char array)
+    CHECK(interval(0, 2).as_subview_of("abc") == "ab"sv);
+    CHECK(interval(0, 3).as_subview_of("abc") == "abc"sv);
+    CHECK_THROWS_AS(interval(0, 4).as_subview_of("abc"), std::out_of_range);
+
+    // null character boundary (string_view)
+    CHECK(interval(0, 2).as_subview_of("abc"sv) == "ab"sv);
+    CHECK(interval(0, 3).as_subview_of("abc"sv) == "abc"sv);
+    CHECK_THROWS_AS(interval(0, 4).as_subview_of("abc"sv), std::out_of_range);
+
+    // Malformed
+    {
+        interval<int> const iv{0, -2};
+        std::string_view const sv = "abcdefg";
+        CHECK_THROWS_AS(iv.as_subview_of(sv), std::domain_error);
+    }
+    {
+        interval<int> const iv{5, 4};
+        std::string_view const sv = "abcdefg";
+        CHECK_THROWS_AS(iv.as_subview_of(sv), std::domain_error);
+    }
+    {
+        interval<int> const iv{-4, -5};
+        std::string_view const sv = "abcdefg";
+        CHECK_THROWS_AS(iv.as_subview_of(sv), std::domain_error);
+    }
+    {
+        interval<int> const iv{0, 50};
+        std::string_view const sv = "abcdefg";
+        CHECK_THROWS_AS(iv.as_subview_of(sv), std::out_of_range);
+    }
+    {
+        interval<int> const iv{4, 50};
+        std::string_view const sv = "abcdefg";
+        CHECK_THROWS_AS(iv.as_subview_of(sv), std::out_of_range);
+    }
+    {
+        interval<int> const iv{50, 51};
+        std::string_view const sv = "abcdefg";
+        CHECK_THROWS_AS(iv.as_subview_of(sv), std::out_of_range);
+    }
+
+    {
+        interval<int> const iv{0, -2};
+        std::vector const ivec{0, 1, 2, 3, 4, 5, 6};
+        CHECK_THROWS_AS(iv.as_subview_of(ivec), std::domain_error);
+    }
+    {
+        interval<int> const iv{5, 4};
+        std::vector const ivec{0, 1, 2, 3, 4, 5, 6};
+        CHECK_THROWS_AS(iv.as_subview_of(ivec), std::domain_error);
+    }
+    {
+        interval<int> const iv{-4, -5};
+        std::vector const ivec{0, 1, 2, 3, 4, 5, 6};
+        CHECK_THROWS_AS(iv.as_subview_of(ivec), std::domain_error);
+    }
+    {
+        interval<int> const iv{0, 50};
+        std::vector const ivec{0, 1, 2, 3, 4, 5, 6};
+        CHECK_THROWS_AS(iv.as_subview_of(ivec), std::out_of_range);
+    }
+    {
+        interval<int> const iv{4, 50};
+        std::vector const ivec{0, 1, 2, 3, 4, 5, 6};
+        CHECK_THROWS_AS(iv.as_subview_of(ivec), std::out_of_range);
+    }
+    {
+        interval<int> const iv{50, 51};
+        std::vector const ivec{0, 1, 2, 3, 4, 5, 6};
+        CHECK_THROWS_AS(iv.as_subview_of(ivec), std::out_of_range);
     }
 }
 

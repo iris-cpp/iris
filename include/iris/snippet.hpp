@@ -24,9 +24,10 @@ namespace iris::snip {
 
 template<class SinkT, class CharT = SinkT::char_type>
 concept snippet_sink = requires(SinkT& sink, SinkT const& csink, std::basic_string_view<CharT> sv) {
-    sink.marginal(sv);
-    sink.highlight(sv);
+    sink.context(sv);
+    sink.match(sv);
     sink.gap();
+    sink.clear();
 };
 
 template<class CharT = char32_t>
@@ -37,19 +38,25 @@ struct recording_sink
     std::vector<std::pair<CharT, std::basic_string<CharT>>>
     events;
 
-    void marginal(std::basic_string_view<CharT> sv)
+    // The adjacent text connected to the left or the right of `match`
+    void context(std::basic_string_view<CharT> sv)
     {
-        events.emplace_back(static_cast<CharT>('M'), sv);
+        events.emplace_back(static_cast<CharT>('C'), sv);
     }
 
-    void highlight(std::basic_string_view<CharT> sv)
+    void match(std::basic_string_view<CharT> sv)
     {
-        events.emplace_back(static_cast<CharT>('H'), sv);
+        events.emplace_back(static_cast<CharT>('M'), sv);
     }
 
     void gap()
     {
         events.emplace_back(std::piecewise_construct, std::forward_as_tuple(static_cast<CharT>('G')), std::forward_as_tuple());
+    }
+
+    void clear() noexcept
+    {
+        events.clear();
     }
 
     [[nodiscard]] std::string to_string() const
@@ -85,10 +92,8 @@ public:
         snippet_sink<CharT> auto& sink
     )
     {
-        if (frags.empty()) return;
-        if (frags.size() != winners.size()) {
-            throw std::invalid_argument{"frags.size() does not match winners.size()"};
-        }
+        sink.clear();
+
         if (!frags.extent().within(input)) {
             throw std::out_of_range{"frags is outside input text"};
         }
@@ -101,22 +106,23 @@ public:
             }
 
             int pos = frag.lower;
-            for (; w != winners.end() && frag.covers(*w) && pos <= w->lower; ++w) {
+            for (; w != winners.end() && frag.encloses(*w) && pos <= w->lower; ++w) {
                 if (pos != w->lower) {
-                    sink.marginal(interval{pos, w->lower}.as_subview_of(input));
+                    sink.context(interval{pos, w->lower}.as_subview_of(input));
                 }
-                sink.highlight(w->as_subview_of(input));
+                sink.match(w->as_subview_of(input));
                 pos = w->upper;
             }
             if (pos != frag.upper) {
-                sink.marginal(interval{pos, frag.upper}.as_subview_of(input));
+                sink.context(interval{pos, frag.upper}.as_subview_of(input));
             }
             last_upper = frag.upper;
         }
         if (w != winners.end()) {
+            sink.clear();
             throwf<std::invalid_argument>("winner {} not covered by any fragment", *w);
         }
-        if (last_upper != static_cast<int>(input.size())) {
+        if (!frags.empty() && last_upper != static_cast<int>(input.size())) {
             sink.gap();
         }
     }

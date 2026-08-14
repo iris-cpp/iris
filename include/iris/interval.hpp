@@ -15,6 +15,7 @@
 #include <compare>
 #include <type_traits>
 #include <utility>
+#include <stdexcept>
 
 namespace iris {
 
@@ -34,22 +35,30 @@ struct interval
         , upper(upper)
     {}
 
+    // Returns `true` when `*this` is ∅ or malformed (flipped).
     [[nodiscard]] constexpr bool empty() const noexcept
     {
-        // Malformed interval is treated as "empty"
         return lower >= upper;
     }
 
+    // Returns the length of the bounds.
+    // Note: Always returns `0` for any ∅ positioned at any offset,
+    //       including the ones with malformed bounds.
     [[nodiscard]] constexpr value_type length() const noexcept
     {
-        return static_cast<value_type>(upper - lower);
+        return empty() ? value_type{0} : static_cast<value_type>(upper - lower);
     }
 
-    [[nodiscard]] constexpr bool is_nonnegative() const noexcept
+    // Returns `true` if bounds are not flipped.
+    // Note: Always returns `true` if `*this` is ∅ or malformed.
+    [[nodiscard]] constexpr bool is_proper() const noexcept
     {
-        return empty() || lower >= 0;
+        return lower <= upper;
     }
 
+    // Returns `true` if `other` shares any point with `*this`.
+    // Note 1: intersects(∅) always returns `false`.
+    // Note 2: Adjacent-only contact is touches(); for intersects-or-touches use connected().
     template<std::signed_integral U = T>
     [[nodiscard]] constexpr bool intersects(interval<U> other) const noexcept
     {
@@ -57,12 +66,15 @@ struct interval
     }
 
     // !intersects
+    // Note: disjoint(∅) always returns `true`.
     template<std::signed_integral U = T>
     [[nodiscard]] constexpr bool disjoint(interval<U> other) const noexcept
     {
         return (upper <= other.lower || other.upper <= lower) || empty() || other.empty();
     }
 
+    // Closures meet but the sets share no point.
+    // Note: touches(∅) always returns `false`.
     template<std::signed_integral U = T>
     [[nodiscard]] constexpr bool touches(interval<U> other) const noexcept
     {
@@ -70,18 +82,56 @@ struct interval
     }
 
     // intersects || touches
+    // Note: connected(∅) always returns `false`.
     template<std::signed_integral U = T>
     [[nodiscard]] constexpr bool connected(interval<U> other) const noexcept
     {
         return (lower <= other.upper && other.lower <= upper) && !empty() && !other.empty();
     }
 
+    // Returns `true` if every point of `other` is a point of `*this`.
+    // Note: covers(∅) always returns `true`.
+    // See also: `encloses(other)`.
     template<std::signed_integral U = T>
     [[nodiscard]] constexpr bool covers(interval<U> other) const noexcept
     {
         return (lower <= other.lower && other.upper <= upper) || other.empty();
     }
 
+    // Returns `true` if `other`'s bounds lie within [lower, upper].
+    // For nonempty `other`: identical to `covers(other)`.
+    // For empty `other`: position-respecting (treats it like a 0-length "text caret".)
+    template<std::signed_integral U = T>
+    [[nodiscard]] constexpr bool encloses(interval<U> const other) const noexcept
+    {
+        return lower <= other.lower && other.upper <= upper;
+    }
+
+    // Returns `true` if p ∈ [lower, upper).
+    [[nodiscard]] constexpr bool contains(value_type p) const noexcept
+    {
+        return lower <= p && p < upper;
+    }
+
+    // Returns `is_proper() && interval{0, r.size()}.encloses(*this)`.
+    template<std::ranges::sized_range R>
+    [[nodiscard]] constexpr bool within(R const& r) const
+        noexcept(noexcept(std::ranges::size(r)))
+    {
+        return is_proper() && 0 <= lower && static_cast<std::ranges::range_size_t<R>>(upper) <= std::ranges::size(r);
+    }
+
+    // Returns `is_proper() && interval{0, N - 1}.encloses(*this)`.
+    template<CharLike CharT, std::size_t N>
+    [[nodiscard]] constexpr bool within(CharT const (&)[N]) const noexcept
+    {
+        static_assert(N >= 1);
+        return is_proper() && 0 <= lower && static_cast<std::size_t>(upper) <= N - 1;
+    }
+
+    // Returns `true` if both intervals have exactly same bounds.
+    // Note: All empty intervals denote ∅ and are mutually equal regardless of
+    //       bounds. Differs from `operator==`, which compares data representations.
     template<std::signed_integral U = T>
     [[nodiscard]] constexpr bool equals(interval<U> other) const noexcept
     {
@@ -90,17 +140,6 @@ struct interval
 
     // -------------------------------------------
 
-    [[nodiscard]] constexpr bool contains(value_type p) const noexcept
-    {
-        return lower <= p && p < upper;
-    }
-
-    template<std::ranges::sized_range R>
-    [[nodiscard]] constexpr bool within(R const& r) const noexcept
-    {
-        return empty() ||
-            (0 <= lower && static_cast<std::ranges::range_size_t<R>>(upper) <= std::ranges::size(r));
-    }
 
     // -------------------------------------------
 
@@ -111,35 +150,38 @@ struct interval
     template<std::ranges::forward_range R>
     [[nodiscard]] constexpr auto as_subview_of(R const& r) const
     {
+        if (!is_proper() || lower < 0) {
+            throw std::domain_error(std::format("interval [{},{}) cannot form a subview; requires 0 <= lower <= upper", lower, upper));
+        }
+        if constexpr (std::ranges::sized_range<R>) {
+            auto const size = std::ranges::size(r);
+            if (static_cast<std::ranges::range_size_t<R>>(upper) > size) {
+                throw std::out_of_range(std::format("interval [{},{}) cannot form a subview; requires 0 <= lower <= upper <= {}", lower, upper, size));
+            }
+        }
+
         if constexpr (requires { r.subview(lower, length()); }) {
-            if (!is_nonnegative()) return r.subview(0, 0);
             return r.subview(lower, length());
 
         } else if constexpr (StringLike<R>) {
             using SV = std::basic_string_view<std::ranges::range_value_t<R>>;
-            SV const sv(r);
-            if (!is_nonnegative() || lower > static_cast<int>(sv.size())) {
-                return SV{};
-            }
-            return sv.substr(
+            return SV{r}.substr(
                 static_cast<std::size_t>(lower),
                 static_cast<std::size_t>(length())
             );
 
         } else {
-            auto const n = static_cast<std::ranges::range_difference_t<R>>(
-                is_nonnegative() ? length() : 0
-            );
-            auto first = std::ranges::next(
-                std::ranges::begin(r),
-                is_nonnegative() ? lower : 0,
-                std::ranges::end(r)
-            );
-            return std::ranges::subrange(
-                first,
-                std::ranges::next(first, n, std::ranges::end(r))
-            );
+            auto const n = static_cast<std::ranges::range_difference_t<R>>(length());
+            auto const first = std::ranges::next(std::ranges::begin(r), lower, std::ranges::end(r));
+            return std::ranges::subrange(first, std::ranges::next(first, n, std::ranges::end(r)));
         }
+    }
+
+    template<CharLike CharT, std::size_t N>
+    [[nodiscard]] constexpr auto as_subview_of(CharT const (&r)[N]) const
+    {
+        static_assert(N >= 1);
+        return this->as_subview_of(std::basic_string_view{r, N - 1});
     }
 
     // -------------------------------------------
