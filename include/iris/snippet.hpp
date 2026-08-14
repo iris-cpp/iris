@@ -87,7 +87,7 @@ public:
 
     void process(
         std::basic_string_view<CharT> input,
-        std::vector<interval<int>> const& winners,
+        std::vector<interval<int>> const& matches,
         interval_set<interval<int>> const& frags,
         snippet_sink<CharT> auto& sink
     )
@@ -98,7 +98,7 @@ public:
             throw std::out_of_range{"frags is outside input text"};
         }
 
-        auto w = winners.begin();
+        auto match_it = matches.begin();
         int last_upper = 0;
         for (auto const frag : frags) {
             if (frag.lower != last_upper) {
@@ -106,21 +106,21 @@ public:
             }
 
             int pos = frag.lower;
-            for (; w != winners.end() && frag.encloses(*w) && pos <= w->lower; ++w) {
-                if (pos != w->lower) {
-                    sink.context(interval{pos, w->lower}.as_subview_of(input));
+            for (; match_it != matches.end() && frag.encloses(*match_it) && pos <= match_it->lower; ++match_it) {
+                if (pos != match_it->lower) {
+                    sink.context(interval{pos, match_it->lower}.as_subview_of(input));
                 }
-                sink.match(w->as_subview_of(input));
-                pos = w->upper;
+                sink.match(match_it->as_subview_of(input));
+                pos = match_it->upper;
             }
             if (pos != frag.upper) {
                 sink.context(interval{pos, frag.upper}.as_subview_of(input));
             }
             last_upper = frag.upper;
         }
-        if (w != winners.end()) {
+        if (match_it != matches.end()) {
             sink.clear();
-            throwf<std::invalid_argument>("winner {} not covered by any fragment", *w);
+            throwf<std::invalid_argument>("match {} not covered by any fragment", *match_it);
         }
         if (!frags.empty() && last_upper != static_cast<int>(input.size())) {
             sink.gap();

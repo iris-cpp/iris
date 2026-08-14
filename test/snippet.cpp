@@ -23,11 +23,11 @@ TEST_CASE("snippet: type traits")
 
 TEST_CASE("snippet: process")
 {
-   // Winner flush at fragment start; full coverage, no gaps
+   // Match flush at fragment start; full coverage, no gaps
     {
         auto const input = U"XXabc"sv;
 
-        std::vector<iris::interval<int>> winners{
+        std::vector<iris::interval<int>> matches{
             {0, 2}, // XX
         };
         iris::interval_set<iris::interval<int>> frags;
@@ -35,16 +35,16 @@ TEST_CASE("snippet: process")
 
         snip::recording_sink<> sink;
         snip::snippet_generator<> sgen;
-        sgen.process(input, winners, frags, sink);
+        sgen.process(input, matches, frags, sink);
 
         CHECK(sink.to_string() == R"(M"XX" C"abc")");
     }
 
-    // Winner flush at fragment end
+    // Match flush at fragment end
     {
         auto const input = U"abcXX"sv;
 
-        std::vector<iris::interval<int>> winners{
+        std::vector<iris::interval<int>> matches{
             {3, 5}, // XX
         };
         iris::interval_set<iris::interval<int>> frags;
@@ -52,16 +52,16 @@ TEST_CASE("snippet: process")
 
         snip::recording_sink<> sink;
         snip::snippet_generator<> sgen;
-        sgen.process(input, winners, frags, sink);
+        sgen.process(input, matches, frags, sink);
 
         CHECK(sink.to_string() == R"(C"abc" M"XX")");
     }
 
-    // Two winners merged into one fragment (close regime), no gaps
+    // Two matches merged into one fragment (close regime), no gaps
     {
         auto const input = U"aaXXbbYYcc"sv;
 
-        std::vector<iris::interval<int>> winners{
+        std::vector<iris::interval<int>> matches{
             {2, 4}, // XX
             {6, 8}, // YY
         };
@@ -70,7 +70,7 @@ TEST_CASE("snippet: process")
 
         snip::recording_sink<> sink;
         snip::snippet_generator<> sgen;
-        sgen.process(input, winners, frags, sink);
+        sgen.process(input, matches, frags, sink);
 
         CHECK(sink.to_string() == R"(C"aa" M"XX" C"bb" M"YY" C"cc")");
     }
@@ -79,7 +79,7 @@ TEST_CASE("snippet: process")
     {
         auto const input = U"aaXXbbYYcc"sv;
 
-        std::vector<iris::interval<int>> winners{
+        std::vector<iris::interval<int>> matches{
             {2, 4}, // XX
             {6, 8}, // YY
         };
@@ -88,16 +88,16 @@ TEST_CASE("snippet: process")
 
         snip::recording_sink<> sink;
         snip::snippet_generator<> sgen;
-        sgen.process(input, winners, frags, sink);
+        sgen.process(input, matches, frags, sink);
 
         CHECK(sink.to_string() == R"(G C"a" M"XX" C"bb" M"YY" C"c" G)");
     }
 
-    // Adjacent winners: no empty context between matches
+    // Adjacent matches: no empty context between matches
     {
         auto const input = U"abXXYYcd"sv;
 
-        std::vector<iris::interval<int>> winners{
+        std::vector<iris::interval<int>> matches{
             {2, 4}, // XX
             {4, 6}, // YY
         };
@@ -106,16 +106,16 @@ TEST_CASE("snippet: process")
 
         snip::recording_sink<> sink;
         snip::snippet_generator<> sgen;
-        sgen.process(input, winners, frags, sink);
+        sgen.process(input, matches, frags, sink);
 
         CHECK(sink.to_string() == R"(C"ab" M"XX" M"YY" C"cd")");
     }
 
-    // Winner equals fragment: match only, gaps both sides
+    // Match equals fragment: match only, gaps both sides
     {
         auto const input = U"aXXb"sv;
 
-        std::vector<iris::interval<int>> winners{
+        std::vector<iris::interval<int>> matches{
             {1, 3}, // XX
         };
         iris::interval_set<iris::interval<int>> frags;
@@ -123,16 +123,16 @@ TEST_CASE("snippet: process")
 
         snip::recording_sink<> sink;
         snip::snippet_generator<> sgen;
-        sgen.process(input, winners, frags, sink);
+        sgen.process(input, matches, frags, sink);
 
         CHECK(sink.to_string() == R"(G M"XX" G)");
     }
 
-    // Caret winner mid-fragment: empty match
+    // Caret match mid-fragment: empty match
     {
         auto const input = U"abcdef"sv;
 
-        std::vector<iris::interval<int>> winners{
+        std::vector<iris::interval<int>> matches{
             {3, 3}, // caret
         };
         iris::interval_set<iris::interval<int>> frags;
@@ -140,16 +140,16 @@ TEST_CASE("snippet: process")
 
         snip::recording_sink<> sink;
         snip::snippet_generator<> sgen;
-        sgen.process(input, winners, frags, sink);
+        sgen.process(input, matches, frags, sink);
 
         CHECK(sink.to_string() == R"(G C"bc" M"" C"de" G)");
     }
 
-    // Caret winner at fragment upper edge (gap domain membership)
+    // Caret match at fragment upper edge (gap domain membership)
     {
         auto const input = U"abcdef"sv;
 
-        std::vector<iris::interval<int>> winners{
+        std::vector<iris::interval<int>> matches{
             {5, 5}, // caret at edge
         };
         iris::interval_set<iris::interval<int>> frags;
@@ -157,16 +157,16 @@ TEST_CASE("snippet: process")
 
         snip::recording_sink<> sink;
         snip::snippet_generator<> sgen;
-        sgen.process(input, winners, frags, sink);
+        sgen.process(input, matches, frags, sink);
 
         CHECK(sink.to_string() == R"(G C"bcde" M"" G)");
     }
 
-    // Three fragments: mixed edge-flush winners, inner gaps, no outer gaps
+    // Three fragments: mixed edge-flush matches, inner gaps, no outer gaps
     {
         auto const input = U"XXaaaaYYbbbbZZ"sv;
 
-        std::vector<iris::interval<int>> winners{
+        std::vector<iris::interval<int>> matches{
             { 0,  2}, // XX
             { 6,  8}, // YY
             {12, 14}, // ZZ
@@ -178,31 +178,31 @@ TEST_CASE("snippet: process")
 
         snip::recording_sink<> sink;
         snip::snippet_generator<> sgen;
-        sgen.process(input, winners, frags, sink);
+        sgen.process(input, matches, frags, sink);
 
         CHECK(sink.to_string() == R"(M"XX" C"a" G C"a" M"YY" C"b" G C"b" M"ZZ")");
     }
 
-    // Empty winners and empty frags: no events
+    // Empty matches and empty frags: no events
     {
         auto const input = U"abcdef"sv;
 
-        std::vector<iris::interval<int>> winners;
+        std::vector<iris::interval<int>> matches;
         iris::interval_set<iris::interval<int>> frags;
 
         snip::recording_sink<> sink;
         snip::snippet_generator<> sgen;
-        sgen.process(input, winners, frags, sink);
+        sgen.process(input, matches, frags, sink);
 
         CHECK(sink.to_string() == "");
         CHECK(sink.events.empty());
     }
 
-    // Winner not covered by any fragment
+    // Match not covered by any fragment
     {
         auto const input = U"abcdefghi"sv;
 
-        std::vector<iris::interval<int>> winners{
+        std::vector<iris::interval<int>> matches{
             {3, 5},
         };
         iris::interval_set<iris::interval<int>> frags;
@@ -210,15 +210,15 @@ TEST_CASE("snippet: process")
 
         snip::recording_sink<> sink;
         snip::snippet_generator<> sgen;
-        CHECK_THROWS_AS(sgen.process(input, winners, frags, sink), std::invalid_argument);
+        CHECK_THROWS_AS(sgen.process(input, matches, frags, sink), std::invalid_argument);
         CHECK(sink.events.empty());
     }
 
-    // Caret winner outside every fragment
+    // Caret match outside every fragment
     {
         auto const input = U"abcdef"sv;
 
-        std::vector<iris::interval<int>> winners{
+        std::vector<iris::interval<int>> matches{
             {8, 8}, // stray caret
         };
         iris::interval_set<iris::interval<int>> frags;
@@ -226,30 +226,30 @@ TEST_CASE("snippet: process")
 
         snip::recording_sink<> sink;
         snip::snippet_generator<> sgen;
-        CHECK_THROWS_AS(sgen.process(input, winners, frags, sink), std::invalid_argument);
+        CHECK_THROWS_AS(sgen.process(input, matches, frags, sink), std::invalid_argument);
         CHECK(sink.events.empty());
     }
 
-    // Nonempty winners with empty frags
+    // Nonempty matches with empty frags
     {
         auto const input = U"abcdef"sv;
 
-        std::vector<iris::interval<int>> winners{
+        std::vector<iris::interval<int>> matches{
             {1, 3},
         };
         iris::interval_set<iris::interval<int>> frags;
 
         snip::recording_sink<> sink;
         snip::snippet_generator<> sgen;
-        CHECK_THROWS_AS(sgen.process(input, winners, frags, sink), std::invalid_argument);
+        CHECK_THROWS_AS(sgen.process(input, matches, frags, sink), std::invalid_argument);
         CHECK(sink.events.empty());
     }
 
-    // Unsorted winners
+    // Unsorted matches
     {
         auto const input = U"abcXXdefghiYYjkl"sv;
 
-        std::vector<iris::interval<int>> winners{
+        std::vector<iris::interval<int>> matches{
             {11, 13}, // YY first
             { 3,  5}, // XX
         };
@@ -259,7 +259,7 @@ TEST_CASE("snippet: process")
 
         snip::recording_sink<> sink;
         snip::snippet_generator<> sgen;
-        CHECK_THROWS_AS(sgen.process(input, winners, frags, sink), std::invalid_argument);
+        CHECK_THROWS_AS(sgen.process(input, matches, frags, sink), std::invalid_argument);
         CHECK(sink.events.empty());
     }
 
@@ -267,7 +267,7 @@ TEST_CASE("snippet: process")
     {
         auto const input = U"abc"sv;
 
-        std::vector<iris::interval<int>> winners{
+        std::vector<iris::interval<int>> matches{
             {1, 2},
         };
         iris::interval_set<iris::interval<int>> frags;
@@ -275,7 +275,7 @@ TEST_CASE("snippet: process")
 
         snip::recording_sink<> sink;
         snip::snippet_generator<> sgen;
-        CHECK_THROWS_AS(sgen.process(input, winners, frags, sink), std::out_of_range);
+        CHECK_THROWS_AS(sgen.process(input, matches, frags, sink), std::out_of_range);
         CHECK(sink.events.empty());
     }
 }
