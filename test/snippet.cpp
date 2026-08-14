@@ -18,7 +18,7 @@ namespace snip = iris::snip;
 
 TEST_CASE("snippet: type traits")
 {
-    STATIC_CHECK(snip::snippet_sink<snip::recording_sink<>>);
+    STATIC_CHECK(snip::SnippetSink<snip::recording_sink<>>);
 }
 
 TEST_CASE("snippet: process predefined frags")

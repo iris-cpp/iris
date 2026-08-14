@@ -185,6 +185,7 @@ if(PROJECT_IS_TOP_LEVEL)
             preprocess
             string_algo
             interval
+            interval_algo
             interval_set
             snippet
         )

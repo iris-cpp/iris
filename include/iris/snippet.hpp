@@ -110,7 +110,7 @@ struct gap_traits
 } // detail
 
 template<class SinkT, class CharT = SinkT::char_type>
-concept snippet_sink = requires(SinkT& sink, SinkT const& csink, std::basic_string_view<CharT> sv) {
+concept SnippetSink = requires(SinkT& sink, SinkT const& csink, std::basic_string_view<CharT> sv) {
     sink.context(sv);
     sink.match(sv);
 
@@ -252,7 +252,7 @@ public:
         std::basic_string_view<CharT> const input_text,
         MatchesR&& matches_r,
         interval_set<interval<int>> const& frags,
-        snippet_sink<CharT> auto& sink
+        SnippetSink<CharT> auto& sink
     )
     {
         input_text_ = input_text;
@@ -271,7 +271,7 @@ public:
         std::basic_string<CharT> const&& input_text,
         MatchesR&& matches_r,
         interval_set<interval<int>> const& frags,
-        snippet_sink<CharT> auto& sink
+        SnippetSink<CharT> auto& sink
     ) = delete;
 
     template<std::ranges::forward_range MatchesR>
@@ -280,7 +280,7 @@ public:
         std::basic_string_view<CharT> const input_text,
         MatchesR&& matches_r,
         int const result_max_chars,
-        snippet_sink<CharT> auto& sink
+        SnippetSink<CharT> auto& sink
     )
     {
         input_text_ = input_text;
@@ -304,11 +304,11 @@ public:
         std::basic_string<CharT> const&& input_text,
         MatchesR&& matches_r,
         int const result_max_chars,
-        snippet_sink<CharT> auto& sink
+        SnippetSink<CharT> auto& sink
     ) = delete;
 
 private:
-    void process_impl(snippet_sink<CharT> auto& sink)
+    void process_impl(SnippetSink<CharT> auto& sink)
     {
         if (!frags_.extent().within(input_text_)) {
             throw std::out_of_range{"frags is outside input text"};
