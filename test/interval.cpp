@@ -35,6 +35,41 @@ TEST_CASE("interval: type traits")
     STATIC_CHECK(std::is_nothrow_swappable_v<interval<int>>);
 }
 
+TEST_CASE("interval: tuple")
+{
+    {
+        interval const iv{1, 2};
+        auto const [lower, upper] = iv; // structured bindings
+        CHECK(lower == 1);
+        CHECK(upper == 2);
+    }
+
+    {
+        interval iv{1, 2};
+        auto&& lower = iris::get<0>(iv);
+        STATIC_CHECK(std::same_as<decltype(lower), int&>);
+        CHECK(lower == 1);
+    }
+    {
+        interval const iv{1, 2};
+        auto&& lower = iris::get<0>(iv);
+        STATIC_CHECK(std::same_as<decltype(lower), int const&>);
+        CHECK(lower == 1);
+    }
+    {
+        interval iv{1, 2};
+        auto&& lower = iris::get<0>(std::move(iv));
+        STATIC_CHECK(std::same_as<decltype(lower), int&&>);
+        CHECK(lower == 1);
+    }
+    {
+        interval const iv{1, 2};
+        auto&& lower = iris::get<0>(std::move(iv));
+        STATIC_CHECK(std::same_as<decltype(lower), int const&&>);
+        CHECK(lower == 1);
+    }
+}
+
 TEST_CASE("interval: members")
 {
     // Check in constexpr context to detect uninitialized value and other UBs
@@ -365,103 +400,47 @@ TEST_CASE("interval: tuple")
 TEST_CASE("interval: subview")
 {
     {
-        interval<int> const iv{};
-        std::string_view const sv = "abcdefg";
-        CHECK(iv.as_subview_of(sv) == ""sv);
-    }
-    {
-        interval const iv{2, 5};
-        std::string_view const sv = "abcdefg";
-        CHECK(iv.as_subview_of(sv) == "cde"sv);
-    }
-    {
-        interval const iv{2, 5};
-        std::string const str = "abcdefg";
-        CHECK(iv.as_subview_of(str) == "cde"sv);
+        CHECK(interval<int>{}.as_subview_of("abcdefg"sv) == ""sv);
+        CHECK(interval(2, 5).as_subview_of("abcdefg"sv) == "cde"sv);
+        CHECK(interval(2, 5).as_subview_of("abcdefg") == "cde"sv);   // array adapter, N-1
+
+        std::string const str = "abcdefg";                            // lvalue: dangling guard
+        CHECK(interval(2, 5).as_subview_of(str) == "cde"sv);
+
+        std::vector const ivec{0, 1, 2, 3, 4, 5, 6, 7};
+        CHECK(interval<int>{}.as_subview_of(ivec).empty());
+        CHECK(std::ranges::equal(interval(2, 5).as_subview_of(ivec), std::array{2, 3, 4}));
     }
 
+    // null character boundary
     {
-        interval<int> const iv{};
-        std::vector const ivec{0,1,2,3,4,5,6,7};
-        CHECK(std::ranges::equal(iv.as_subview_of(ivec), std::vector<int>{}));
-    }
-    {
-        interval<int> const iv{2, 5};
-        std::vector const ivec{0,1,2,3,4,5,6,7};
-        CHECK(std::ranges::equal(iv.as_subview_of(ivec), std::vector<int>{2, 3, 4}));
-    }
-
-    // null character boundary (raw char array)
+        // raw char array
     CHECK(interval(0, 2).as_subview_of("abc") == "ab"sv);
     CHECK(interval(0, 3).as_subview_of("abc") == "abc"sv);
     CHECK_THROWS_AS(interval(0, 4).as_subview_of("abc"), std::out_of_range);
 
-    // null character boundary (string_view)
+        // string_view
     CHECK(interval(0, 2).as_subview_of("abc"sv) == "ab"sv);
     CHECK(interval(0, 3).as_subview_of("abc"sv) == "abc"sv);
     CHECK_THROWS_AS(interval(0, 4).as_subview_of("abc"sv), std::out_of_range);
+    }
 
     // Malformed
     {
-        interval<int> const iv{0, -2};
-        std::string_view const sv = "abcdefg";
-        CHECK_THROWS_AS(iv.as_subview_of(sv), std::domain_error);
-    }
-    {
-        interval<int> const iv{5, 4};
-        std::string_view const sv = "abcdefg";
-        CHECK_THROWS_AS(iv.as_subview_of(sv), std::domain_error);
-    }
-    {
-        interval<int> const iv{-4, -5};
-        std::string_view const sv = "abcdefg";
-        CHECK_THROWS_AS(iv.as_subview_of(sv), std::domain_error);
-    }
-    {
-        interval<int> const iv{0, 50};
-        std::string_view const sv = "abcdefg";
-        CHECK_THROWS_AS(iv.as_subview_of(sv), std::out_of_range);
-    }
-    {
-        interval<int> const iv{4, 50};
-        std::string_view const sv = "abcdefg";
-        CHECK_THROWS_AS(iv.as_subview_of(sv), std::out_of_range);
-    }
-    {
-        interval<int> const iv{50, 51};
-        std::string_view const sv = "abcdefg";
-        CHECK_THROWS_AS(iv.as_subview_of(sv), std::out_of_range);
-    }
+        CHECK_THROWS_AS(interval(0, -2).as_subview_of("abcdefg"sv), std::domain_error);
+        CHECK_THROWS_AS(interval(5, 4).as_subview_of("abcdefg"sv), std::domain_error);
+        CHECK_THROWS_AS(interval(-4, -5).as_subview_of("abcdefg"sv), std::domain_error);
+        CHECK_THROWS_AS(interval(0, 50).as_subview_of("abcdefg"sv), std::out_of_range);
+        CHECK_THROWS_AS(interval(4, 50).as_subview_of("abcdefg"sv), std::out_of_range);
+        CHECK_THROWS_AS(interval(50, 51).as_subview_of("abcdefg"sv), std::out_of_range);
 
-    {
-        interval<int> const iv{0, -2};
         std::vector const ivec{0, 1, 2, 3, 4, 5, 6};
-        CHECK_THROWS_AS(iv.as_subview_of(ivec), std::domain_error);
-    }
-    {
-        interval<int> const iv{5, 4};
-        std::vector const ivec{0, 1, 2, 3, 4, 5, 6};
-        CHECK_THROWS_AS(iv.as_subview_of(ivec), std::domain_error);
-    }
-    {
-        interval<int> const iv{-4, -5};
-        std::vector const ivec{0, 1, 2, 3, 4, 5, 6};
-        CHECK_THROWS_AS(iv.as_subview_of(ivec), std::domain_error);
-    }
-    {
-        interval<int> const iv{0, 50};
-        std::vector const ivec{0, 1, 2, 3, 4, 5, 6};
-        CHECK_THROWS_AS(iv.as_subview_of(ivec), std::out_of_range);
-    }
-    {
-        interval<int> const iv{4, 50};
-        std::vector const ivec{0, 1, 2, 3, 4, 5, 6};
-        CHECK_THROWS_AS(iv.as_subview_of(ivec), std::out_of_range);
-    }
-    {
-        interval<int> const iv{50, 51};
-        std::vector const ivec{0, 1, 2, 3, 4, 5, 6};
-        CHECK_THROWS_AS(iv.as_subview_of(ivec), std::out_of_range);
+        CHECK_THROWS_AS(interval(0, -2).as_subview_of(ivec), std::domain_error);
+        CHECK_THROWS_AS(interval(5, 4).as_subview_of(ivec), std::domain_error);
+        CHECK_THROWS_AS(interval(-4, -5).as_subview_of(ivec), std::domain_error);
+        CHECK_THROWS_AS(interval(0, 50).as_subview_of(ivec), std::out_of_range);
+        CHECK_THROWS_AS(interval(4, 50).as_subview_of(ivec), std::out_of_range);
+        CHECK_THROWS_AS(interval(50, 51).as_subview_of(ivec), std::out_of_range);
     }
 }
 

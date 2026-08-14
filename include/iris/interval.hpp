@@ -60,7 +60,7 @@ struct interval
     // Note 1: intersects(∅) always returns `false`.
     // Note 2: Adjacent-only contact is touches(); for intersects-or-touches use connected().
     template<std::signed_integral U = T>
-    [[nodiscard]] constexpr bool intersects(interval<U> other) const noexcept
+    [[nodiscard]] constexpr bool intersects(interval<U> const other) const noexcept
     {
         return (lower < other.upper && other.lower < upper) && !empty() && !other.empty();
     }
@@ -68,7 +68,7 @@ struct interval
     // !intersects
     // Note: disjoint(∅) always returns `true`.
     template<std::signed_integral U = T>
-    [[nodiscard]] constexpr bool disjoint(interval<U> other) const noexcept
+    [[nodiscard]] constexpr bool disjoint(interval<U> const other) const noexcept
     {
         return (upper <= other.lower || other.upper <= lower) || empty() || other.empty();
     }
@@ -76,7 +76,7 @@ struct interval
     // Closures meet but the sets share no point.
     // Note: touches(∅) always returns `false`.
     template<std::signed_integral U = T>
-    [[nodiscard]] constexpr bool touches(interval<U> other) const noexcept
+    [[nodiscard]] constexpr bool touches(interval<U> const other) const noexcept
     {
         return (upper == other.lower || other.upper == lower) && !empty() && !other.empty();
     }
@@ -84,7 +84,7 @@ struct interval
     // intersects || touches
     // Note: connected(∅) always returns `false`.
     template<std::signed_integral U = T>
-    [[nodiscard]] constexpr bool connected(interval<U> other) const noexcept
+    [[nodiscard]] constexpr bool connected(interval<U> const other) const noexcept
     {
         return (lower <= other.upper && other.lower <= upper) && !empty() && !other.empty();
     }
@@ -93,7 +93,7 @@ struct interval
     // Note: covers(∅) always returns `true`.
     // See also: `encloses(other)`.
     template<std::signed_integral U = T>
-    [[nodiscard]] constexpr bool covers(interval<U> other) const noexcept
+    [[nodiscard]] constexpr bool covers(interval<U> const other) const noexcept
     {
         return (lower <= other.lower && other.upper <= upper) || other.empty();
     }
@@ -133,7 +133,7 @@ struct interval
     // Note: All empty intervals denote ∅ and are mutually equal regardless of
     //       bounds. Differs from `operator==`, which compares data representations.
     template<std::signed_integral U = T>
-    [[nodiscard]] constexpr bool equals(interval<U> other) const noexcept
+    [[nodiscard]] constexpr bool equals(interval<U> const other) const noexcept
     {
         return (lower == other.lower && upper == other.upper) || (empty() && other.empty());
     }
