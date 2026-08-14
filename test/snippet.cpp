@@ -21,7 +21,7 @@ TEST_CASE("snippet: type traits")
     STATIC_CHECK(snip::snippet_sink<snip::recording_sink<>>);
 }
 
-TEST_CASE("snippet: process")
+TEST_CASE("snippet: process predefined frags")
 {
    // Match flush at fragment start; full coverage, no gaps
     {
@@ -278,6 +278,11 @@ TEST_CASE("snippet: process")
         CHECK_THROWS_AS(sgen.process(input, matches, frags, sink), std::out_of_range);
         CHECK(sink.events.empty());
     }
+}
+
+TEST_CASE("snippet: process generated frags")
+{
+
 }
 
 // NOLINTEND(readability-container-size-empty)
