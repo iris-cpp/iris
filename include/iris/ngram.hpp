@@ -271,8 +271,7 @@ class ngram_index
     static constexpr std::size_t side_merge_threshold = 2048;
 
 public:
-    [[nodiscard]]
-    auto find_list(this auto&& self, ngram<N, CharT> const ng)
+    [[nodiscard]] auto find_list(this auto&& self, ngram<N, CharT> const ng)
     {
         if (auto const it = self.gram_entries_.find(ng); it != self.gram_entries_.end()) {
             return it->second.get();
@@ -299,10 +298,15 @@ public:
         list->for_each_documents(f);
     }
 
-    [[nodiscard]]
-    bool empty() const noexcept
+    [[nodiscard]] bool empty() const noexcept
     {
         return gram_entries_.empty() && side_entries_.empty();
+    }
+
+    void clear() noexcept
+    {
+        gram_entries_.clear();
+        side_entries_.clear();
     }
 
     void merge_new_entries(std::vector<std::pair<ngram<N, CharT>, std::unique_ptr<PostingListT>>>& pending)
@@ -381,8 +385,13 @@ struct ngram_index_storage
         this->template append_index<2>(doc_id, input);
     }
 
-    [[nodiscard]]
-    bool empty() const noexcept
+    void clear() noexcept
+    {
+        uni_data_.clear();
+        bi_data_.clear();
+    }
+
+    [[nodiscard]] bool empty() const noexcept
     {
         return
             this->template get_data<1>().idx.empty() &&
@@ -413,6 +422,13 @@ private:
 
         std::vector<std::pair<ngram<N, CharT>, std::unique_ptr<PostingListT>>>
         batch_pending;
+
+        void clear() noexcept
+        {
+            idx.clear();
+            batch_grams.clear();
+            batch_pending.clear();
+        }
     };
 
     ngram_index_storage_data<1> uni_data_;
@@ -723,14 +739,19 @@ template<class CharT = char32_t>
 class ngram_database
 {
 public:
-    [[nodiscard]]
-    ngram_document_id add_document(std::basic_string_view<CharT> const doc_text)
+    [[nodiscard]] ngram_document_id add_document(std::basic_string_view<CharT> const doc_text)
     {
-        ngram_document_id const doc_id{max_doc_id_};
-        max_doc_id_ = ngram_document_id{std::to_underlying(max_doc_id_) + 1u};
+        ngram_document_id const doc_id{next_doc_id_};
+        next_doc_id_ = ngram_document_id{std::to_underlying(next_doc_id_) + 1u};
 
         store_.append_index(doc_id, doc_text);
         return doc_id;
+    }
+
+    void clear() noexcept
+    {
+        next_doc_id_ = 0_doc_id;
+        store_.clear();
     }
 
     template<std::size_t N>
@@ -741,8 +762,7 @@ public:
         idx.find_occurrences(ng, occs);
     }
 
-    [[nodiscard]]
-    ngram_search_result search(ngram_search_query<CharT> const& query) const
+    [[nodiscard]] ngram_search_result search(ngram_search_query<CharT> const& query) const
     {
         if (query.empty()) return {};
         if (store_.empty()) return {};
@@ -899,7 +919,7 @@ private:
         search_res.remove_stale_document_matches(word_id, current_ngram);
     }
 
-    ngram_document_id max_doc_id_{0_doc_id};
+    ngram_document_id next_doc_id_{0_doc_id};
     detail::ngram_index_storage<CharT> store_;
 };
 
