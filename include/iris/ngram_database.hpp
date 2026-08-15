@@ -15,6 +15,7 @@
 #include <concepts>
 #include <span>
 #include <flat_map>
+#include <unordered_set>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -28,6 +29,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <cstdlib>
 
 namespace iris {
 
@@ -225,6 +227,7 @@ struct ngram_posting_list
                 0
             );
         }
+
         ++postings.back().pos_count;
         positions.emplace_back(pos);
     }
@@ -699,10 +702,25 @@ public:
         return doc_id;
     }
 
+    [[nodiscard]] bool is_visible(ngram_document_id const doc_id) const noexcept
+    {
+        return !invisible_documents_.contains(doc_id);
+    }
+
+    void set_visible(ngram_document_id const doc_id, bool const flag)
+    {
+        if (flag) {
+            invisible_documents_.erase(doc_id);
+        } else {
+            invisible_documents_.emplace(doc_id);
+        }
+    }
+
     void clear() noexcept
     {
         next_doc_id_ = 0_doc_id;
         store_.clear();
+        invisible_documents_.clear();
     }
 
     template<std::size_t N>
@@ -713,12 +731,10 @@ public:
         idx.find_occurrences(ng, occs);
     }
 
-    [[nodiscard]] ngram_search_result search(ngram_search_query<CharT> const& query) const
+    bool search(ngram_search_query<CharT> const& query, ngram_search_result& search_res) const
     {
-        if (query.empty()) return {};
-        if (store_.empty()) return {};
-
-        ngram_search_result search_res;
+        if (query.empty()) return false;
+        if (store_.empty()) return false;
 
         int word_id = 0;
         auto it = query.words().begin();
@@ -726,7 +742,7 @@ public:
         this->search_word<true>(search_res, word_id++, *it++);
         if (search_res.empty()) {
             search_res.reset(); // remove tombstones
-            return search_res;
+            return false;
         }
 
         for (; it != query.words().end(); ++it) {
@@ -737,7 +753,7 @@ public:
                 break;
             }
         }
-        return search_res;
+        return !search_res.empty();
     }
 
 private:
@@ -761,6 +777,7 @@ private:
 
         if constexpr (IsFirstWord) {
             store_.search(ng, [&](ngram_document_id const doc_id, std::span<int const> const positions) {
+                if (!is_visible(doc_id)) return;
                 (void)search_res.init_word_matches<IsFirstWord, N>(doc_id, word_id, positions);
             });
             if (search_res.empty()) return;
@@ -768,6 +785,7 @@ private:
         } else {
             std::size_t available_doc_count = 0;
             store_.search(ng, [&](ngram_document_id const doc_id, std::span<int const> const positions) {
+                if (!is_visible(doc_id)) return;
                 if (search_res.init_word_matches<IsFirstWord, N>(doc_id, word_id, positions)) {
                     ++available_doc_count;
                 }
@@ -781,6 +799,8 @@ private:
         unsigned current_ngram = 1;
         auto const do_search = [&](int remaining_chars) {
             return [&, remaining_chars, overlapping_chars = int(N) - remaining_chars](ngram_document_id const doc_id, std::span<int const> const positions) {
+                if (!is_visible(doc_id)) return detail::search_continuation::proceed;
+
                 // Find the existing match set from the previous iteration.
                 // If none exists, any subsequent characters of the document will not match.
                 //
@@ -872,6 +892,7 @@ private:
 
     ngram_document_id next_doc_id_{0_doc_id};
     detail::ngram_index_storage<CharT> store_;
+    std::unordered_set<ngram_document_id> invisible_documents_;
 };
 
 } // iris
@@ -898,19 +919,6 @@ struct std::formatter<iris::ngram_occurrence, CharT>
     Ctx::iterator format(iris::ngram_occurrence const& occ, Ctx& ctx) const
     {
         return std::format_to(ctx.out(), "{}:{}", occ.doc_id, occ.pos);
-    }
-};
-
-template<class NGCharT, class CharT>
-struct std::formatter<iris::ngram_search_query<NGCharT>, CharT>
-    : iris::no_spec_formatter<CharT>
-{
-    template<class Ctx>
-    Ctx::iterator format(iris::ngram_search_query<NGCharT> const& query, Ctx& ctx) const
-    {
-        return std::format_to(ctx.out(), "{}", query.words() | std::views::transform([](std::u32string_view ustr) {
-            return iris::unicode::transcode<char>(ustr);
-        }));
     }
 };
 

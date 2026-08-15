@@ -52,7 +52,8 @@ struct std::formatter<DocumentMatch, CharT>
 
 #define IRIS_CHECK_SEARCH(query_input, ...) do { \
         iris::ngram_search_query const query{U ## query_input}; \
-        auto const search_res = ngram_db.search(query); \
+        iris::ngram_search_result search_res; \
+        ngram_db.search(query, search_res); \
         auto const& doc_matches = search_res.doc_matches(); \
         \
         std::vector<DocumentMatch> const expected_doc_matches{ \

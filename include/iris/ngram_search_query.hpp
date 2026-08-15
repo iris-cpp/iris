@@ -5,11 +5,15 @@
 
 #include <iris/config.hpp>
 #include <iris/string_algo.hpp>
+#include <iris/format.hpp>
+
+#include <iris/unicode/string.hpp>
 
 #include <string>
 #include <string_view>
 #include <vector>
 #include <ranges>
+#include <format>
 #include <algorithm>
 
 namespace iris {
@@ -17,6 +21,8 @@ namespace iris {
 template<class CharT = char32_t>
 struct ngram_search_query
 {
+    ngram_search_query() = default;
+
     explicit ngram_search_query(std::basic_string_view<CharT> input_sv)
     {
         std::basic_string<CharT> input{input_sv};
@@ -63,5 +69,18 @@ template<class CharT, std::size_t N>
 ngram_search_query(CharT const(&)[N]) -> ngram_search_query<CharT>;
 
 } // iris
+
+template<class NGCharT, class CharT>
+struct std::formatter<iris::ngram_search_query<NGCharT>, CharT>
+    : iris::no_spec_formatter<CharT>
+{
+    template<class Ctx>
+    Ctx::iterator format(iris::ngram_search_query<NGCharT> const& query, Ctx& ctx) const
+    {
+        return std::format_to(ctx.out(), "{}", query.words() | std::views::transform([](std::u32string_view ustr) {
+            return iris::unicode::transcode<char>(ustr);
+        }));
+    }
+};
 
 #endif
