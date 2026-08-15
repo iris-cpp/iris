@@ -5,7 +5,8 @@
 
 #include "iris_test.hpp"
 
-#include <iris/ngram.hpp>
+#include <iris/ngram_search_query.hpp>
+#include <iris/ngram_database.hpp>
 
 #include <format>
 #include <iostream>
