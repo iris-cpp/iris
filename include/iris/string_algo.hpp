@@ -8,8 +8,10 @@
 
 #include <string>
 #include <string_view>
-#include <ranges>
 #include <algorithm>
+#include <type_traits>
+
+#include <cassert>
 
 namespace iris {
 
@@ -36,14 +38,16 @@ struct string_algo_traits<char32_t>
 
 } // detail
 
-template<class CharT, class Traits>
+// TODO: make these CPO so that they can be passed to `std::views::transform`
+
+template<class CharT, class TraitsT>
 constexpr void trim_edges(
-    std::basic_string<CharT, Traits>& input,
-    std::basic_string_view<CharT, Traits> const spaces = detail::string_algo_traits<CharT>::ordinary_spaces
+    std::basic_string<CharT, TraitsT>& input,
+    std::type_identity_t<std::basic_string_view<CharT, TraitsT>> const spaces = detail::string_algo_traits<CharT>::ordinary_spaces
 )
 {
     auto const first = input.find_first_not_of(spaces);
-    if (first == std::basic_string<CharT, Traits>::npos) {
+    if (first == std::basic_string<CharT, TraitsT>::npos) {
         input.clear();
         return;
     }
@@ -76,10 +80,10 @@ template<int = 0>
 }
 
 
-template<class CharT, class Traits>
+template<class CharT, class TraitsT>
 constexpr void normalize_spaces(
-    std::basic_string<CharT, Traits>& input,
-    std::basic_string_view<CharT, Traits> const space_like_variant_chars = detail::string_algo_traits<CharT>::space_like_variant_chars,
+    std::basic_string<CharT, TraitsT>& input,
+    std::type_identity_t<std::basic_string_view<CharT, TraitsT>> const space_like_variant_chars = detail::string_algo_traits<CharT>::space_like_variant_chars,
     CharT const to_space = detail::string_algo_traits<CharT>::space
 )
 {
@@ -113,10 +117,10 @@ template<int = 0>
 }
 
 
-template<class CharT, class Traits>
+template<class CharT, class TraitsT>
 constexpr void compact_spaces(
-    std::basic_string<CharT, Traits>& input,
-    std::basic_string_view<CharT, Traits> const spaces = detail::string_algo_traits<CharT>::ordinary_spaces,
+    std::basic_string<CharT, TraitsT>& input,
+    std::type_identity_t<std::basic_string_view<CharT, TraitsT>> const spaces = detail::string_algo_traits<CharT>::ordinary_spaces,
     CharT const to_space = detail::string_algo_traits<CharT>::space
 )
 {
@@ -162,6 +166,103 @@ template<int = 0>
 {
     std::u32string buf(input);
     iris::compact_spaces(buf, spaces, to_space);
+    return buf;
+}
+
+// ---------------------------------------------
+
+// Replaces all occurrences of each elem of `escape_targets` with `{leader, each elem of escape_targets}`.
+// `leader` is automatically included in escape targets by default; you don't need to
+// specify it in `escape_targets`.
+template<class CharT, class TraitsT>
+constexpr void escape(
+    std::basic_string<CharT, TraitsT>& input,
+    CharT const leader /* e.g. '\' */,
+    std::type_identity_t<std::basic_string_view<CharT, TraitsT>> escape_targets /* e.g. "\"" */
+)
+{
+    assert(!escape_targets.contains(leader) && "you don't need to include `leader` in `escape_targets`");
+
+    auto const is_leader_needed = [&](CharT c) noexcept {
+        return c == leader || escape_targets.find(c) != std::basic_string_view<CharT, TraitsT>::npos;
+    };
+    std::size_t const extra = std::ranges::count_if(input, is_leader_needed);
+    if (extra == 0) return;
+
+    input.resize(input.size() + extra);
+    auto out = input.rbegin();
+    for (auto in = input.rbegin() + extra; in != input.rend(); ++in) {
+        *out++ = *in;
+        if (is_leader_needed(*in)) {
+            *out++ = leader;
+        }
+    }
+}
+
+template<int = 0>
+[[nodiscard]] constexpr std::string escape_copy(
+    std::string_view input,
+    char const leader,
+    std::string_view const escape_targets
+)
+{
+    std::string buf(input);
+    iris::escape(buf, leader, escape_targets);
+    return buf;
+}
+
+template<int = 0>
+[[nodiscard]] constexpr std::u32string escape_copy(
+    std::u32string_view input,
+    char32_t const leader,
+    std::u32string_view const escape_targets
+)
+{
+    std::u32string buf(input);
+    iris::escape(buf, leader, escape_targets);
+    return buf;
+}
+
+// Inverse of `escape(...)`.
+template<class CharT, class TraitsT>
+constexpr void unescape(
+    std::basic_string<CharT, TraitsT>& input,
+    CharT const leader /* e.g. '\' */
+)
+{
+    std::size_t const first = input.find(leader);
+    if (first == std::basic_string<CharT, TraitsT>::npos) return;
+
+    auto out = input.begin() + first;
+    auto const end = input.end();
+    for (auto in = out; in != end; ++in, ++out) {
+        if (*in == leader && std::next(in) != end) {
+            ++in; // skip the leader, copy the escaped char below
+        }
+        *out = *in;
+    }
+    input.erase(out, end);
+}
+
+template<int = 0>
+[[nodiscard]] constexpr std::string unescape_copy(
+    std::string_view input,
+    char const leader
+)
+{
+    std::string buf(input);
+    iris::unescape(buf, leader);
+    return buf;
+}
+
+template<int = 0>
+[[nodiscard]] constexpr std::u32string unescape_copy(
+    std::u32string_view input,
+    char32_t const leader
+)
+{
+    std::u32string buf(input);
+    iris::unescape(buf, leader);
     return buf;
 }
 
