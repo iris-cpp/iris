@@ -3,52 +3,52 @@
 #include "ngram_test.hpp"
 
 [[nodiscard]]
-constexpr auto make_occurrences(std::initializer_list<ngram_occurrence> occs)
+constexpr auto make_occurrences(std::initializer_list<gram_occurrence> occs)
 {
-    return std::vector<ngram_occurrence>{occs};
+    return std::vector<gram_occurrence>{occs};
 }
 
 #define IRIS_CHECK_NO_OCCURRENCE(ng_str) do { \
-        std::vector<ngram_occurrence> occs; \
+        std::vector<gram_occurrence> occs; \
         ngram_db.find_occurrences(iris::to_ngram(U ## ng_str), occs); \
         CHECK(occs.empty()); \
     } while (false)
 
 #define IRIS_CHECK_OCCURRENCE(ng_str, ...) do { \
-        std::vector<ngram_occurrence> occs; \
+        std::vector<gram_occurrence> occs; \
         ngram_db.find_occurrences(iris::to_ngram(U ## ng_str), occs); \
         CHECK(occs == make_occurrences({__VA_ARGS__})); \
     } while (false)
 
-TEST_CASE("ngram (type traits)")
+TEST_CASE("gram (type traits)")
 {
-    STATIC_CHECK(std::same_as<decltype(iris::ngram<1, char>::data), char>);
-    STATIC_CHECK(std::same_as<decltype(iris::ngram<2, char>::data), std::uint16_t>);
+    STATIC_CHECK(std::same_as<decltype(iris::ngram::gram<1, char>::data), char>);
+    STATIC_CHECK(std::same_as<decltype(iris::ngram::gram<2, char>::data), std::uint16_t>);
 
-    STATIC_CHECK(std::same_as<decltype(iris::ngram<1, char32_t>::data), char32_t>);
-    STATIC_CHECK(std::same_as<decltype(iris::ngram<2, char32_t>::data), std::uint64_t>);
+    STATIC_CHECK(std::same_as<decltype(iris::ngram::gram<1, char32_t>::data), char32_t>);
+    STATIC_CHECK(std::same_as<decltype(iris::ngram::gram<2, char32_t>::data), std::uint64_t>);
 }
 
-TEST_CASE("ngram (minimal input)")
+TEST_CASE("gram (minimal input)")
 {
 #ifdef _MSC_VER
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"");
         IRIS_CHECK_NO_OCCURRENCE("a");
     }
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"a");
         IRIS_CHECK_OCCURRENCE("a", {0_doc_id, 0});
         IRIS_CHECK_NO_OCCURRENCE("X");
         IRIS_CHECK_NO_OCCURRENCE("XX");
     }
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"ab");
         IRIS_CHECK_OCCURRENCE("a", {0_doc_id, 0});
         IRIS_CHECK_OCCURRENCE("b", {0_doc_id, 1});
@@ -57,7 +57,7 @@ TEST_CASE("ngram (minimal input)")
         IRIS_CHECK_NO_OCCURRENCE("XX");
     }
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"abc");
         IRIS_CHECK_OCCURRENCE("a", {0_doc_id, 0});
         IRIS_CHECK_OCCURRENCE("b", {0_doc_id, 1});
@@ -68,7 +68,7 @@ TEST_CASE("ngram (minimal input)")
         IRIS_CHECK_NO_OCCURRENCE("XX");
     }
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"abcd");
         IRIS_CHECK_OCCURRENCE("a", {0_doc_id, 0});
         IRIS_CHECK_OCCURRENCE("b", {0_doc_id, 1});
@@ -81,7 +81,7 @@ TEST_CASE("ngram (minimal input)")
         IRIS_CHECK_NO_OCCURRENCE("XX");
     }
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"abcde");
         IRIS_CHECK_OCCURRENCE("a", {0_doc_id, 0});
         IRIS_CHECK_OCCURRENCE("b", {0_doc_id, 1});
@@ -97,7 +97,7 @@ TEST_CASE("ngram (minimal input)")
     }
 }
 
-TEST_CASE("ngram (realistic input)")
+TEST_CASE("gram (realistic input)")
 {
 #ifdef _MSC_VER
     SetConsoleOutputCP(CP_UTF8);
@@ -106,7 +106,7 @@ TEST_CASE("ngram (realistic input)")
     // https://gihyo.jp/dev/serial/01/make-findspot/0005
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"今日は良い天気です。");
 
         IRIS_CHECK_OCCURRENCE("今日", {0_doc_id, 0});
@@ -120,7 +120,7 @@ TEST_CASE("ngram (realistic input)")
         IRIS_CHECK_OCCURRENCE("す。", {0_doc_id, 8});
     }
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"今日は大雨です。");
 
         IRIS_CHECK_OCCURRENCE("今日", {0_doc_id, 0});
@@ -132,7 +132,7 @@ TEST_CASE("ngram (realistic input)")
         IRIS_CHECK_OCCURRENCE("す。", {0_doc_id, 6});
     }
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"今日の東海地方は大雨でしょう。");
 
         IRIS_CHECK_OCCURRENCE("今日", {0_doc_id, 0});
@@ -152,7 +152,7 @@ TEST_CASE("ngram (realistic input)")
     }
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"今日は良い天気です。");
         (void)ngram_db.add_document(U"今日は大雨です。");
         (void)ngram_db.add_document(U"今日の東海地方は大雨でしょう。");

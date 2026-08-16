@@ -69,23 +69,6 @@ target_link_libraries(Catch2WithMain PRIVATE iris_cxx_test_external)
 
 target_link_libraries(iris_cxx_test INTERFACE Catch2::Catch2)
 
-
-# -----------------------------------------------------------------
-# Iris internal test targets
-
-add_library(_iris_internal_test INTERFACE)
-target_include_directories(_iris_internal_test INTERFACE ${CMAKE_CURRENT_LIST_DIR})
-
-if(MSVC)
-    target_sources(_iris_internal_test INTERFACE "${CMAKE_CURRENT_LIST_DIR}/cpp.hint")
-endif()
-
-function(iris_define_internal_test test_name)
-    iris_define_test(${test_name} ${ARGN})
-    target_link_libraries(${test_name}_test PRIVATE _iris_internal_test)
-endfunction()
-
-
 # -----------------------------------------------------------------
 # Common CMake utilities for testing
 
@@ -167,14 +150,33 @@ function(iris_define_library_test library_type test_name srcs)
     _iris_define_test_impl(${test_name} Catch2::Catch2)
 endfunction()
 
+# -----------------------------------------------------------------
+# Iris internal test targets
+
+add_library(_iris_internal_test_base INTERFACE)
+target_include_directories(_iris_internal_test_base INTERFACE ${CMAKE_CURRENT_LIST_DIR})
+if(MSVC)
+    target_sources(_iris_internal_test_base INTERFACE "${CMAKE_CURRENT_LIST_DIR}/cpp.hint")
+endif()
+
+function(iris_define_internal_test test_name)
+    iris_define_test(iris_${test_name} ${ARGN})
+    target_link_libraries(iris_${test_name}_test PRIVATE _iris_internal_test_base)
+    target_sources(iris_${test_name}_test PRIVATE FILE_SET HEADERS BASE_DIRS ${CMAKE_CURRENT_FUNCTION_LIST_DIR} FILES ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/iris_test.hpp)
+    set_target_properties(iris_${test_name}_test PROPERTIES FOLDER "test/iris")
+endfunction()
+
+function(iris_define_internal_subdir_test subdir test_name)
+    list(TRANSFORM ARGN PREPEND "${subdir}/")
+    iris_define_internal_test(${subdir}_${test_name} ${ARGN})
+    set_target_properties(iris_${subdir}_${test_name}_test PROPERTIES FOLDER "test/iris/${subdir}")
+endfunction()
 
 # -----------------------------------------------------------------
 # Iris tests
 
 if(PROJECT_IS_TOP_LEVEL)
     if(NOT DEFINED IRIS_CI_COMPONENT OR IRIS_CI_COMPONENT STREQUAL iris)
-        add_subdirectory(rvariant)
-
         set(
             IRIS_TEST_IRIS_TESTS
             core
@@ -189,18 +191,24 @@ if(PROJECT_IS_TOP_LEVEL)
             interval_algo
             interval_set
             snippet
-            ngram
-            ngram_search_2
-            ngram_search_3
-            ngram_search_4_dep
         )
-
         foreach(test_name IN LISTS IRIS_TEST_IRIS_TESTS)
-            iris_define_internal_test(iris_${test_name} ${test_name}.cpp)
-            iris_define_test_headers(iris_${test_name} iris_test.hpp)
-            set_target_properties(iris_${test_name}_test PROPERTIES FOLDER "test/iris")
+            iris_define_internal_test(${test_name} ${test_name}.cpp)
         endforeach()
 
+        set(
+            IRIS_TEST_NGRAM_TESTS
+            ngram
+            search_2
+            search_3
+            search_4_dep
+        )
+        foreach(test_name IN LISTS IRIS_TEST_NGRAM_TESTS)
+            iris_define_internal_subdir_test(ngram ${test_name} ${test_name}.cpp)
+            iris_define_test_headers(iris_ngram_${test_name} ngram/ngram_test.hpp)
+        endforeach()
+
+        add_subdirectory(rvariant)
         add_subdirectory(unicode)
     endif()
 endif()

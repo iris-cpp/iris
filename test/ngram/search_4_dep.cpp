@@ -3,14 +3,14 @@
 #include "ngram_test.hpp"
 
 // 2x 2-gram document
-TEST_CASE("ngram search (document chars = 4, aaaa)")
+TEST_CASE("gram search (document chars = 4, aaaa)")
 {
 #ifdef _MSC_VER
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"aaaa");
         IRIS_CHECK_SEARCH("");
 
@@ -57,14 +57,14 @@ TEST_CASE("ngram search (document chars = 4, aaaa)")
 }
 
 // 2x 2-gram document
-TEST_CASE("ngram search (document chars = 4, abab)")
+TEST_CASE("gram search (document chars = 4, abab)")
 {
 #ifdef _MSC_VER
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"abab");
         IRIS_CHECK_SEARCH("");
 
@@ -125,14 +125,14 @@ TEST_CASE("ngram search (document chars = 4, abab)")
 }
 
 // 2x 2-gram document
-TEST_CASE("ngram search (document chars = 4, abca)")
+TEST_CASE("gram search (document chars = 4, abca)")
 {
 #ifdef _MSC_VER
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"abca");
         IRIS_CHECK_SEARCH("");
 
@@ -208,14 +208,14 @@ TEST_CASE("ngram search (document chars = 4, abca)")
 }
 
 // 2x 2-gram document
-TEST_CASE("ngram search (document chars = 4, abcd)")
+TEST_CASE("gram search (document chars = 4, abcd)")
 {
 #ifdef _MSC_VER
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"abcd");
         IRIS_CHECK_SEARCH("");
 
@@ -283,63 +283,63 @@ TEST_CASE("ngram search (document chars = 4, abcd)")
     }
 }
 
-TEST_CASE("ngram search (dependency on previous match)")
+TEST_CASE("gram search (dependency on previous match)")
 {
 #ifdef _MSC_VER
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"abcd");
         IRIS_CHECK_SEARCH("abXX");
     }
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"abef");
         IRIS_CHECK_SEARCH("abXXef");
     }
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"abef");
         IRIS_CHECK_SEARCH("abXXefef");
     }
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"ab..ef");
         IRIS_CHECK_SEARCH("abef");
     }
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"ab..ef");
         IRIS_CHECK_SEARCH("abefef");
     }
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"ab..ef");
         IRIS_CHECK_SEARCH("abXXef");
     }
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"ab..ef");
         IRIS_CHECK_SEARCH("abXXefef");
     }
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"abef");
         IRIS_CHECK_SEARCH("abXef");
     }
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"abef");
         IRIS_CHECK_SEARCH("abXefef");
     }
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"abxcd"); // trap document
         (void)ngram_db.add_document(U"abcd");
         IRIS_CHECK_SEARCH(
@@ -350,7 +350,7 @@ TEST_CASE("ngram search (dependency on previous match)")
         );
     }
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"abcd");
         (void)ngram_db.add_document(U"abxcd"); // trap document
         IRIS_CHECK_SEARCH(
@@ -362,7 +362,7 @@ TEST_CASE("ngram search (dependency on previous match)")
     }
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"ab");
         (void)ngram_db.add_document(U"abcd");
         IRIS_CHECK_SEARCH(
@@ -375,14 +375,14 @@ TEST_CASE("ngram search (dependency on previous match)")
     }
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"abXcd");
         (void)ngram_db.add_document(U"abcdX");
         IRIS_CHECK_SEARCH("abcdc");
     }
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"abXXabcd");
         IRIS_CHECK_SEARCH(
             "abcd",
@@ -393,7 +393,7 @@ TEST_CASE("ngram search (dependency on previous match)")
     }
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"ab cdXf");
         (void)ngram_db.add_document(U"ab cdef");
         IRIS_CHECK_SEARCH(

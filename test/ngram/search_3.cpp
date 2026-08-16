@@ -3,14 +3,14 @@
 #include "ngram_test.hpp"
 
 // 2-gram + 1-gram document
-TEST_CASE("ngram search (document chars = 3, aaa/baa)")
+TEST_CASE("gram search (document chars = 3, aaa/baa)")
 {
 #ifdef _MSC_VER
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"aaa");
         IRIS_CHECK_SEARCH("");
 
@@ -48,7 +48,7 @@ TEST_CASE("ngram search (document chars = 3, aaa/baa)")
     }
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"baa");
         IRIS_CHECK_SEARCH("");
 
@@ -103,14 +103,14 @@ TEST_CASE("ngram search (document chars = 3, aaa/baa)")
 }
 
 // 2-gram + 1-gram document
-TEST_CASE("ngram search (document chars = 3, aba/aab)")
+TEST_CASE("gram search (document chars = 3, aba/aab)")
 {
 #ifdef _MSC_VER
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"aba");
         IRIS_CHECK_SEARCH("");
 
@@ -164,7 +164,7 @@ TEST_CASE("ngram search (document chars = 3, aba/aab)")
     }
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"aab");
         IRIS_CHECK_SEARCH("");
 
@@ -219,14 +219,14 @@ TEST_CASE("ngram search (document chars = 3, aba/aab)")
 }
 
 // 2-gram + 1-gram document
-TEST_CASE("ngram search (document chars = 3, abc)")
+TEST_CASE("gram search (document chars = 3, abc)")
 {
 #ifdef _MSC_VER
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"abc");
         IRIS_CHECK_SEARCH("");
 

@@ -5,8 +5,8 @@
 
 #include "iris_test.hpp"
 
-#include <iris/ngram_search_query.hpp>
-#include <iris/ngram_database.hpp>
+#include <iris/ngram/search_query.hpp>
+#include <iris/ngram/database.hpp>
 
 #include <format>
 #include <iostream>
@@ -17,20 +17,20 @@
 #endif
 
 using namespace iris::ngram_literals;
-using iris::ngram_occurrence;
+using iris::ngram::gram_occurrence;
 using iris::interval;
 
 struct DocumentMatch
 {
-    iris::ngram_document_id doc_id;
-    std::vector<iris::ngram_search_word_match> word_matches;
+    iris::ngram::document_id doc_id;
+    std::vector<iris::ngram::search_word_match> word_matches;
 
-    DocumentMatch(iris::ngram_document_id doc_id, std::initializer_list<iris::ngram_search_word_match> word_matches)
+    DocumentMatch(iris::ngram::document_id doc_id, std::initializer_list<iris::ngram::search_word_match> word_matches)
         : doc_id(doc_id)
         , word_matches(word_matches)
     {}
 
-    DocumentMatch(iris::ngram_document_id doc_id, std::vector<iris::ngram_search_word_match> word_matches)
+    DocumentMatch(iris::ngram::document_id doc_id, std::vector<iris::ngram::search_word_match> word_matches)
         : doc_id(doc_id)
         , word_matches(std::move(word_matches))
     {}
@@ -51,8 +51,8 @@ struct std::formatter<DocumentMatch, CharT>
 };
 
 #define IRIS_CHECK_SEARCH(query_input, ...) do { \
-        iris::ngram_search_query const query{U ## query_input}; \
-        iris::ngram_search_result search_res; \
+        iris::ngram::search_query const query{U ## query_input}; \
+        iris::ngram::search_result search_res; \
         ngram_db.search(query, search_res); \
         auto const& doc_matches = search_res.doc_matches(); \
         \

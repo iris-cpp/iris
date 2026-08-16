@@ -4,11 +4,13 @@
 // SPDX-License-Identifier: MIT
 
 #include <iris/config.hpp>
-#include <iris/ngram_search_query.hpp>
+
+#include <iris/ngram/gram.hpp>
+#include <iris/ngram/id.hpp>
+#include <iris/ngram/search_query.hpp>
+
 #include <iris/default_init_allocator.hpp>
 #include <iris/interval.hpp>
-#include <iris/string_algo.hpp>
-#include <iris/unicode/string.hpp>
 #include <iris/format.hpp>
 
 #include <memory>
@@ -16,10 +18,8 @@
 #include <span>
 #include <flat_map>
 #include <unordered_set>
-#include <string>
 #include <string_view>
 #include <vector>
-#include <array>
 #include <ranges>
 #include <algorithm>
 #include <type_traits>
@@ -28,172 +28,17 @@
 #include <stdexcept>
 
 #include <cassert>
-#include <cstdint>
-#include <cstdlib>
 
-namespace iris {
+namespace iris::ngram {
 
-enum struct ngram_document_id : unsigned {};
-
-struct ngram_occurrence
+struct gram_occurrence
 {
-    ngram_document_id doc_id;
+    document_id doc_id;
     int pos;
 
-    [[nodiscard]] constexpr bool operator==(ngram_occurrence const&) const noexcept = default;
-    [[nodiscard]] constexpr std::strong_ordering operator<=>(ngram_occurrence const&) const noexcept = default;
+    [[nodiscard]] constexpr bool operator==(gram_occurrence const&) const noexcept = default;
+    [[nodiscard]] constexpr std::strong_ordering operator<=>(gram_occurrence const&) const noexcept = default;
 };
-
-namespace detail {
-
-template<std::size_t Bytes> struct ngram_value;
-template<> struct ngram_value<1> { using type = std::uint8_t; };
-template<> struct ngram_value<2> { using type = std::uint16_t; };
-template<> struct ngram_value<4> { using type = std::uint32_t; };
-template<> struct ngram_value<8> { using type = std::uint64_t; };
-
-template<std::size_t Bytes>
-using ngram_value_t = ngram_value<Bytes>::type;
-
-} // detail
-
-template<std::size_t N, class CharT>
-struct ngram
-{
-    static_assert(N >= 3);
-
-    std::array<CharT, N> data;
-
-    template<std::forward_iterator It>
-    constexpr void copy_n(It it)
-        noexcept(noexcept(*it++))
-    {
-        std::ranges::copy_n(it, N, data.begin());
-    }
-    template<std::forward_iterator It>
-    [[nodiscard]] static constexpr ngram from_copy_n(It it)
-        noexcept(noexcept(std::declval<ngram&>().copy_n(std::move(it))))
-    {
-        ngram ng;
-        ng.copy_n(std::move(it));
-        return ng;
-    }
-
-    template<std::forward_iterator It>
-    constexpr void shift_copy(It it, int const remaining_chars)
-        noexcept(
-            noexcept(std::shift_left(data.begin(), data.end(), remaining_chars)) &&
-            noexcept(std::ranges::copy_n(it, remaining_chars, data.begin() + (N - remaining_chars)))
-        )
-    {
-        assert(remaining_chars < int(N));
-        std::shift_left(data.begin(), data.end(), remaining_chars);
-        std::ranges::copy_n(it, remaining_chars, data.begin() + (N - remaining_chars));
-    }
-
-    template<std::size_t Len>
-    [[nodiscard]] static constexpr ngram from_c_array(CharT const (&chars)[Len]) noexcept
-    {
-        static_assert(Len == N + 1);
-        assert(chars[Len - 1] == static_cast<CharT>(0));
-        return ngram::from_copy_n(std::ranges::begin(chars));
-    }
-
-    [[nodiscard]] constexpr bool operator==(ngram const&) const noexcept = default;
-    [[nodiscard]] constexpr std::strong_ordering operator<=>(ngram const&) const noexcept = default;
-};
-
-template<class CharT>
-struct ngram<1, CharT>
-{
-    CharT data;
-
-    template<std::forward_iterator It>
-    constexpr void copy_n(It it)
-        noexcept(noexcept(*it))
-    {
-        data = *it;
-    }
-    template<std::forward_iterator It>
-    [[nodiscard]] static constexpr ngram from_copy_n(It it)
-        noexcept(noexcept(std::declval<ngram&>().copy_n(std::move(it))))
-    {
-        ngram ng;
-        ng.copy_n(std::move(it));
-        return ng;
-    }
-
-    template<std::size_t Len>
-    [[nodiscard]] static constexpr ngram from_c_array(CharT const (&chars)[Len]) noexcept
-    {
-        static_assert(Len == 1 + 1);
-        assert(chars[Len - 1] == static_cast<CharT>(0));
-        return ngram::from_copy_n(std::ranges::begin(chars));
-    }
-
-    [[nodiscard]] constexpr bool operator==(ngram const&) const noexcept = default;
-    [[nodiscard]] constexpr std::strong_ordering operator<=>(ngram const&) const noexcept = default;
-};
-
-template<class CharT>
-struct ngram<2, CharT>
-{
-    using value_type = detail::ngram_value_t<sizeof(CharT) * 2>;
-    value_type data;
-
-    template<std::forward_iterator It>
-    constexpr void copy_n(It it)
-        noexcept(noexcept(*it++))
-    {
-        using uchar = std::make_unsigned_t<CharT>;
-        data  = value_type(static_cast<uchar>(*it++)) << (sizeof(CharT) * 8);
-        data |= value_type(static_cast<uchar>(*it));
-    }
-    template<std::forward_iterator It>
-    [[nodiscard]] static constexpr ngram from_copy_n(It it)
-        noexcept(noexcept(std::declval<ngram&>().copy_n(std::move(it))))
-    {
-        ngram ng;
-        ng.copy_n(std::move(it));
-        return ng;
-    }
-
-    template<std::forward_iterator It>
-    constexpr void shift_copy(It it, int const remaining_chars)
-        noexcept(noexcept(*it))
-    {
-        assert(remaining_chars == 1);
-        (void)remaining_chars;
-        data = (data << (sizeof(CharT) * 8)) | value_type(static_cast<std::make_unsigned_t<CharT>>(*it));
-    }
-
-    template<std::size_t Len>
-    [[nodiscard]] static constexpr ngram from_c_array(CharT const (&chars)[Len]) noexcept
-    {
-        static_assert(Len == 2 + 1);
-        assert(chars[Len - 1] == static_cast<CharT>(0));
-        return ngram::from_copy_n(std::ranges::begin(chars));
-    }
-
-    [[nodiscard]] constexpr bool operator==(ngram const&) const noexcept = default;
-    [[nodiscard]] constexpr std::strong_ordering operator<=>(ngram const&) const noexcept = default;
-};
-
-inline namespace ngram_literals {
-
-[[nodiscard]] constexpr ngram_document_id operator ""_doc_id(unsigned long long id) noexcept
-{
-    return ngram_document_id{static_cast<std::underlying_type_t<ngram_document_id>>(id)};
-}
-
-} // ngram_literals
-
-template<class CharT, std::size_t N>
-[[nodiscard]] ngram<N - 1, CharT> to_ngram(CharT const (&chars)[N]) noexcept
-{
-    return ngram<N - 1, CharT>::from_c_array(chars);
-}
-
 
 namespace detail {
 
@@ -203,41 +48,32 @@ enum struct [[nodiscard]] search_continuation : bool
     proceed = true,
 };
 
-struct ngram_posting
+class posting_list
 {
-    ngram_document_id doc_id;
-    unsigned pos_offset = 0;
-    unsigned pos_count = 0;
-};
-
-struct ngram_posting_list
-{
-    std::vector<ngram_posting> postings;
-    std::vector<int> positions;
-
-    void append(ngram_document_id const doc_id, int pos)
+public:
+    void append(document_id const doc_id, int pos)
     {
-        if (postings.empty() || postings.back().doc_id != doc_id) {
-            if (!postings.empty() && postings.back().doc_id > doc_id) {
+        if (postings_.empty() || postings_.back().doc_id != doc_id) {
+            if (!postings_.empty() && postings_.back().doc_id > doc_id) {
                 throw std::invalid_argument{"documents must be indexed in non-decreasing order of document ID"};
             }
-            postings.emplace_back(
+            postings_.emplace_back(
                 doc_id,
-                static_cast<unsigned>(positions.size()),
+                static_cast<unsigned>(positions_.size()),
                 0
             );
         }
 
-        ++postings.back().pos_count;
-        positions.emplace_back(pos);
+        ++postings_.back().pos_count;
+        positions_.emplace_back(pos);
     }
 
-    void to_occurrence_list(std::vector<ngram_occurrence>& occs) const
+    void to_occurrence_list(std::vector<gram_occurrence>& occs) const
     {
         occs.clear();
-        for (auto const& posting : postings) {
+        for (auto const& posting : postings_) {
             for (std::size_t i = posting.pos_offset; i < posting.pos_offset + posting.pos_count; ++i) {
-                occs.emplace_back(posting.doc_id, positions[i]);
+                occs.emplace_back(posting.doc_id, positions_[i]);
             }
         }
     }
@@ -245,16 +81,16 @@ struct ngram_posting_list
     template<class F>
     void for_each_documents(F&& f) const
     {
-        static_assert(std::invocable<F, ngram_document_id, std::span<int const>>);
+        static_assert(std::invocable<F, document_id, std::span<int const>>);
 
         constexpr bool f_returns_continuation = std::same_as<
-            std::invoke_result_t<F, ngram_document_id, std::span<int const>>,
+            std::invoke_result_t<F, document_id, std::span<int const>>,
             search_continuation
         >;
 
-        for (auto const& posting : postings) {
+        for (auto const& posting : postings_) {
             std::span<int const> const posting_span{
-                positions.begin() + posting.pos_offset,
+                positions_.begin() + posting.pos_offset,
                 static_cast<std::size_t>(posting.pos_count)
             };
 
@@ -266,16 +102,27 @@ struct ngram_posting_list
             }
         }
     }
+
+private:
+    struct posting_t
+    {
+        document_id doc_id;
+        unsigned pos_offset = 0;
+        unsigned pos_count = 0;
+    };
+
+    std::vector<posting_t> postings_;
+    std::vector<int> positions_;
 };
 
-template<std::size_t N, class CharT, class PostingListT = ngram_posting_list>
-class ngram_index
+template<std::size_t N, class CharT, class PostingListT = posting_list>
+class gram_index
 {
-    using entry_map = std::flat_map<ngram<N, CharT>, std::unique_ptr<PostingListT>>;
+    using entry_map = std::flat_map<gram<N, CharT>, std::unique_ptr<PostingListT>>;
     static constexpr std::size_t side_merge_threshold = 2048;
 
 public:
-    [[nodiscard]] auto find_list(this auto&& self, ngram<N, CharT> const ng)
+    [[nodiscard]] auto find_list(this auto&& self, gram<N, CharT> const ng)
     {
         if (auto const it = self.gram_entries_.find(ng); it != self.gram_entries_.end()) {
             return it->second.get();
@@ -286,7 +133,7 @@ public:
         return static_cast<PostingListT*>(nullptr);
     }
 
-    void find_occurrences(ngram<N, CharT> const ng, std::vector<ngram_occurrence>& occs) const
+    void find_occurrences(gram<N, CharT> const ng, std::vector<gram_occurrence>& occs) const
     {
         occs.clear();
         auto const* list = this->find_list(ng);
@@ -295,7 +142,7 @@ public:
     }
 
     template<class F>
-    void search(ngram<N, CharT> const ng, F&& f) const
+    void search(gram<N, CharT> const ng, F&& f) const
     {
         auto const* list = this->find_list(ng);
         if (!list) return;
@@ -313,7 +160,7 @@ public:
         side_entries_.clear();
     }
 
-    void merge_new_entries(std::vector<std::pair<ngram<N, CharT>, std::unique_ptr<PostingListT>>>& pending)
+    void merge_new_entries(std::vector<std::pair<gram<N, CharT>, std::unique_ptr<PostingListT>>>& pending)
     {
         if (pending.empty()) return; // vocabulary saturated
 
@@ -371,19 +218,19 @@ private:
 };
 
 template<std::size_t N, class CharT>
-struct ngram_pos_t
+struct gram_pos_t
 {
-    ngram<N, CharT> ng;
+    gram<N, CharT> ng;
     int pos;
 
-    [[nodiscard]] constexpr bool operator==(ngram_pos_t const&) const noexcept = default;
-    [[nodiscard]] constexpr std::strong_ordering operator<=>(ngram_pos_t const&) const noexcept = default;
+    [[nodiscard]] constexpr bool operator==(gram_pos_t const&) const noexcept = default;
+    [[nodiscard]] constexpr std::strong_ordering operator<=>(gram_pos_t const&) const noexcept = default;
 };
 
-template<class CharT, class PostingListT = ngram_posting_list>
-struct ngram_index_storage
+template<class CharT, class PostingListT = posting_list>
+struct index_storage
 {
-    void append_index(ngram_document_id const doc_id, std::basic_string_view<CharT> const input)
+    void append_index(document_id const doc_id, std::basic_string_view<CharT> const input)
     {
         this->template append_index<1>(doc_id, input);
         this->template append_index<2>(doc_id, input);
@@ -403,7 +250,7 @@ struct ngram_index_storage
     }
 
     template<std::size_t N, class F>
-    void search(ngram<N, CharT> const ng, F&& f) const
+    void search(gram<N, CharT> const ng, F&& f) const
     {
         this->template get_data<N>().idx.search(ng, f);
     }
@@ -416,15 +263,15 @@ struct ngram_index_storage
 
 private:
     template<std::size_t N>
-    struct ngram_index_storage_data
+    struct gram_index_storage
     {
-        ngram_index<N, CharT, PostingListT> idx;
+        gram_index<N, CharT, PostingListT> idx;
 
         // Caches
-        std::vector<ngram_pos_t<N, CharT>, default_init_allocator<ngram_pos_t<N, CharT>>>
+        std::vector<gram_pos_t<N, CharT>, default_init_allocator<gram_pos_t<N, CharT>>>
         batch_grams;
 
-        std::vector<std::pair<ngram<N, CharT>, std::unique_ptr<PostingListT>>>
+        std::vector<std::pair<gram<N, CharT>, std::unique_ptr<PostingListT>>>
         batch_pending;
 
         void clear() noexcept
@@ -435,8 +282,8 @@ private:
         }
     };
 
-    ngram_index_storage_data<1> uni_data_;
-    ngram_index_storage_data<2> bi_data_;
+    gram_index_storage<1> uni_data_;
+    gram_index_storage<2> bi_data_;
 
     template<std::size_t N>
     [[nodiscard]] auto& get_data(this auto& self IRIS_LIFETIMEBOUND) noexcept
@@ -452,12 +299,12 @@ private:
 
     template<std::size_t N>
     void append_index(
-        ngram_document_id const doc_id,
+        document_id const doc_id,
         std::basic_string_view<CharT> const input
     )
     {
         if (input.size() < N) return;
-        ngram_index_storage_data<N>& data = this->template get_data<N>();
+        gram_index_storage<N>& data = this->template get_data<N>();
 
         // Naive per-gram insertion into flat_map is expensive: each *new* key
         // shifts the underlying vectors, so building an index of vocabulary
@@ -516,15 +363,15 @@ private:
 
 } // detail
 
-struct [[nodiscard]] ngram_search_word_match
+struct [[nodiscard]] search_word_match
 {
-    ngram_search_word_match() = default;
+    search_word_match() = default;
 
-    explicit ngram_search_word_match(int word_id)
+    explicit search_word_match(int word_id)
         : word_id(word_id)
     {}
 
-    ngram_search_word_match(int word_id, std::initializer_list<interval<int>> spans)
+    search_word_match(int word_id, std::initializer_list<interval<int>> spans)
         : word_id(word_id)
         , spans(spans)
     {}
@@ -534,23 +381,23 @@ struct [[nodiscard]] ngram_search_word_match
     std::vector<interval<int>> spans;
 
     [[nodiscard]]
-    bool operator==(ngram_search_word_match const& other) const noexcept
+    bool operator==(search_word_match const& other) const noexcept
     {
         return word_id == other.word_id && spans == other.spans;
     }
 };
 
-class [[nodiscard]] ngram_search_result
+class [[nodiscard]] search_result
 {
-    using doc_matches_map = std::flat_map<ngram_document_id, std::vector<ngram_search_word_match>>;
+    using doc_matches_map = std::flat_map<document_id, std::vector<search_word_match>>;
 
     struct word_matches_handle
     {
         doc_matches_map::iterator doc_it;
-        ngram_search_word_match* word_match = nullptr;
+        search_word_match* word_match = nullptr;
 
         [[nodiscard]]
-        ngram_search_word_match* operator->() const noexcept
+        search_word_match* operator->() const noexcept
         {
             return word_match;
         }
@@ -563,7 +410,7 @@ class [[nodiscard]] ngram_search_result
 
 public:
     [[nodiscard]]
-    bool has_document(ngram_document_id const doc_id) const noexcept
+    bool has_document(document_id const doc_id) const noexcept
     {
         auto const it = doc_matches_.find(doc_id);
         // An entry with no word matches is a tombstone (soft-erased document
@@ -577,7 +424,7 @@ public:
     // Returns whether search must continue
     template<bool IsFirstWord, std::size_t N>
     [[nodiscard]]
-    bool init_word_matches(ngram_document_id const doc_id, int const word_id, std::span<int const> const positions)
+    bool init_word_matches(document_id const doc_id, int const word_id, std::span<int const> const positions)
     {
         assert(!positions.empty());
 
@@ -594,7 +441,7 @@ public:
             if (doc_matches_it->second.empty()) return false; // tombstoned (soft-erased) document; skip
         }
 
-        assert(!std::ranges::contains(doc_matches_it->second, word_id, &ngram_search_word_match::word_id));
+        assert(!std::ranges::contains(doc_matches_it->second, word_id, &search_word_match::word_id));
         auto& word_match = doc_matches_it->second.emplace_back(word_id);
         word_match.spans.assign_range(positions | std::views::transform([](int const pos) -> interval<int> {
             return {pos, pos + static_cast<int>(N)};
@@ -603,7 +450,7 @@ public:
     }
 
     [[nodiscard]]
-    word_matches_handle get_word_matches(ngram_document_id const doc_id, int const word_id)
+    word_matches_handle get_word_matches(document_id const doc_id, int const word_id)
     {
         auto const doc_matches_it = doc_matches_.find(doc_id);
         if (doc_matches_it == doc_matches_.end()) return {};
@@ -618,7 +465,7 @@ public:
             assert(
                 doc_matches_it->second.empty() ||
                 // Make sure the matching element does not exist at the position except for *back*
-                !std::ranges::contains(doc_matches_it->second, word_id, &ngram_search_word_match::word_id)
+                !std::ranges::contains(doc_matches_it->second, word_id, &search_word_match::word_id)
             );
             return {};
         }
@@ -646,7 +493,7 @@ public:
         for (std::size_t in = 0; in < keys.size(); ++in) {
             auto& word_matches = values[in];
             bool is_word_survived = false;
-            std::erase_if(word_matches, [&](ngram_search_word_match const& wm) {
+            std::erase_if(word_matches, [&](search_word_match const& wm) {
                 if (wm.word_id != word_id) return false;
                 if (wm.successful_ngrams != expected_ngrams) return true;
                 is_word_survived = true;
@@ -690,24 +537,24 @@ private:
 };
 
 template<class CharT = char32_t>
-class ngram_database
+class database
 {
 public:
-    [[nodiscard]] ngram_document_id add_document(std::basic_string_view<CharT> const doc_text)
+    [[nodiscard]] document_id add_document(std::basic_string_view<CharT> const doc_text)
     {
-        ngram_document_id const doc_id{next_doc_id_};
-        next_doc_id_ = ngram_document_id{std::to_underlying(next_doc_id_) + 1u};
+        document_id const doc_id{next_doc_id_};
+        next_doc_id_ = document_id{std::to_underlying(next_doc_id_) + 1u};
 
         store_.append_index(doc_id, doc_text);
         return doc_id;
     }
 
-    [[nodiscard]] bool is_visible(ngram_document_id const doc_id) const noexcept
+    [[nodiscard]] bool is_visible(document_id const doc_id) const noexcept
     {
         return !invisible_documents_.contains(doc_id);
     }
 
-    void set_visible(ngram_document_id const doc_id, bool const flag)
+    void set_visible(document_id const doc_id, bool const flag)
     {
         if (flag) {
             invisible_documents_.erase(doc_id);
@@ -724,14 +571,14 @@ public:
     }
 
     template<std::size_t N>
-    void find_occurrences(ngram<N, CharT> ng, std::vector<ngram_occurrence>& occs) const
+    void find_occurrences(gram<N, CharT> ng, std::vector<gram_occurrence>& occs) const
     {
         occs.clear();
         auto const& idx = store_.template get_index<N>();
         idx.find_occurrences(ng, occs);
     }
 
-    bool search(ngram_search_query<CharT> const& query, ngram_search_result& search_res) const
+    bool search(search_query<CharT> const& query, search_result& search_res) const
     {
         if (query.empty()) return false;
         if (store_.empty()) return false;
@@ -758,7 +605,7 @@ public:
 
 private:
     template<bool IsFirstWord>
-    void search_word(ngram_search_result& search_res, int const word_id, std::basic_string_view<CharT> const word) const
+    void search_word(search_result& search_res, int const word_id, std::basic_string_view<CharT> const word) const
     {
         assert(!word.empty());
 
@@ -770,13 +617,13 @@ private:
     }
 
     template<bool IsFirstWord, std::size_t N>
-    void search_word_impl(ngram_search_result& search_res, int const word_id, std::basic_string_view<CharT> const word) const
+    void search_word_impl(search_result& search_res, int const word_id, std::basic_string_view<CharT> const word) const
     {
         assert(word.size() >= N);
-        auto ng = ngram<N, CharT>::from_copy_n(word.begin());
+        auto ng = gram<N, CharT>::from_copy_n(word.begin());
 
         if constexpr (IsFirstWord) {
-            store_.search(ng, [&](ngram_document_id const doc_id, std::span<int const> const positions) {
+            store_.search(ng, [&](document_id const doc_id, std::span<int const> const positions) {
                 if (!is_visible(doc_id)) return;
                 (void)search_res.init_word_matches<IsFirstWord, N>(doc_id, word_id, positions);
             });
@@ -784,7 +631,7 @@ private:
 
         } else {
             std::size_t available_doc_count = 0;
-            store_.search(ng, [&](ngram_document_id const doc_id, std::span<int const> const positions) {
+            store_.search(ng, [&](document_id const doc_id, std::span<int const> const positions) {
                 if (!is_visible(doc_id)) return;
                 if (search_res.init_word_matches<IsFirstWord, N>(doc_id, word_id, positions)) {
                     ++available_doc_count;
@@ -798,7 +645,7 @@ private:
 
         unsigned current_ngram = 1;
         auto const do_search = [&](int remaining_chars) {
-            return [&, remaining_chars, overlapping_chars = int(N) - remaining_chars](ngram_document_id const doc_id, std::span<int const> const positions) {
+            return [&, remaining_chars, overlapping_chars = int(N) - remaining_chars](document_id const doc_id, std::span<int const> const positions) {
                 if (!is_visible(doc_id)) return detail::search_continuation::proceed;
 
                 // Find the existing match set from the previous iteration.
@@ -812,9 +659,9 @@ private:
 
                 // Prevent *resurrecting* the false-positive match on "match -> unmatch -> match" pattern.
                 // For example, when the document is "abef" and the query is "abXXef",
-                //   - ngram{"ab"} -> match (successful_ngrams = 1)
-                //   - ngram{"XX"} -> no match (successful_ngrams is untouched)
-                //   - ngram{"ef"} -> successful_ngrams does not match current_ngram!
+                //   - gram{"ab"} -> match (successful_ngrams = 1)
+                //   - gram{"XX"} -> no match (successful_ngrams is untouched)
+                //   - gram{"ef"} -> successful_ngrams does not match current_ngram!
                 if (word_match->successful_ngrams != current_ngram) {
                     search_res.erase_document(word_match);
                     if (search_res.empty()) return detail::search_continuation::abort;
@@ -890,44 +737,44 @@ private:
         search_res.remove_stale_document_matches(word_id, current_ngram);
     }
 
-    ngram_document_id next_doc_id_{0_doc_id};
-    detail::ngram_index_storage<CharT> store_;
-    std::unordered_set<ngram_document_id> invisible_documents_;
+    document_id next_doc_id_{0_doc_id};
+    detail::index_storage<CharT> store_;
+    std::unordered_set<document_id> invisible_documents_;
 };
 
-} // iris
+} // iris::gram
 
 
 template<class CharT>
-struct std::formatter<iris::ngram_document_id, CharT>
-    : std::formatter<std::underlying_type_t<iris::ngram_document_id>, CharT>
+struct std::formatter<iris::ngram::document_id, CharT>
+    : std::formatter<std::underlying_type_t<iris::ngram::document_id>, CharT>
 {
-    using base_type = std::formatter<std::underlying_type_t<iris::ngram_document_id>, CharT>;
+    using base_type = std::formatter<std::underlying_type_t<iris::ngram::document_id>, CharT>;
 
     template<class Ctx>
-    Ctx::iterator format(iris::ngram_document_id doc_id, Ctx& ctx) const
+    Ctx::iterator format(iris::ngram::document_id doc_id, Ctx& ctx) const
     {
         return base_type::format(std::to_underlying(doc_id), ctx);
     }
 };
 
 template<class CharT>
-struct std::formatter<iris::ngram_occurrence, CharT>
+struct std::formatter<iris::ngram::gram_occurrence, CharT>
     : iris::no_spec_formatter<CharT>
 {
     template<class Ctx>
-    Ctx::iterator format(iris::ngram_occurrence const& occ, Ctx& ctx) const
+    Ctx::iterator format(iris::ngram::gram_occurrence const& occ, Ctx& ctx) const
     {
         return std::format_to(ctx.out(), "{}:{}", occ.doc_id, occ.pos);
     }
 };
 
 template<class CharT>
-struct std::formatter<iris::ngram_search_word_match, CharT>
+struct std::formatter<iris::ngram::search_word_match, CharT>
     : iris::no_spec_formatter<CharT>
 {
     template<class Ctx>
-    Ctx::iterator format(iris::ngram_search_word_match const& word_match, Ctx& ctx) const
+    Ctx::iterator format(iris::ngram::search_word_match const& word_match, Ctx& ctx) const
     {
         return std::format_to(ctx.out(), "{{word: #{}, spans: {}}}", word_match.word_id, word_match.spans);
     }

@@ -16,21 +16,21 @@
 #include <format>
 #include <algorithm>
 
-namespace iris {
+namespace iris::ngram {
 
 template<class CharT = char32_t>
-struct ngram_search_query
+struct search_query
 {
-    ngram_search_query() = default;
+    search_query() = default;
 
-    explicit ngram_search_query(std::basic_string_view<CharT> input_sv)
+    explicit search_query(std::basic_string_view<CharT> input_sv)
     {
         std::basic_string<CharT> input{input_sv};
         iris::compact_spaces(input);
         if (input.empty()) return;
 
         words_ = input
-            | std::views::split(detail::string_algo_traits<CharT>::space)
+            | std::views::split(iris::detail::string_algo_traits<CharT>::space)
             | std::views::transform([](auto const& r) {
                 return std::basic_string<CharT>{std::from_range, r};
             })
@@ -56,7 +56,7 @@ struct ngram_search_query
         return words_.empty();
     }
 
-    [[nodiscard]] bool operator==(ngram_search_query const& other) const noexcept
+    [[nodiscard]] bool operator==(search_query const& other) const noexcept
     {
         return words_ == other.words_;
     }
@@ -66,16 +66,16 @@ private:
 };
 
 template<class CharT, std::size_t N>
-ngram_search_query(CharT const(&)[N]) -> ngram_search_query<CharT>;
+search_query(CharT const(&)[N]) -> search_query<CharT>;
 
-} // iris
+} // iris::gram
 
 template<class NGCharT, class CharT>
-struct std::formatter<iris::ngram_search_query<NGCharT>, CharT>
+struct std::formatter<iris::ngram::search_query<NGCharT>, CharT>
     : iris::no_spec_formatter<CharT>
 {
     template<class Ctx>
-    Ctx::iterator format(iris::ngram_search_query<NGCharT> const& query, Ctx& ctx) const
+    Ctx::iterator format(iris::ngram::search_query<NGCharT> const& query, Ctx& ctx) const
     {
         return std::format_to(ctx.out(), "{}", query.words() | std::views::transform([](std::u32string_view ustr) {
             return iris::unicode::transcode<char>(ustr);

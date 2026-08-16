@@ -2,14 +2,14 @@
 
 #include "ngram_test.hpp"
 
-TEST_CASE("ngram search (document chars = 0)")
+TEST_CASE("gram search (document chars = 0)")
 {
 #ifdef _MSC_VER
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         IRIS_CHECK_SEARCH("");
         IRIS_CHECK_SEARCH("X");
         IRIS_CHECK_SEARCH("XX");
@@ -17,14 +17,14 @@ TEST_CASE("ngram search (document chars = 0)")
 }
 
 // 1-gram document
-TEST_CASE("ngram search (document chars = 1)")
+TEST_CASE("gram search (document chars = 1)")
 {
 #ifdef _MSC_VER
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"a");
         IRIS_CHECK_SEARCH("");
         IRIS_CHECK_SEARCH(
@@ -39,14 +39,14 @@ TEST_CASE("ngram search (document chars = 1)")
 }
 
 // 2-gram document
-TEST_CASE("ngram search (document chars = 2)")
+TEST_CASE("gram search (document chars = 2)")
 {
 #ifdef _MSC_VER
     SetConsoleOutputCP(CP_UTF8);
 #endif
 
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"aa");
         IRIS_CHECK_SEARCH("");
 
@@ -71,7 +71,7 @@ TEST_CASE("ngram search (document chars = 2)")
         IRIS_CHECK_SEARCH("XXX");
     }
     {
-        iris::ngram_database<> ngram_db;
+        iris::ngram::database<> ngram_db;
         (void)ngram_db.add_document(U"ab");
         IRIS_CHECK_SEARCH("");
 
