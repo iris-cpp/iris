@@ -3,7 +3,8 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <iris/config.hpp>
+#include <iris/config.hpp> // IWYU pragma: keep
+
 #include <iris/string_algo.hpp>
 #include <iris/format.hpp>
 
@@ -45,8 +46,7 @@ struct search_query
 
     // ------------------------------------------
 
-    [[nodiscard]]
-    auto const& words() const noexcept
+    [[nodiscard]] auto const& words() const noexcept
     {
         return words_;
     }
@@ -68,7 +68,7 @@ private:
 template<class CharT, std::size_t N>
 search_query(CharT const(&)[N]) -> search_query<CharT>;
 
-} // iris::gram
+} // iris::ngram
 
 template<class NGCharT, class CharT>
 struct std::formatter<iris::ngram::search_query<NGCharT>, CharT>

@@ -3,17 +3,33 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <iris/config.hpp>
+#include <iris/config.hpp> // IWYU pragma: keep
 
+#include <format>
 #include <utility>
 
 #include <cstdint>
+#include <cstddef> // IWYU pragma: keep
 
 namespace iris::ngram {
 
-enum struct document_id : std::uint32_t {};
+// An external id that is always *stable* across document updates or removal.
+enum struct document_id : std::uint32_t
+{
+    tombstone = static_cast<std::uint32_t>(-2),
+};
+
+namespace detail {
+
+[[nodiscard]] constexpr std::size_t to_index(document_id doc_id) noexcept
+{
+    return static_cast<std::size_t>(doc_id);
+}
+
+} // detail
 
 } // iris::ngram
+
 
 namespace iris {
 
@@ -27,5 +43,19 @@ inline namespace ngram_literals {
 } // ngram_literals
 
 } // iris
+
+
+template<class CharT>
+struct std::formatter<iris::ngram::document_id, CharT>
+    : std::formatter<std::underlying_type_t<iris::ngram::document_id>, CharT>
+{
+    using base_type = std::formatter<std::underlying_type_t<iris::ngram::document_id>, CharT>;
+
+    template<class Ctx>
+    Ctx::iterator format(iris::ngram::document_id doc_id, Ctx& ctx) const
+    {
+        return base_type::format(std::to_underlying(doc_id), ctx);
+    }
+};
 
 #endif
