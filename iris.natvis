@@ -255,16 +255,16 @@
 
 	<!-- ngram -->
 
-	<Type Name="iris::detail::ngram&lt;1,char32_t&gt;">
+	<Type Name="iris::ngram::gram&lt;1,char32_t&gt;">
 		<DisplayString>{chars._Elems,na1}</DisplayString>
 	</Type>
-	<Type Name="iris::detail::ngram&lt;2,char32_t&gt;">
+	<Type Name="iris::ngram::gram&lt;2,char32_t&gt;">
 		<DisplayString>{chars._Elems,na2}</DisplayString>
 	</Type>
-	<Type Name="iris::detail::ngram&lt;3,char32_t&gt;">
+	<Type Name="iris::ngram::gram&lt;3,char32_t&gt;">
 		<DisplayString>{chars._Elems,na3}</DisplayString>
 	</Type>
-	<Type Name="iris::detail::ngram&lt;4,char32_t&gt;">
+	<Type Name="iris::ngram::gram&lt;4,char32_t&gt;">
 		<DisplayString>{chars._Elems,na4}</DisplayString>
 	</Type>
 </AutoVisualizer>
