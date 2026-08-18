@@ -59,11 +59,13 @@ private:
     std::vector<interval<int>> spans_;
 };
 
-template<class DocumentID = document_id>
+template<class DocumentID = document_id, class HashT = std::hash<DocumentID>, class EqualT = std::equal_to<>>
 struct [[nodiscard]] search_result
 {
     using document_id_type = DocumentID;
-    using map_type = std::unordered_map<DocumentID, std::vector<search_word_match>>;
+    using hash_type = HashT;
+    using equal_type = EqualT;
+    using map_type = std::unordered_map<DocumentID, std::vector<search_word_match>, HashT, EqualT>;
 
     search_result() = default;
 

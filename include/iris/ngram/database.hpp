@@ -74,8 +74,8 @@ public:
         store_.clear();
     }
 
-    template<class DocumentID = document_id>
-    bool search(this auto const& db, search_query<CharT> const& query, search_result<DocumentID>& search_res)
+    template<class DocumentID, class HashT, class EqualT>
+    bool search(this auto const& db, search_query<CharT> const& query, search_result<DocumentID, HashT, EqualT>& search_res)
     {
         search_res.clear();
         if (query.empty()) return false;

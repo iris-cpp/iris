@@ -8,8 +8,7 @@
 #include <iris/ngram/database.hpp>
 #include <iris/ngram/id.hpp>
 
-#include <iris/hash.hpp>
-
+#include <format>
 #include <unordered_map>
 #include <stdexcept>
 #include <memory>
@@ -25,7 +24,7 @@ class keyed_database : private database<CharT>
 public:
     using document_id_type = KeyT;
 
-    template<class KeyLikeT>
+    template<class KeyLikeT = KeyT>
         requires std::is_constructible_v<KeyT, KeyLikeT>
     void add_document(KeyLikeT&& key_like, std::basic_string_view<CharT> const doc_text)
     {
@@ -34,8 +33,10 @@ public:
         if (!inserted) {
             if constexpr (std::is_pointer_v<KeyT>) {
                 throwf<std::invalid_argument>("key `{}` already exists in keyed_database", static_cast<void const*>(it->first));
-            } else {
+            } else if constexpr (std::formattable<KeyT, char>) {
                 throwf<std::invalid_argument>("key `{}` already exists in keyed_database", it->first);
+            } else {
+                throwf<std::invalid_argument>("key `???` already exists in keyed_database");
             }
         }
         assert(doc_id_to_key_.size() == detail::to_index(doc_id));
@@ -48,7 +49,7 @@ public:
         base_type::update_document(this->get_document_id(key_like), doc_text);
     }
 
-    template<class KeyLikeT>
+    template<class KeyLikeT = KeyT>
         requires std::is_constructible_v<KeyT, KeyLikeT>
     void add_or_update_document(KeyLikeT&& key_like, std::basic_string_view<CharT> const doc_text)
     {
