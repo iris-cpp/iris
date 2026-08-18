@@ -49,6 +49,20 @@ public:
     }
 
     template<class KeyLikeT>
+        requires std::is_constructible_v<KeyT, KeyLikeT>
+    void add_or_update_document(KeyLikeT&& key_like, std::basic_string_view<CharT> const doc_text)
+    {
+        KeyT key{std::forward<KeyLikeT>(key_like)};
+        auto const it = key_to_doc_id_.find(key);
+
+        if (it == key_to_doc_id_.end()) {
+            this->add_document(std::move(key), doc_text);
+        } else {
+            base_type::update_document(it->second, doc_text);
+        }
+    }
+
+    template<class KeyLikeT>
     void remove_document(KeyLikeT const& key_like)
     {
         base_type::remove_document(this->get_document_id(key_like));
