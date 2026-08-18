@@ -3,6 +3,8 @@
 
 // SPDX-License-Identifier: MIT
 
+// IWYU pragma: always_keep
+
 #include <version>
 
 #if _MSC_VER

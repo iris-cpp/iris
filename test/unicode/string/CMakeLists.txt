@@ -8,7 +8,7 @@ set(
 
 foreach(test_name IN LISTS IRIS_TEST_UNICODE_STRING_TESTS)
     iris_define_internal_test(unicode_string_${test_name} ${test_name}.cpp)
-    set_target_properties(unicode_string_${test_name}_test PROPERTIES FOLDER "test/unicode/string")
+    set_target_properties(iris_unicode_string_${test_name}_test PROPERTIES FOLDER "test/unicode/string")
 endforeach()
 
-target_sources(unicode_string_utf8_invalid_test PRIVATE test_data/utf8_invalid.txt)
+target_sources(iris_unicode_string_utf8_invalid_test PRIVATE test_data/utf8_invalid.txt)

@@ -252,4 +252,19 @@
 			<Item ExcludeView="NoType;Noindex;NoindexExpanded" Name="index">(int)index_</Item>
         </Expand>
     </Type>
+
+	<!-- ngram -->
+
+	<Type Name="iris::ngram::gram&lt;1,char32_t&gt;">
+		<DisplayString>{chars._Elems,na1}</DisplayString>
+	</Type>
+	<Type Name="iris::ngram::gram&lt;2,char32_t&gt;">
+		<DisplayString>{chars._Elems,na2}</DisplayString>
+	</Type>
+	<Type Name="iris::ngram::gram&lt;3,char32_t&gt;">
+		<DisplayString>{chars._Elems,na3}</DisplayString>
+	</Type>
+	<Type Name="iris::ngram::gram&lt;4,char32_t&gt;">
+		<DisplayString>{chars._Elems,na4}</DisplayString>
+	</Type>
 </AutoVisualizer>
