@@ -3,7 +3,7 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <iris/config.hpp>
+#include <iris/config.hpp> // IWYU pragma: keep
 
 #include <iris/bits/is_function_object.hpp>  // IWYU pragma: export
 #include <iris/bits/specialization_of.hpp>  // IWYU pragma: export
@@ -11,12 +11,49 @@
 #include <iris/requirements.hpp>
 
 #include <concepts>
-#include <type_traits>
+#include <type_traits> // IWYU pragma: export
 #include <utility>
 
 #include <cstddef>
 
 namespace iris {
+
+template<class T>
+struct remove_cv
+{
+    using type = T;
+
+    template<template <class> class F>
+    using apply = F<T>;
+};
+
+template<class T>
+struct remove_cv<T const>
+{
+    using type = T;
+
+    template<template <class> class F>
+    using apply = F<T> const;
+};
+
+template<class T>
+struct remove_cv<T volatile>
+{
+    using type = T;
+
+    template<template <class> class F>
+    using apply = F<T> volatile;
+};
+
+template<class T>
+struct remove_cv<T const volatile>
+{
+    using type = T;
+
+    template<template <class> class F>
+    using apply = F<T> const volatile;
+};
+
 
 template<class... Ts>
 struct type_list
