@@ -205,6 +205,31 @@ TEST_CASE("string_algo: escape")
 #undef IRIS_TEST_ESCAPE
 }
 
+
+TEST_CASE("string_algo: abbreviate")
+{
+#ifdef _MSC_VER
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+
+    {
+        std::string str;
+        iris::abbreviate(str, 3, "...");
+        CHECK(str == ""sv);
+    }
+
+    CHECK_THROWS_AS(iris::abbreviate_copy("", 2, "..."), std::length_error);
+    CHECK_THROWS_AS(iris::abbreviate_copy("aaaaaa", 2, "..."), std::length_error);
+
+    CHECK(iris::abbreviate_copy("fo", 3, "...") == "fo"sv);
+    CHECK(iris::abbreviate_copy("foo", 3, "...") == "foo"sv);
+    CHECK(iris::abbreviate_copy("foob", 3, "...") == "..."sv);
+
+    CHECK(iris::abbreviate_copy("foo", 4, "...") == "foo"sv);
+    CHECK(iris::abbreviate_copy("foob", 4, "...") == "foob"sv);
+    CHECK(iris::abbreviate_copy("fooba", 4, "...") == "f..."sv);
+}
+
 TEST_CASE("string_algo: ordinary_normalize")
 {
 #ifdef _MSC_VER
