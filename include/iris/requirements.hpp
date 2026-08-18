@@ -3,11 +3,13 @@
 
 // SPDX-License-Identifier: MIT
 
+#include <iris/config.hpp> // IWYU pragma: keep
+
 #include <iris/hash_fwd.hpp>
 #include <iris/bits/is_function_object.hpp>
 #include <iris/bits/specialization_of.hpp>
 
-#include <concepts>
+#include <concepts> // IWYU pragma: export
 #include <type_traits>
 #include <utility>
 

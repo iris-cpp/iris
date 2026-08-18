@@ -179,6 +179,7 @@ if(PROJECT_IS_TOP_LEVEL)
             IRIS_TEST_IRIS_TESTS
             core
             type_traits
+            stdint
             enum
             indirect
             colorize_format
