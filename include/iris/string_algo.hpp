@@ -270,6 +270,49 @@ template<int = 0>
 }
 
 
+// Truncates the tail of the string to `max_length` while replacing the tail with
+// `ellipsis` iff `input.size()` exceeded `max_length`.
+template<class CharT, class TraitsT>
+constexpr void abbreviate(
+    std::basic_string<CharT, TraitsT>& input,
+    std::size_t const max_length,
+    std::type_identity_t<std::basic_string_view<CharT, TraitsT>> ellipsis
+)
+{
+    if (max_length < ellipsis.size()) {
+        throw std::length_error{"ellipsis' length is longer than max_length"};
+    }
+
+    if (input.size() > max_length) {
+        input.replace(max_length - ellipsis.size(), std::basic_string<CharT, TraitsT>::npos, ellipsis);
+    }
+}
+
+template<int = 0>
+constexpr std::string abbreviate_copy(
+    std::string_view input,
+    std::size_t const max_length,
+    std::string_view ellipsis
+)
+{
+    std::string buf(input);
+    iris::abbreviate(buf, max_length, ellipsis);
+    return buf;
+}
+
+template<int = 0>
+constexpr std::u32string abbreviate_copy(
+    std::u32string_view input,
+    std::size_t const max_length,
+    std::u32string_view ellipsis
+)
+{
+    std::u32string buf(input);
+    iris::abbreviate(buf, max_length, ellipsis);
+    return buf;
+}
+
+
 namespace detail {
 
 // Closed range [first, last] of character set
