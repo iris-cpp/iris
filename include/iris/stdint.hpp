@@ -98,7 +98,7 @@ using make_integer_of_size_impl_t = integer_of_size_impl<signedness_of_integral<
 template<class T>
 struct make_signed_of_size
 {
-    static_assert(std::integral<T> && !std::same_as<std::remove_cv_t<T>, bool> || std::is_enum_v<T>);
+    static_assert((std::integral<T> && !std::same_as<std::remove_cv_t<T>, bool>) || std::is_enum_v<T>);
     using type = remove_cv<T>::template apply<detail::make_signed_of_size_impl_t>;
 };
 
@@ -108,7 +108,7 @@ using make_signed_of_size_t = make_signed_of_size<T>::type;
 template<class T>
 struct make_unsigned_of_size
 {
-    static_assert(std::integral<T> && !std::same_as<std::remove_cv_t<T>, bool> || std::is_enum_v<T>);
+    static_assert((std::integral<T> && !std::same_as<std::remove_cv_t<T>, bool>) || std::is_enum_v<T>);
     using type = remove_cv<T>::template apply<detail::make_unsigned_of_size_impl_t>;
 };
 
@@ -118,7 +118,7 @@ using make_unsigned_of_size_t = make_unsigned_of_size<T>::type;
 template<class T>
 struct make_integer_of_size
 {
-    static_assert(std::integral<T> && !std::same_as<std::remove_cv_t<T>, bool> || std::is_enum_v<T>);
+    static_assert((std::integral<T> && !std::same_as<std::remove_cv_t<T>, bool>) || std::is_enum_v<T>);
     using type = remove_cv<T>::template apply<detail::make_integer_of_size_impl_t>;
 };
 

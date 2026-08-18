@@ -3,13 +3,16 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <iris/config.hpp>
-#include <iris/string.hpp>
+#include <iris/config.hpp> // IWYU pragma: keep
+#include <iris/string.hpp> // IWYU pragma: keep
+#include <iris/stdint.hpp>
 
+#include <concepts>
 #include <string>
 #include <string_view>
 #include <algorithm>
 #include <type_traits>
+#include <array>
 
 #include <cassert>
 
@@ -263,6 +266,118 @@ template<int = 0>
 {
     std::u32string buf(input);
     iris::unescape(buf, leader);
+    return buf;
+}
+
+
+namespace detail {
+
+// Closed range [first, last] of character set
+template<class CharT>
+struct char_range
+{
+    using char_type = CharT;
+    using value_type = make_unsigned_of_size_t<CharT>;
+
+    CharT first, last;
+
+    consteval char_range(CharT first, CharT last)
+        : first(first)
+        , last(last)
+    {
+        if (first > last) throw std::domain_error{"char_range must be proper"};
+    }
+
+    [[nodiscard]] constexpr std::size_t count() const noexcept
+    {
+        return static_cast<std::size_t>(
+            static_cast<value_type>(last) - static_cast<value_type>(first)
+        ) + 1uz;
+    }
+};
+
+template<class FromT, class ToT = FromT>
+struct char_substitute
+{
+    using char_type = FromT::char_type;
+    using value_type = make_unsigned_of_size_t<char_type>;
+
+    FromT from;
+    ToT to;
+
+    consteval char_substitute(FromT from, ToT to)
+        : from(from)
+        , to(to)
+    {
+        if (from.count() != to.count()) {
+            throw std::out_of_range{"from.count() does not match to.count()"};
+        }
+    }
+
+    [[nodiscard]] constexpr bool substitute(char_type& ch) const noexcept
+    {
+        if (from.first <= ch && ch <= from.last) {
+            value_type const ofs = static_cast<value_type>(ch) - static_cast<value_type>(from.first);
+            ch = static_cast<char_type>(static_cast<value_type>(to.first) + ofs);
+            return true;
+        }
+        return false;
+    }
+};
+
+template<class CharT>
+inline constexpr auto jp_substitutes = std::to_array<char_substitute<char_range<CharT>>>({
+    {{U'０', U'９'}, {U'0', U'9'}},
+    {{U'Ａ', U'Ｚ'}, {U'A', U'Z'}},
+    {{U'ａ', U'ｚ'}, {U'a', U'z'}},
+});
+
+} // detail
+
+// Normalizes occurrences of "ordinary" inconsistent spelling with
+// the canonicalized letter.
+//
+// This algorithm guarantees the character count never changes regardless
+// of the transformation, in contrast to fully-featured Unicode normalization
+// such as NFKC. (Note: NFKC not only changes the character count; it may
+// occasionally render the resulting character to empty set, or even *flips*
+// the character positioning, which makes it require a rather complex algo.)
+//
+// The above design choice enables this function to be used like an *easy*
+// canonicalization, where the original and the transformed string can both
+// be mapped to the identical `interval<int>`.
+template<class CharT, class TraitsT>
+constexpr void ordinary_normalize(std::basic_string<CharT, TraitsT>& input)
+{
+    static_assert(std::same_as<CharT, char32_t>, "sorry, not implemented");
+
+    for (CharT& ch : input) {
+        switch (ch) {
+        case U'　': ch = U' '; continue;
+        default: break;
+        }
+
+        for (auto const& subs : detail::jp_substitutes<CharT>) {
+            if (subs.substitute(ch)) {
+                break;
+            }
+        }
+    }
+}
+
+//template<int = 0>
+//[[nodiscard]] constexpr std::string ordinary_normalize_copy(std::string_view input)
+//{
+//    std::string buf(input);
+//    iris::ordinary_normalize(buf);
+//    return buf;
+//}
+
+template<int = 0>
+[[nodiscard]] constexpr std::u32string ordinary_normalize_copy(std::u32string_view input)
+{
+    std::u32string buf(input);
+    iris::ordinary_normalize(buf);
     return buf;
 }
 

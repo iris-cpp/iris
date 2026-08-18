@@ -205,4 +205,66 @@ TEST_CASE("string_algo: escape")
 #undef IRIS_TEST_ESCAPE
 }
 
+TEST_CASE("string_algo: ordinary_normalize")
+{
+#ifdef _MSC_VER
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+
+    {
+        std::u32string str;
+        iris::ordinary_normalize(str);
+        CHECK(str == U""sv);
+    }
+
+    CHECK(iris::ordinary_normalize_copy(U"") == U""sv);
+
+#if 0
+let edge_chars = [['ａ', 'ｚ'], ['Ａ', 'Ｚ'], ['０', '９']];
+for (let char_range of edge_chars) {
+    console.log(`[${char_range[0].codePointAt(0).toString(16)}, ${char_range[1].codePointAt(0).toString(16)}]`);
+}
+// [ff41, ff5a]
+// [ff21, ff3a]
+// [ff10, ff19]
+#endif
+
+    CHECK(iris::ordinary_normalize_copy(U" ") == U" "sv);
+    CHECK(iris::ordinary_normalize_copy(U"　") == U" "sv);
+
+    CHECK(iris::ordinary_normalize_copy(U"a") == U"a"sv);
+    CHECK(iris::ordinary_normalize_copy(U"z") == U"z"sv);
+    CHECK(iris::ordinary_normalize_copy(U"A") == U"A"sv);
+    CHECK(iris::ordinary_normalize_copy(U"Z") == U"Z"sv);
+    CHECK(iris::ordinary_normalize_copy(U"0") == U"0"sv);
+    CHECK(iris::ordinary_normalize_copy(U"9") == U"9"sv);
+
+    CHECK(iris::ordinary_normalize_copy(U"ａ") == U"a"sv);
+    CHECK(iris::ordinary_normalize_copy(U"ｚ") == U"z"sv);
+    CHECK(iris::ordinary_normalize_copy(U"\uff5b") == U"\uff5b"sv);
+
+    CHECK(iris::ordinary_normalize_copy(U"Ａ") == U"A"sv);
+    CHECK(iris::ordinary_normalize_copy(U"Ｚ") == U"Z"sv);
+    CHECK(iris::ordinary_normalize_copy(U"\uff3b") == U"\uff3b"sv);
+
+    CHECK(iris::ordinary_normalize_copy(U"０") == U"0"sv);
+    CHECK(iris::ordinary_normalize_copy(U"９") == U"9"sv);
+    CHECK(iris::ordinary_normalize_copy(U"\uff20") == U"\uff20"sv);
+
+    {
+        std::u32string_view const input =
+            U"ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ／"
+            U"ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ／"
+            U"０１２３４５６７８９";
+
+        std::u32string_view const expected_normalized =
+            U"abcdefghijklmnopqrstuvwxyz／"
+            U"ABCDEFGHIJKLMNOPQRSTUVWXYZ／"
+            U"0123456789";
+
+        CHECK(iris::ordinary_normalize_copy(input) == expected_normalized);
+        CHECK(iris::ordinary_normalize_copy(input).size() == input.size());
+    }
+}
+
 // NOLINTEND(readability-container-size-empty)
