@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-# Copyright 2026 The Iris Project Contributors
-#
-# Distributed under the Boost Software License, Version 1.0.
-# https://www.boost.org/LICENSE_1_0.txt
+
+# SPDX-License-Identifier: MIT
 
 N = 32
 

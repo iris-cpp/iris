@@ -1,12 +1,7 @@
 #ifndef IRIS_ZZ_ALLOY_DETAIL_INTEGER_SEQ_TRANSFORM_HPP
 #define IRIS_ZZ_ALLOY_DETAIL_INTEGER_SEQ_TRANSFORM_HPP
 
-/*=============================================================================
-    Copyright (c) 2025 Yaito Kakeyama
-
-    Distributed under the Boost Software License, Version 1.0. (See accompanying
-    file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-==============================================================================*/
+// SPDX-License-Identifier: MIT
 
 #include <utility>
 
