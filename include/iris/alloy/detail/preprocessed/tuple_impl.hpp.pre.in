@@ -1,0 +1,17 @@
+#ifndef IRIS_ZZ_ALLOY_DETAIL_PREPROCESSED_TUPLE_IMPL_HPP
+#define IRIS_ZZ_ALLOY_DETAIL_PREPROCESSED_TUPLE_IMPL_HPP
+
+// SPDX-License-Identifier: MIT
+
+#include <iris/config.hpp>
+
+#include <iris/alloy/detail/tuple_comparison.hpp>
+
+#include <iris/alloy/traits.hpp>
+
+#include <iris/type_traits.hpp>
+
+#include <type_traits>
+
+#include <cstddef>
+

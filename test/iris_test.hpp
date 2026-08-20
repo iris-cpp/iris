@@ -3,7 +3,7 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <iris/config.hpp>
+#include <iris/config.hpp> // IWYU pragma: keep
 
 #include <catch2/catch_test_macros.hpp>  // IWYU pragma: export
 #include <catch2/catch_tostring.hpp>
