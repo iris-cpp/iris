@@ -5,7 +5,7 @@
 
 #include <iris/config.hpp> // IWYU pragma: keep
 
-#include <iris/sfield/serialize.hpp>
+#include <iris/sfield/serialize_traits.hpp>
 
 #include <iris/alloy/utility.hpp>
 
