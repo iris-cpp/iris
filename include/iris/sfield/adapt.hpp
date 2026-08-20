@@ -5,7 +5,7 @@
 
 #include <iris/config.hpp> // IWYU pragma: keep
 
-#include <iris/sfield/serialize.hpp>
+#include <iris/sfield/serialize_traits.hpp>
 
 #include <iris/alloy/adapt.hpp> // IWYU pragma: export
 
@@ -13,15 +13,9 @@
 #include <iris/pp/stringize.hpp>
 #include <iris/pp/cat.hpp>
 
-#include <concepts>
 #include <string>
 #include <string_view>
 #include <type_traits>
-#include <utility>
-#include <array>
-
-#include <cassert>
-
 
 namespace iris::sfield {
 
@@ -33,7 +27,7 @@ struct is_value_semantics_preferred : std::false_type
 
 template<class T>
     requires
-        std::is_fundamental_v<T> ||
+        std::is_arithmetic_v<T> ||
         std::is_reference_v<T> ||
         std::is_pointer_v<T> ||
         std::is_enum_v<T>

@@ -3,8 +3,8 @@
 #include <iris/alloy/adapted/std_pair.hpp>
 #include <iris/alloy/adapted/std_tuple.hpp>
 
+#include <iris/sfield/serialize_traits.hpp>
 #include <iris/sfield/adapt.hpp>
-#include <iris/sfield/serialize.hpp>
 #include <iris/sfield/serialize_json.hpp>
 
 #include <concepts>

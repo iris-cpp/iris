@@ -1,5 +1,5 @@
-#ifndef IRIS_ZZ_SFIELD_SERIALIZE_HPP
-#define IRIS_ZZ_SFIELD_SERIALIZE_HPP
+#ifndef IRIS_ZZ_SFIELD_SERIALIZE_TRAITS_HPP
+#define IRIS_ZZ_SFIELD_SERIALIZE_TRAITS_HPP
 
 // SPDX-License-Identifier: MIT
 
@@ -14,9 +14,9 @@
 
 #include <iris/bits/specialization_of.hpp>
 
-#include <concepts>
 #include <type_traits>
 #include <optional>
+#include <utility>
 
 namespace iris::sfield {
 
