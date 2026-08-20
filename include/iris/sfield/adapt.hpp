@@ -110,23 +110,33 @@ struct field_definition
     IRIS_ZZ_SFIELD_BOOL_GET_SET(maybe_paren_type, field_name, default_value)
 
 
-#define IRIS_SFIELD_GET(maybe_paren_type, field_name, ...) \
+#define IRIS_ZZ_SFIELD_TYPE_IS_bool (bool)
+
+#define IRIS_ZZ_SFIELD_GET_I(maybe_paren_type, field_name, ...) \
     IRIS_ZZ_SFIELD_DATA_MEMBER(maybe_paren_type, field_name, __VA_ARGS__) \
     IRIS_ZZ_SFIELD_GETTER(maybe_paren_type, field_name)
 
-#define IRIS_SFIELD_GET_SET(maybe_paren_type, field_name, ...) \
+#define IRIS_SFIELD_GET(maybe_paren_type, field_name, ...) \
+    IRIS_PP_IF( \
+        IRIS_PP_IS_PAREN( IRIS_PP_CAT_ONLY_TWO(IRIS_ZZ_SFIELD_TYPE_IS_, IRIS_PP_UNPAREN_IF_PAREN(maybe_paren_type)) ), \
+        IRIS_ZZ_SFIELD_BOOL_GET, \
+        IRIS_ZZ_SFIELD_GET_I \
+    ) (maybe_paren_type, field_name, __VA_ARGS__)
+
+#define IRIS_ZZ_SFIELD_GET_SET_I(maybe_paren_type, field_name, ...) \
     IRIS_ZZ_SFIELD_DATA_MEMBER(maybe_paren_type, field_name, __VA_ARGS__) \
     IRIS_ZZ_SFIELD_GETTER(maybe_paren_type, field_name) \
     IRIS_ZZ_SFIELD_SETTER(maybe_paren_type, field_name)
 
-#define IRIS_ZZ_SFIELD_TYPE_IS_bool (bool)
-
-#define IRIS_SFIELD(maybe_paren_type, field_name, ...) \
+#define IRIS_SFIELD_GET_SET(maybe_paren_type, field_name, ...) \
     IRIS_PP_IF( \
         IRIS_PP_IS_PAREN( IRIS_PP_CAT_ONLY_TWO(IRIS_ZZ_SFIELD_TYPE_IS_, IRIS_PP_UNPAREN_IF_PAREN(maybe_paren_type)) ), \
         IRIS_ZZ_SFIELD_BOOL_GET_SET, \
-        IRIS_SFIELD_GET_SET \
+        IRIS_ZZ_SFIELD_GET_SET_I \
     ) (maybe_paren_type, field_name, __VA_ARGS__)
+
+#define IRIS_SFIELD(maybe_paren_type, field_name, ...) \
+    IRIS_SFIELD_GET_SET(maybe_paren_type, field_name, __VA_ARGS__)
 
 #define IRIS_SFIELD_CLASS(class_name) \
     template<class ClassT> \
