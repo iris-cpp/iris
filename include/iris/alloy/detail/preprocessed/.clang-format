@@ -1,0 +1,16 @@
+AccessModifierOffset: -4
+AllowBreakBeforeNoexceptSpecifier: OnlyWithParen
+AlwaysBreakTemplateDeclarations : true
+ColumnLimit: 160
+FixNamespaceComments: false
+IndentWidth: 4
+NamespaceIndentation: None
+PointerAlignment: Left
+QualifierAlignment: Right
+UseTab: Never
+AlignEscapedNewlines: DontAlign
+BreakBeforeBraces: Mozilla
+SpaceAfterTemplateKeyword: false
+SpaceBeforeParens: Custom
+SpaceBeforeParensOptions:
+  AfterRequiresInClause: true

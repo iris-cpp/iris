@@ -214,20 +214,42 @@ endif()
 # -----------------------------------------------------------------
 # Configure Iris main target
 
+option(IRIS_CI "Enables intensive testing for CI" OFF)
+if(IRIS_CI)
+    target_compile_definitions(iris INTERFACE IRIS_CI=1)
+endif()
+
 file(
     GLOB_RECURSE IRIS_HEADERS
     ${PROJECT_SOURCE_DIR}/include/iris/*.hpp
     ${PROJECT_SOURCE_DIR}/include/iris/*.ipp
 )
 
+if(MSVC)
+    add_custom_command(
+        OUTPUT ${PROJECT_SOURCE_DIR}/include/iris/alloy/detail/preprocessed/tuple_impl.hpp
+        COMMAND ${PROJECT_SOURCE_DIR}/scripts/generate_tuple_members.bat
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+        DEPENDS ${PROJECT_SOURCE_DIR}/include/iris/alloy/detail/tuple_impl.hpp
+        VERBATIM
+    )
+else()
+    add_custom_command(
+        OUTPUT ${PROJECT_SOURCE_DIR}/include/iris/alloy/detail/preprocessed/tuple_impl.hpp
+        COMMAND ${PROJECT_SOURCE_DIR}/scripts/generate_tuple_members.sh
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+        DEPENDS ${PROJECT_SOURCE_DIR}/include/iris/alloy/detail/tuple_impl.hpp
+        VERBATIM
+    )
+endif()
+
+list(APPEND IRIS_HEADERS ${PROJECT_SOURCE_DIR}/include/iris/alloy/detail/preprocessed/tuple_impl.hpp)
+list(REMOVE_DUPLICATES IRIS_HEADERS)
+
 target_sources(iris PRIVATE FILE_SET HEADERS TYPE HEADERS FILES ${IRIS_HEADERS})
 source_group(TREE ${PROJECT_SOURCE_DIR}/include/iris PREFIX iris FILES ${IRIS_HEADERS})
 target_include_directories(iris INTERFACE ${PROJECT_SOURCE_DIR}/include)
 
-option(IRIS_CI "Enables intensive testing for CI" OFF)
-if(IRIS_CI)
-    target_compile_definitions(iris INTERFACE IRIS_CI=1)
-endif()
 
 # -----------------------------------------------------------------
 # Test
