@@ -71,6 +71,12 @@ struct tuple_size {};
 template<class T>
 struct tuple_size<T const> : tuple_size<T> {};
 
+template<class T>
+struct tuple_size<T volatile> : tuple_size<T> {};
+
+template<class T>
+struct tuple_size<T const volatile> : tuple_size<T> {};
+
 template<class... Ts>
 struct tuple_size<tuple<Ts...>> : std::integral_constant<std::size_t, sizeof...(Ts)> {};
 
@@ -88,6 +94,25 @@ struct tuple_element<I, tuple<Ts...>>
 {
     using type = IRIS_CORE_PACK_INDEXING(I, Ts...);
 };
+
+template<std::size_t I, class... Ts>
+struct tuple_element<I, tuple<Ts...> const>
+{
+    using type = tuple_element<I, tuple<Ts...>>::type const;
+};
+
+template<std::size_t I, class... Ts>
+struct tuple_element<I, tuple<Ts...> volatile>
+{
+    using type = tuple_element<I, tuple<Ts...>>::type volatile;
+};
+
+template<std::size_t I, class... Ts>
+struct tuple_element<I, tuple<Ts...> const volatile>
+{
+    using type = tuple_element<I, tuple<Ts...>>::type const volatile;
+};
+
 
 template<std::size_t I, class Tuple>
 using tuple_element_t = typename tuple_element<I, Tuple>::type;

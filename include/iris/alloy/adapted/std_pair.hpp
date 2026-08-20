@@ -7,6 +7,33 @@
 
 namespace iris::alloy {
 
+template<class T>
+struct tuple_size;
+
+template<class T, class U>
+struct tuple_size<std::pair<T, U>> : std::integral_constant<std::size_t, 2>
+{};
+
+template<std::size_t I, class Tuple>
+struct tuple_element;
+
+template<std::size_t I, class T, class U>
+struct tuple_element<I, std::pair<T, U>> : std::tuple_element<I, std::pair<T, U>>
+{};
+
+template<std::size_t I, class T, class U>
+struct tuple_element<I, std::pair<T, U> const> : std::tuple_element<I, std::pair<T, U> const>
+{};
+
+template<std::size_t I, class T, class U>
+struct tuple_element<I, std::pair<T, U> volatile> : std::tuple_element<I, std::pair<T, U> volatile>
+{};
+
+template<std::size_t I, class T, class U>
+struct tuple_element<I, std::pair<T, U> const volatile> : std::tuple_element<I, std::pair<T, U> const volatile>
+{};
+
+
 namespace detail {
 
 template<auto... Vs>

@@ -181,6 +181,7 @@ if(PROJECT_IS_TOP_LEVEL)
             IRIS_TEST_IRIS_TESTS
             core
             type_traits
+            ranges
             stdint
             enum
             indirect
@@ -197,6 +198,8 @@ if(PROJECT_IS_TOP_LEVEL)
         foreach(test_name IN LISTS IRIS_TEST_IRIS_TESTS)
             iris_define_internal_test(${test_name} ${test_name}.cpp)
         endforeach()
+
+        target_link_libraries(iris_sfield_test PRIVATE Iris::SField)
 
         set(
             IRIS_TEST_NGRAM_TESTS
