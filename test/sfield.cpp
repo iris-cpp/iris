@@ -132,10 +132,11 @@ struct MyData
 {
     IRIS_SFIELD_CLASS(MyData)
 
-    IRIS_SFIELD((std::string), name)
-    IRIS_SFIELD((std::string), text, "empty text")
-    IRIS_SFIELD((int), age)
-    IRIS_SFIELD_BOOL((bool), enabled, true)
+    IRIS_SFIELD(std::string, name)
+    IRIS_SFIELD(std::string, text, "empty text")
+    IRIS_SFIELD((std::pair<int, int>), pair)
+    IRIS_SFIELD(int, age)
+    IRIS_SFIELD(bool, enabled, true)
 };
 
 IRIS_SFIELD_ADAPT(
