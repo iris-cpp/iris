@@ -140,7 +140,7 @@ struct field_definition
 
 #define IRIS_MARSHAL_CLASS(class_name) \
     template<class ClassT> \
-    friend struct ::iris::marshal::detail::adapted_class; \
+    friend struct ::iris::marshal::adapted_class_traits; \
     \
     [[nodiscard]] constexpr bool operator==(class_name const&) const noexcept = default;
 
@@ -153,7 +153,7 @@ struct field_definition
 
 #define IRIS_MARSHAL_ADAPT(class_name, ...) \
     template<> \
-    struct iris::marshal::detail::adapted_class<class_name> \
+    struct iris::marshal::adapted_class_traits<class_name> \
     { \
         inline static constexpr auto fields = ::iris::alloy::tuple{ \
             IRIS_PP_SEQ_FOR_EACH( \
