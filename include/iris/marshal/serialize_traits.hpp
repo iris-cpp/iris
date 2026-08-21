@@ -1,5 +1,5 @@
-#ifndef IRIS_ZZ_SFIELD_SERIALIZE_TRAITS_HPP
-#define IRIS_ZZ_SFIELD_SERIALIZE_TRAITS_HPP
+#ifndef IRIS_ZZ_MARSHAL_SERIALIZE_TRAITS_HPP
+#define IRIS_ZZ_MARSHAL_SERIALIZE_TRAITS_HPP
 
 // SPDX-License-Identifier: MIT
 
@@ -18,7 +18,7 @@
 #include <optional>
 #include <utility>
 
-namespace iris::sfield {
+namespace iris::marshal {
 
 namespace detail {
 
@@ -138,6 +138,6 @@ concept serializable =
     serializable_map<T> ||
     serializable_class<T>;
 
-} // iris::sfield
+} // iris::marshal
 
 #endif

@@ -224,7 +224,7 @@ file(
     ${PROJECT_SOURCE_DIR}/include/iris/*.hpp
     ${PROJECT_SOURCE_DIR}/include/iris/*.ipp
 )
-list(FILTER IRIS_HEADERS EXCLUDE REGEX /include/iris/sfield[./])
+list(FILTER IRIS_HEADERS EXCLUDE REGEX /include/iris/marshal[./])
 
 if(MSVC)
     add_custom_command(
@@ -256,19 +256,19 @@ target_include_directories(iris INTERFACE ${PROJECT_SOURCE_DIR}/include)
 # Additional sublibraries
 
 file(
-    GLOB_RECURSE IRIS_SFIELD_HEADERS
-    ${PROJECT_SOURCE_DIR}/include/iris/sfield/*.hpp
-    ${PROJECT_SOURCE_DIR}/include/iris/sfield*.hpp
+    GLOB_RECURSE IRIS_MARSHAL_HEADERS
+    ${PROJECT_SOURCE_DIR}/include/iris/marshal/*.hpp
+    ${PROJECT_SOURCE_DIR}/include/iris/marshal*.hpp
 )
 
-add_library(iris_sfield INTERFACE)
-add_library(Iris::SField ALIAS iris_sfield)
+add_library(iris_marshal INTERFACE)
+add_library(Iris::Marshal ALIAS iris_marshal)
 
-target_sources(iris_sfield PRIVATE FILE_SET HEADERS TYPE HEADERS FILES ${IRIS_SFIELD_HEADERS})
-source_group(TREE ${PROJECT_SOURCE_DIR}/include/iris PREFIX iris FILES ${IRIS_SFIELD_HEADERS})
+target_sources(iris_marshal PRIVATE FILE_SET HEADERS TYPE HEADERS FILES ${IRIS_MARSHAL_HEADERS})
+source_group(TREE ${PROJECT_SOURCE_DIR}/include/iris PREFIX iris FILES ${IRIS_MARSHAL_HEADERS})
 
 set_target_properties(
-    iris_sfield PROPERTIES
+    iris_marshal PROPERTIES
         CXX_EXTENSIONS OFF
         EXCLUDE_FROM_ALL true
         # EXCLUDE_FROM_DEFAULT_BUILD true
@@ -281,7 +281,7 @@ if(NOT NLOHMANN_JSON_FOUND)
     add_subdirectory(modules/nlohmann_json EXCLUDE_FROM_ALL)
 endif()
 
-target_link_libraries(iris_sfield INTERFACE nlohmann_json::nlohmann_json Iris::Iris)
+target_link_libraries(iris_marshal INTERFACE nlohmann_json::nlohmann_json Iris::Iris)
 
 # -----------------------------------------------------------------
 # Test
