@@ -274,7 +274,11 @@ template<std::size_t... Is>
 struct for_each_impl<std::index_sequence<Is...>>
 {
     template<class Tuple, class F>
-    static constexpr void apply(Tuple&& t, F&& f){
+    static constexpr void apply(Tuple&& t, F&& f)
+        noexcept(std::conjunction_v<
+            std::is_nothrow_invocable<F, tuple_get_t<Is, Tuple>>...
+        >)
+    {
         ((void)std::invoke(std::forward<F>(f), alloy::get<Is>(std::forward<Tuple>(t))), ...);
     }
 };
@@ -318,6 +322,7 @@ template<TupleLike Tuple>
 
 template<TupleLike Tuple, class F>
 constexpr void for_each(Tuple&& t, F&& f)
+    noexcept(noexcept(detail::for_each_impl<std::make_index_sequence<tuple_size_v<std::remove_cvref_t<Tuple>>>>::apply(std::forward<Tuple>(t), std::forward<F>(f))))
 {
     return detail::for_each_impl<std::make_index_sequence<tuple_size_v<std::remove_cvref_t<Tuple>>>>::apply(std::forward<Tuple>(t), std::forward<F>(f));
 }

@@ -13,6 +13,33 @@
 namespace iris::alloy {
 
 template<class T>
+struct tuple_size;
+
+template<class... Ts>
+struct tuple_size<std::tuple<Ts...>> : std::integral_constant<std::size_t, sizeof...(Ts)>
+{};
+
+template<std::size_t I, class Tuple>
+struct tuple_element;
+
+template<std::size_t I, class... Ts>
+struct tuple_element<I, std::tuple<Ts...>> : std::tuple_element<I, std::tuple<Ts...>>
+{};
+
+template<std::size_t I, class... Ts>
+struct tuple_element<I, std::tuple<Ts...> const> : std::tuple_element<I, std::tuple<Ts...> const>
+{};
+
+template<std::size_t I, class... Ts>
+struct tuple_element<I, std::tuple<Ts...> volatile> : std::tuple_element<I, std::tuple<Ts...> volatile>
+{};
+
+template<std::size_t I, class... Ts>
+struct tuple_element<I, std::tuple<Ts...> const volatile> : std::tuple_element<I, std::tuple<Ts...> const volatile>
+{};
+
+
+template<class T>
 struct adaptor;
 
 namespace detail {
@@ -38,7 +65,7 @@ struct make_call_std_get
 template<class... Ts>
 struct adaptor<std::tuple<Ts...>>
 {
-    using getters_list = detail::integer_seq_transform_t<std::make_index_sequence<sizeof...(Ts)>, detail::make_call_std_get>;
+    using getters_list = detail::integer_seq_transform<std::make_index_sequence<sizeof...(Ts)>, detail::make_call_std_get>::type;
 };
 
 } // iris::alloy

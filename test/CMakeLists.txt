@@ -181,6 +181,7 @@ if(PROJECT_IS_TOP_LEVEL)
             IRIS_TEST_IRIS_TESTS
             core
             type_traits
+            ranges
             stdint
             enum
             indirect
@@ -192,10 +193,13 @@ if(PROJECT_IS_TOP_LEVEL)
             interval_set
             snippet
             alloy
+            marshal
         )
         foreach(test_name IN LISTS IRIS_TEST_IRIS_TESTS)
             iris_define_internal_test(${test_name} ${test_name}.cpp)
         endforeach()
+
+        target_link_libraries(iris_marshal_test PRIVATE Iris::Marshal)
 
         set(
             IRIS_TEST_NGRAM_TESTS
