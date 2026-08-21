@@ -29,6 +29,29 @@ struct generic_format
     static constexpr bool key = true;
 };
 
+// Customization point: serialize T by converting it to/from proxy_type.
+template<class T>
+struct adapted_proxy_traits;
+
+template<class T>
+concept adapted_proxy = requires(std::remove_cvref_t<T> const& v) {
+    typename adapted_proxy_traits<std::remove_cvref_t<T>>::proxy_type;
+    { adapted_proxy_traits<std::remove_cvref_t<T>>::to_proxy(v) }
+        -> std::convertible_to<typename adapted_proxy_traits<std::remove_cvref_t<T>>::proxy_type>;
+};
+
+template<class T>
+using adapted_proxy_t = adapted_proxy_traits<std::remove_cvref_t<T>>::proxy_type;
+
+// Customization point
+template<class ClassT>
+struct adapted_class_traits;
+
+template<class T>
+concept adapted_class = requires {
+    adapted_class_traits<std::remove_cvref_t<T>>::fields;
+};
+
 // Customization point
 template<class T>
 struct adapted_optional_traits;
@@ -45,15 +68,6 @@ concept adapted_optional = requires(T const& opt) {
     typename adapted_optional_traits<std::remove_cvref_t<T>>::value_type;
     static_cast<bool>(opt);
     { *opt } -> std::convertible_to<typename adapted_optional_traits<std::remove_cvref_t<T>>::value_type const&>;
-};
-
-// Customization point
-template<class ClassT>
-struct adapted_class_traits;
-
-template<class T>
-concept adapted_class = requires {
-    adapted_class_traits<std::remove_cvref_t<T>>::fields;
 };
 
 namespace detail {
@@ -83,7 +97,15 @@ consteval bool is_serializable_impl()
 {
     using V = std::remove_cvref_t<T>;
 
-    if constexpr (adapted_class<V>) {
+    static_assert(
+        !(adapted_class<V> && adapted_proxy<V>),
+        "a type cannot be adapted both as a class and as a proxy"
+    );
+
+    if constexpr (adapted_proxy<V>) {
+        return is_serializable_impl<adapted_proxy_t<V>, Format>();
+
+    } else if constexpr (adapted_class<V>) {
         return true;
 
     } else if constexpr (adapted_optional<V>) {
@@ -126,23 +148,32 @@ consteval bool is_tuple_elements_serializable_impl()
 
 
 template<class T, class Format = generic_format>
+concept serializable_proxy =
+    adapted_proxy<T> &&
+    detail::is_serializable_impl<adapted_proxy_t<T>, Format>();
+
+template<class T, class Format = generic_format>
 concept serializable_class =
+    !serializable_proxy<T, Format> &&
     adapted_class<T>;
 
 template<class T, class Format = generic_format>
 concept serializable_optional =
+    !serializable_proxy<T, Format> &&
     !serializable_class<T, Format> &&
     adapted_optional<T> &&
     detail::is_serializable_impl<typename adapted_optional_traits<std::remove_cvref_t<T>>::value_type, Format>();
 
 template<class T, class Format = generic_format>
 concept serializable_scalar =
+    !serializable_proxy<T, Format> &&
     !serializable_class<T, Format> &&
     !adapted_optional<T> &&
     detail::is_serializable_scalar<std::remove_cvref_t<T>>::value;
 
 template<class T, class Format = generic_format>
 concept serializable_map =
+    !serializable_proxy<T, Format> &&
     !serializable_class<T, Format> &&
     !adapted_optional<T> &&
     !serializable_scalar<T, Format> &&
@@ -153,6 +184,7 @@ concept serializable_map =
 
 template<class T, class Format = generic_format>
 concept serializable_array =
+    !serializable_proxy<T, Format> &&
     !serializable_class<T, Format> &&
     !adapted_optional<T> &&
     !serializable_scalar<T, Format> &&
@@ -162,6 +194,7 @@ concept serializable_array =
 
 template<class T, class Format = generic_format>
 concept serializable_tuple =
+    !serializable_proxy<T, Format> &&
     !serializable_class<T, Format> &&
     !adapted_optional<T> &&
     !serializable_scalar<T, Format> &&
@@ -171,6 +204,7 @@ concept serializable_tuple =
 
 template<class T, class Format = generic_format>
 concept serializable =
+    serializable_proxy<T, Format> ||
     serializable_class<T, Format> ||
     serializable_optional<T, Format> ||
     serializable_scalar<T, Format> ||
