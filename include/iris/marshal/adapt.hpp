@@ -5,7 +5,8 @@
 
 #include <iris/config.hpp> // IWYU pragma: keep
 
-#include <iris/marshal/serialize_traits.hpp>
+#include <iris/marshal/serialize_traits.hpp> // IWYU pragma: keep
+#include <iris/marshal/detail/field.hpp> // IWYU pragma: keep
 
 #include <iris/alloy/adapt.hpp> // IWYU pragma: export
 
@@ -14,8 +15,6 @@
 #include <iris/pp/cat.hpp>
 #include <iris/pp/arg.hpp>
 
-#include <string>
-#include <string_view>
 #include <type_traits>
 
 namespace iris::marshal {
@@ -48,13 +47,6 @@ using setter_param_t = std::conditional_t<
     T,
     T const&
 >;
-
-
-template<auto Mem>
-struct field_definition
-{
-    std::string_view name;
-};
 
 } // detail
 

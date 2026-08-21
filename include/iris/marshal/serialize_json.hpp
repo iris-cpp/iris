@@ -6,98 +6,122 @@
 #include <iris/config.hpp> // IWYU pragma: keep
 
 #include <iris/marshal/serialize_traits.hpp>
+#include <iris/marshal/detail/field.hpp>
 
 #include <iris/alloy/utility.hpp>
 
+#include <iris/string.hpp>
+
 #include <nlohmann/json.hpp>
 
-namespace iris::marshal {
+#include <utility>
+#include <type_traits>
+
+namespace iris::marshal::json {
+
+struct format
+{
+    template<class K>
+    static constexpr bool key = StringLike<std::remove_cvref_t<K>>;
+};
+
+template<class T> concept serializable_class    = marshal::serializable_class<T, format>;
+template<class T> concept serializable_optional = marshal::serializable_optional<T, format>;
+template<class T> concept serializable_scalar   = marshal::serializable_scalar<T, format>;
+template<class T> concept serializable_map      = marshal::serializable_map<T, format>;
+template<class T> concept serializable_array    = marshal::serializable_array<T, format>;
+template<class T> concept serializable_tuple    = marshal::serializable_tuple<T, format>;
+template<class T> concept serializable          = marshal::serializable<T, format>;
 
 template<serializable_scalar T>
-void save(nlohmann::json& json, T const& value);
+void save(nlohmann::json& out, T const& value);
 
 template<serializable_array R>
-void save(nlohmann::json& json, R const& arr);
+void save(nlohmann::json& out, R const& arr);
 
 template<serializable_map MapT>
-void save(nlohmann::json& json, MapT const& map);
+void save(nlohmann::json& out, MapT const& map);
 
 template<serializable_tuple TupleT>
-void save(nlohmann::json& json, TupleT const& tup);
+void save(nlohmann::json& out, TupleT const& tup);
 
 template<serializable_class ClassT>
-void save(nlohmann::json& json, ClassT const& klass);
+void save(nlohmann::json& out, ClassT const& klass);
 
 template<serializable_optional OptionalT>
-void save(nlohmann::json& json, OptionalT const& opt);
+void save(nlohmann::json& out, OptionalT const& opt);
 
 
 template<serializable_scalar T>
-void save(nlohmann::json& json, T const& value)
+void save(nlohmann::json& out, T const& value)
 {
-    json = value;
+    if constexpr (std::is_enum_v<T>) {
+        out = std::to_underlying(value);
+    } else {
+        out = value;
+    }
 }
 
 template<serializable_array R>
-void save(nlohmann::json& json, R const& arr)
+void save(nlohmann::json& out, R const& arr)
 {
     auto json_arr = nlohmann::json::array();
 
     for (auto const& elem : arr) {
         nlohmann::json elem_json;
-        marshal::save(elem_json, elem);
+        json::save(elem_json, elem);
         json_arr.emplace_back(std::move(elem_json));
     }
 
-    json = std::move(json_arr);
+    out = std::move(json_arr);
 }
 
 template<serializable_map MapT>
-void save(nlohmann::json& json, MapT const& map)
+void save(nlohmann::json& out, MapT const& map)
 {
     auto json_map = nlohmann::json::object();
 
     for (auto const& [key, value] : map) {
-        marshal::save(json_map[key], value);
+        json::save(json_map[std::basic_string_view{key}], value);
     }
 
-    json = std::move(json_map);
+    out = std::move(json_map);
 }
 
 template<serializable_tuple TupleT>
-void save(nlohmann::json& json, TupleT const& tup)
+void save(nlohmann::json& out, TupleT const& tup)
 {
     auto json_arr = nlohmann::json::array();
 
     alloy::for_each(tup, [&](auto const& elem) {
         nlohmann::json elem_json;
-        marshal::save(elem_json, elem);
+        json::save(elem_json, elem);
         json_arr.emplace_back(std::move(elem_json));
     });
 
-    json = std::move(json_arr);
+    out = std::move(json_arr);
 }
 
 template<serializable_class ClassT>
-void save(nlohmann::json& json, ClassT const& klass)
+void save(nlohmann::json& out, ClassT const& klass)
 {
     auto json_map = nlohmann::json::object();
 
     constexpr auto const& fields = adapted_class_traits<ClassT>::fields;
     alloy::for_each(fields, [&]<auto Mem>(detail::field_definition<Mem> const& def) {
-        marshal::save(json_map[def.name], (klass.*Mem)());
+        json::save(json_map[def.name], (klass.*Mem)());
     });
 
-    json = std::move(json_map);
+    out = std::move(json_map);
 }
 
 template<serializable_optional OptionalT>
-void save(nlohmann::json& json, OptionalT const& opt)
+void save(nlohmann::json& out, OptionalT const& opt)
 {
     if (opt) {
-        marshal::save(json, *opt);
+        json::save(out, *opt);
     } else {
-        json = nullptr;
+        out = nullptr;
     }
 }
 
@@ -106,6 +130,6 @@ void save(nlohmann::json& json, OptionalT const& opt)
 // TODO: load
 
 
-} // iris::marshal
+} // iris::marshal::json
 
 #endif
