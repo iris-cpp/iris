@@ -5,44 +5,71 @@
 
 #include <iris/config.hpp> // IWYU pragma: keep
 
+#include <iris/utility.hpp>
+
 #include <ranges> // IWYU pragma: export
+#include <concepts>
 #include <type_traits>
 #include <utility>
 
-namespace iris {
+namespace iris::ranges {
 
-template<class T>
-struct is_assoc_container : std::false_type
-{};
+namespace detail {
 
-template<class T>
-struct is_assoc_container<T const> : is_assoc_container<T>
-{};
+template<std::ranges::range R>
+using kv_element_t = std::remove_cvref_t<std::ranges::range_reference_t<R>>;
 
-template<class T>
-struct is_assoc_container<T volatile> : is_assoc_container<T>
-{};
+} // detail
 
-template<class T>
-struct is_assoc_container<T const volatile> : is_assoc_container<T>
-{};
+template<class R>
+concept key_value_range =
+    std::ranges::input_range<R> &&
+    requires {
+        typename detail::kv_element_t<R>;
+        requires std::tuple_size<detail::kv_element_t<R>>::value == 2;
+        typename std::tuple_element_t<0, detail::kv_element_t<R>>;
+        typename std::tuple_element_t<1, detail::kv_element_t<R>>;
+    } &&
+    gettable<0, std::ranges::range_reference_t<R>> &&
+    gettable<1, std::ranges::range_reference_t<R>>;
 
-template<class T>
-constexpr bool is_assoc_container_v = is_assoc_container<T>::value;
+template<key_value_range R>
+using range_key_t    = std::remove_cvref_t<std::tuple_element_t<0, detail::kv_element_t<R>>>;
 
-template<std::ranges::input_range R>
-    requires
-        requires {
-            typename R::key_type;
-            typename R::value_type;
-            typename R::mapped_type;
-            typename std::tuple_size<typename R::value_type>;
-            std::tuple_size<typename R::value_type>::value;
-            requires std::tuple_size<typename R::value_type>::value == 2;
-        }
-struct is_assoc_container<R> : std::true_type
-{};
+template<key_value_range R>
+using range_mapped_t = std::remove_cvref_t<std::tuple_element_t<1, detail::kv_element_t<R>>>;
 
-} // iris
+
+
+template<class C>
+concept key_value_container =
+    key_value_range<C> &&
+    std::default_initializable<std::remove_cvref_t<C>> &&
+    requires {
+        typename std::remove_cvref_t<C>::key_type;
+        typename std::remove_cvref_t<C>::mapped_type;
+    } &&
+    std::same_as<range_key_t<C>,    typename std::remove_cvref_t<C>::key_type> &&
+    std::same_as<range_mapped_t<C>, typename std::remove_cvref_t<C>::mapped_type> &&
+    requires(
+        std::remove_cvref_t<C>& c,
+        typename std::remove_cvref_t<C>::key_type k,
+        typename std::remove_cvref_t<C>::mapped_type m
+    ) {
+        c.emplace(std::move(k), std::move(m));
+    };
+
+template<class C>
+concept unique_key_value_container =
+    key_value_container<C> &&
+    requires(
+        std::remove_cvref_t<C>& c,
+        typename std::remove_cvref_t<C>::key_type k,
+        typename std::remove_cvref_t<C>::mapped_type m
+    ) {
+        { c.try_emplace(std::move(k), std::move(m)).second } -> std::convertible_to<bool>;
+    };
+
+} // iris::ranges
 
 #endif

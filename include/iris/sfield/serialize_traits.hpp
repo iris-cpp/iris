@@ -31,7 +31,6 @@ struct is_adapted_class : std::false_type
 
 template<class T>
     requires requires {
-        typename adapted_class<T>;
         adapted_class<T>::fields;
     }
 struct is_adapted_class<T> : std::true_type
@@ -73,22 +72,30 @@ struct is_serializable<R> : is_serializable<std::ranges::range_value_t<R>>
 
 } // detail
 
+
+template<class T>
+concept serializable_class =
+    detail::is_adapted_class<T>::value;
+
 // T is a type that is directly representable with JSON's native type
 template<class T>
-concept serializable_primitive = detail::is_serializable_primitive<T>::value;
-
+concept serializable_primitive =
+    !serializable_class<T> &&
+    detail::is_serializable_primitive<T>::value;
 
 template<class T>
 concept serializable_array =
+    !serializable_class<T> &&
     std::ranges::forward_range<T> &&
-    !is_assoc_container_v<T> &&
+    !ranges::key_value_range<T> &&
     !StringLike<T> &&
     detail::is_serializable<std::ranges::range_value_t<T>>::value;
 
 template<class T>
 concept serializable_map =
+    !serializable_class<T> &&
     std::ranges::forward_range<T> &&
-    is_assoc_container_v<T> &&
+    ranges::key_value_range<T> &&
     detail::is_serializable<std::ranges::range_value_t<T>>::value;
 
 
@@ -118,19 +125,17 @@ struct is_serializable<Tup> : serializable_tuple_impl<Tup, std::make_index_seque
 
 template<class T>
 concept serializable_tuple =
+    !serializable_class<T> &&
     alloy::TupleLike<T> &&
     detail::serializable_tuple_impl<T>::value &&
     !detail::is_adapted_class<T>::value;
-
-template<class T>
-concept serializable_class =
-    detail::is_adapted_class<T>::value;
 
 template<class T>
 concept serializable =
     serializable_primitive<T> ||
     serializable_array<T> ||
     serializable_tuple<T> ||
+    serializable_map<T> ||
     serializable_class<T>;
 
 } // iris::sfield
