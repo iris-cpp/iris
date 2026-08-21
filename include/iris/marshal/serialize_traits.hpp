@@ -23,6 +23,12 @@
 
 namespace iris::marshal {
 
+struct generic_format
+{
+    template<class T>
+    static constexpr bool key = true;
+};
+
 // Customization point
 template<class T>
 struct adapted_optional_traits;
@@ -52,7 +58,7 @@ concept adapted_class = requires {
 
 namespace detail {
 
-template<class T>
+template<class T, class Format>
 [[nodiscard]] consteval bool is_serializable_impl();
 
 template<class T>
@@ -69,10 +75,10 @@ struct is_serializable_scalar<T> : std::true_type
 
 // ---------------------------------------------------
 
-template<class Tup, std::size_t I>
+template<class Tup, class Format, std::size_t I = 0>
 [[nodiscard]] consteval bool is_tuple_elements_serializable_impl();
 
-template<class T>
+template<class T, class Format>
 consteval bool is_serializable_impl()
 {
     using V = std::remove_cvref_t<T>;
@@ -81,94 +87,96 @@ consteval bool is_serializable_impl()
         return true;
 
     } else if constexpr (adapted_optional<V>) {
-        return is_serializable_impl<typename adapted_optional_traits<V>::value_type>();
+        return is_serializable_impl<typename adapted_optional_traits<V>::value_type, Format>();
 
     } else if constexpr (is_serializable_scalar<V>::value) {
         return true;
 
     } else if constexpr (ranges::key_value_range<V>) {
-        return is_serializable_impl<ranges::range_key_t<V>>() &&
-               is_serializable_impl<ranges::range_mapped_t<V>>();
+        return Format::template key<ranges::range_key_t<V>> &&
+               is_serializable_impl<ranges::range_key_t<V>, Format>() &&
+               is_serializable_impl<ranges::range_mapped_t<V>, Format>();
 
     } else if constexpr (std::ranges::input_range<V>) {
-        return is_serializable_impl<std::ranges::range_value_t<V>>();
+        return is_serializable_impl<std::ranges::range_value_t<V>, Format>();
 
     } else if constexpr (alloy::TupleLike<V>) {
-        return is_tuple_elements_serializable_impl<V>();
+        return is_tuple_elements_serializable_impl<V, Format>();
 
     } else {
         return false;
     }
 }
 
-template<class Tup, std::size_t I = 0>
+template<class Tup, class Format, std::size_t I>
 consteval bool is_tuple_elements_serializable_impl()
 {
     if constexpr (I == alloy::tuple_size_v<Tup>) {
         return true;
 
-    } else if constexpr (!is_serializable_impl<typename alloy::tuple_element<I, Tup>::type>()) {
+    } else if constexpr (!is_serializable_impl<typename alloy::tuple_element<I, Tup>::type, Format>()) {
         return false;
 
     } else {
-        return is_tuple_elements_serializable_impl<Tup, I + 1>();
+        return is_tuple_elements_serializable_impl<Tup, Format, I + 1>();
     }
 }
 
 } // detail
 
 
-template<class T>
+template<class T, class Format = generic_format>
 concept serializable_class =
     adapted_class<T>;
 
-template<class T>
+template<class T, class Format = generic_format>
 concept serializable_optional =
-    !serializable_class<T> &&
+    !serializable_class<T, Format> &&
     adapted_optional<T> &&
-    detail::is_serializable_impl<typename adapted_optional_traits<std::remove_cvref_t<T>>::value_type>();
+    detail::is_serializable_impl<typename adapted_optional_traits<std::remove_cvref_t<T>>::value_type, Format>();
 
-template<class T>
+template<class T, class Format = generic_format>
 concept serializable_scalar =
-    !serializable_class<T> &&
+    !serializable_class<T, Format> &&
     !adapted_optional<T> &&
     detail::is_serializable_scalar<std::remove_cvref_t<T>>::value;
 
-template<class T>
+template<class T, class Format = generic_format>
 concept serializable_map =
-    !serializable_class<T> &&
+    !serializable_class<T, Format> &&
     !adapted_optional<T> &&
-    !serializable_scalar<T> &&
+    !serializable_scalar<T, Format> &&
     ranges::key_value_range<T> &&
-    detail::is_serializable_impl<ranges::range_key_t<T>>() &&
-    detail::is_serializable_impl<ranges::range_mapped_t<T>>();
+    Format::template key<ranges::range_key_t<T>> &&
+    detail::is_serializable_impl<ranges::range_key_t<T>, Format>() &&
+    detail::is_serializable_impl<ranges::range_mapped_t<T>, Format>();
 
-template<class T>
+template<class T, class Format = generic_format>
 concept serializable_array =
-    !serializable_class<T> &&
+    !serializable_class<T, Format> &&
     !adapted_optional<T> &&
-    !serializable_scalar<T> &&
+    !serializable_scalar<T, Format> &&
     !ranges::key_value_range<T> &&
     std::ranges::input_range<T> &&
-    detail::is_serializable_impl<std::ranges::range_value_t<T>>();
+    detail::is_serializable_impl<std::ranges::range_value_t<T>, Format>();
 
-template<class T>
+template<class T, class Format = generic_format>
 concept serializable_tuple =
-    !serializable_class<T> &&
+    !serializable_class<T, Format> &&
     !adapted_optional<T> &&
-    !serializable_scalar<T> &&
+    !serializable_scalar<T, Format> &&
     !std::ranges::range<T> &&
     alloy::TupleLike<T> &&
-    detail::is_tuple_elements_serializable_impl<std::remove_cvref_t<T>>();
+    detail::is_tuple_elements_serializable_impl<std::remove_cvref_t<T>, Format>();
 
-template<class T>
+template<class T, class Format = generic_format>
 concept serializable =
-    serializable_class<T> ||
-    serializable_optional<T> ||
-    serializable_scalar<T> ||
-    serializable_map<T> ||
-    serializable_array<T> ||
-    serializable_tuple<T>;
+    serializable_class<T, Format> ||
+    serializable_optional<T, Format> ||
+    serializable_scalar<T, Format> ||
+    serializable_map<T, Format> ||
+    serializable_array<T, Format> ||
+    serializable_tuple<T, Format>;
 
 } // iris::marshal
 
