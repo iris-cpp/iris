@@ -25,18 +25,18 @@ TEST_CASE("marshal: serialize (builtin types)")
 {
     STATIC_CHECK(!iris::marshal::serializable<NonSerializable>);
 
-    STATIC_CHECK(iris::marshal::serializable_primitive<int>);
-    STATIC_CHECK(iris::marshal::serializable_primitive<int const>);
-    STATIC_CHECK(iris::marshal::serializable_primitive<non_scoped_enum>);
-    STATIC_CHECK(iris::marshal::serializable_primitive<scoped_enum>);
+    STATIC_CHECK(iris::marshal::serializable_scalar<int>);
+    STATIC_CHECK(iris::marshal::serializable_scalar<int const>);
+    STATIC_CHECK(iris::marshal::serializable_scalar<non_scoped_enum>);
+    STATIC_CHECK(iris::marshal::serializable_scalar<scoped_enum>);
 
-    STATIC_CHECK(iris::marshal::serializable_primitive<std::string>);
-    STATIC_CHECK(iris::marshal::serializable_primitive<std::u32string>);
-    STATIC_CHECK(iris::marshal::serializable_primitive<std::string_view>);
-    STATIC_CHECK(iris::marshal::serializable_primitive<std::u32string_view>);
+    STATIC_CHECK(iris::marshal::serializable_scalar<std::string>);
+    STATIC_CHECK(iris::marshal::serializable_scalar<std::u32string>);
+    STATIC_CHECK(iris::marshal::serializable_scalar<std::string_view>);
+    STATIC_CHECK(iris::marshal::serializable_scalar<std::u32string_view>);
 
-    STATIC_CHECK(iris::marshal::serializable_primitive<std::optional<int>>);
-    STATIC_CHECK(iris::marshal::serializable_primitive<std::optional<int> const>);
+    STATIC_CHECK(iris::marshal::serializable_optional<std::optional<int>>);
+    STATIC_CHECK(iris::marshal::serializable_optional<std::optional<int> const>);
     STATIC_CHECK(!iris::marshal::serializable<std::optional<NonSerializable>>);
 
     STATIC_CHECK(iris::marshal::serializable_tuple<std::pair<int, int>>);
@@ -55,40 +55,47 @@ TEST_CASE("marshal: serialize (builtin types)")
         nlohmann::json json;
         int const value = 42;
         iris::marshal::save(json, value);
-        CHECK(json.get<int>() == 42);
+        CHECK(json.get<int>() == value);
     }
 
     {
         nlohmann::json json;
         std::optional<int> const value = 42;
         iris::marshal::save(json, value);
-        CHECK(json.get<int>() == 42);
+        CHECK(json.get<int>() == value);
+    }
+
+    {
+        nlohmann::json json;
+        std::vector<std::optional<int>> const value = {42, std::nullopt, 44};
+        iris::marshal::save(json, value);
+        CHECK(json.get<std::vector<std::optional<int>>>() == value);
     }
 
     {
         nlohmann::json json;
         auto const value = non_scoped_enum{42};
         iris::marshal::save(json, value);
-        CHECK(json.get<non_scoped_enum>() == non_scoped_enum{42});
+        CHECK(json.get<non_scoped_enum>() == value);
     }
     {
         nlohmann::json json;
         auto const value = scoped_enum{42};
         iris::marshal::save(json, value);
-        CHECK(json.get<scoped_enum>() == scoped_enum{42});
+        CHECK(json.get<scoped_enum>() == value);
     }
 
     {
         nlohmann::json json;
         std::string const value = "foo";
         iris::marshal::save(json, value);
-        CHECK(json.get<std::string>() == "foo"sv);
+        CHECK(json.get<std::string>() == value);
     }
     {
         nlohmann::json json;
         std::u32string const value = U"あいう";
         iris::marshal::save(json, value);
-        CHECK(json.get<std::u32string>() == U"あいう"sv);
+        CHECK(json.get<std::u32string>() == value);
     }
 
     {
@@ -114,16 +121,16 @@ TEST_CASE("marshal: serialize (builtin types)")
 
     {
         nlohmann::json json;
-        std::pair const pair{0, 1};
-        iris::marshal::save(json, pair);
-        CHECK(json.get<std::pair<int, int>>() == std::pair{0, 1});
+        std::pair const value{0, 1};
+        iris::marshal::save(json, value);
+        CHECK(json.get<std::pair<int, int>>() == value);
     }
 
     {
         nlohmann::json json;
-        std::tuple const tuple{0, 1, 2};
-        iris::marshal::save(json, tuple);
-        CHECK(json.get<std::tuple<int, int, int>>() == std::tuple{0, 1, 2});
+        std::tuple const value{0, 1, 2};
+        iris::marshal::save(json, value);
+        CHECK(json.get<std::tuple<int, int, int>>() == value);
     }
 }
 
