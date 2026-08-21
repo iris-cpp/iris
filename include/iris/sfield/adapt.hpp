@@ -140,7 +140,9 @@ struct field_definition
 
 #define IRIS_SFIELD_CLASS(class_name) \
     template<class ClassT> \
-    friend struct ::iris::sfield::detail::adapted_class;
+    friend struct ::iris::sfield::detail::adapted_class; \
+    \
+    [[nodiscard]] constexpr bool operator==(class_name const&) const noexcept = default;
 
 // ------------------------------------------------------------
 
