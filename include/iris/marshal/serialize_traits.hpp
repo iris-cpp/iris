@@ -56,15 +56,15 @@ template<class T, detail::marshal_format Format>
 struct adapted_proxy_traits;
 
 template<class T, detail::marshal_format Format>
-using proxy_native_type_t = adapted_proxy_traits<std::remove_cvref_t<T>, Format>::native_type;
+using adapted_proxy_native_type_t = adapted_proxy_traits<std::remove_cvref_t<T>, Format>::native_type;
 
 template<class T, class Format>
 concept adapted_proxy =
     detail::marshal_format<Format> &&
     requires(std::remove_cvref_t<T> const& v) {
-        typename proxy_native_type_t<T, Format>;
+        typename adapted_proxy_native_type_t<T, Format>;
         { adapted_proxy_traits<std::remove_cvref_t<T>, Format>::to_native_type(v) }
-            -> std::convertible_to<proxy_native_type_t<T, Format>>;
+            -> std::convertible_to<adapted_proxy_native_type_t<T, Format>>;
     };
 
 namespace detail {
@@ -73,7 +73,7 @@ template<class T, class Format>
 concept proxy_writable =
     detail::marshal_format<Format> &&
     adapted_proxy<T, Format> &&
-    requires(proxy_native_type_t<T, Format> p) {
+    requires(adapted_proxy_native_type_t<T, Format> p) {
         { adapted_proxy_traits<std::remove_cvref_t<T>, Format>::from_native_type(std::move(p)) }
             -> std::convertible_to<std::remove_cvref_t<T>>;
     } &&
@@ -154,7 +154,7 @@ consteval bool is_serializable_impl()
     );
 
     if constexpr (adapted_proxy<V, Format>) {
-        return is_serializable_impl<proxy_native_type_t<V, Format>, Format>();
+        return is_serializable_impl<adapted_proxy_native_type_t<V, Format>, Format>();
 
     } else if constexpr (adapted_class<V>) {
         return true;
@@ -203,7 +203,7 @@ template<class T, class Format = generic_format>
 concept serializable_proxy =
     detail::marshal_format<Format> &&
     adapted_proxy<T, Format> &&
-    detail::is_serializable_impl<proxy_native_type_t<T, Format>, Format>();
+    detail::is_serializable_impl<adapted_proxy_native_type_t<T, Format>, Format>();
 
 template<class T, class Format = generic_format>
 concept serializable_class =
@@ -298,7 +298,7 @@ consteval bool is_deserializable_impl()
         return false;
 
     } else if constexpr (adapted_proxy<V, Format>) {
-        return loadable<proxy_native_type_t<V, Format>, Format> && proxy_writable<V, Format>;
+        return loadable<adapted_proxy_native_type_t<V, Format>, Format> && proxy_writable<V, Format>;
 
     } else if constexpr (adapted_class<V>) {
         return true;

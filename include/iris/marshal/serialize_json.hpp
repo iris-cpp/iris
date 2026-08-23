@@ -5,7 +5,7 @@
 
 #include <iris/config.hpp> // IWYU pragma: keep
 
-#include <iris/marshal/serialize_traits.hpp>
+#include <iris/marshal/serialize.hpp>
 #include <iris/marshal/detail/field.hpp>
 
 #include <iris/alloy/utility.hpp>
@@ -16,27 +16,12 @@
 
 #include <nlohmann/json.hpp>
 
+#include <vector>
 #include <string>
 #include <utility>
 #include <type_traits>
 
 namespace iris::marshal::json {
-
-namespace detail {
-
-template<class T>
-struct native_t_impl
-{
-    using type = T;
-};
-
-template<StringLike T>
-struct native_t_impl<T>
-{
-    using type = std::string;
-};
-
-} // detail
 
 struct format : generic_format
 {
@@ -100,104 +85,70 @@ template<class T> concept deserializable_array    = marshal::deserializable_arra
 template<class T> concept deserializable_tuple    = marshal::deserializable_tuple<T, format>;
 template<class T> concept deserializable          = marshal::deserializable<T, format>;
 
-namespace detail {
-
-struct save_fn
+class dom_writer
 {
-    template<serializable_scalar T>
-    static void operator()(nlohmann::json& out, T const& value)
+    nlohmann::json& root_;
+    std::vector<nlohmann::json*> stack_;
+    std::string pending_key_;
+
+    [[nodiscard]] nlohmann::json& slot()
+    {
+        if (stack_.empty()) return root_;
+        auto& parent = *stack_.back();
+        return parent.is_object() ? parent[pending_key_] : parent.emplace_back();
+    }
+
+public:
+    using format = json::format;
+    using result_type = nlohmann::json;
+
+    explicit dom_writer(nlohmann::json& root)
+        : root_(root)
+    {}
+
+    template<class T>
+        requires format::loadable_scalar<T>
+    void scalar(T const& value)
     {
         if constexpr (std::is_enum_v<T>) {
-            out = std::to_underlying(value);
+            slot() = std::to_underlying(value);
         } else {
-            out = value;
+            slot() = value;
         }
     }
 
-    template<serializable_array R>
-    static void operator()(nlohmann::json& out, R const& arr)
+    void null()
     {
-        auto json_arr = nlohmann::json::array();
-
-        for (auto const& elem : arr) {
-            nlohmann::json elem_json;
-            save_fn{}(elem_json, elem);
-            json_arr.emplace_back(std::move(elem_json));
-        }
-
-        out = std::move(json_arr);
+        slot() = nullptr;
     }
 
-    template<serializable_map MapT>
-    static void operator()(nlohmann::json& out, MapT const& map)
+    void begin_array()
     {
-        auto json_map = nlohmann::json::object();
-
-        for (auto const& [key, value] : map) {
-            if constexpr (adapted_proxy<ranges::range_key_t<MapT>, format>) {
-                auto&& json_key = adapted_proxy_traits<ranges::range_key_t<MapT>, format>::to_native_type(key);
-                save_fn{}(json_map[json_key], value);
-            } else {
-                save_fn{}(json_map[std::basic_string_view{key}], value);
-            }
-        }
-
-        out = std::move(json_map);
+        stack_.push_back(&(slot() = nlohmann::json::array()));
+    }
+    void end_array()
+    {
+        stack_.pop_back();
     }
 
-    template<serializable_tuple TupleT>
-    static void operator()(nlohmann::json& out, TupleT const& tup)
+    void begin_object()
     {
-        auto json_arr = nlohmann::json::array();
-
-        alloy::for_each(tup, [&](auto const& elem) {
-            nlohmann::json elem_json;
-            save_fn{}(elem_json, elem);
-            json_arr.emplace_back(std::move(elem_json));
-        });
-
-        out = std::move(json_arr);
+        stack_.push_back(&(slot() = nlohmann::json::object()));
     }
-
-    template<serializable_class ClassT>
-    static void operator()(nlohmann::json& out, ClassT const& klass)
+    void map_key(std::string_view k)
     {
-        auto json_map = nlohmann::json::object();
-
-        constexpr auto const& fields = adapted_class_traits<ClassT>::fields;
-        alloy::for_each(fields, [&]<class T, auto GetMem, auto SetMem>(marshal::detail::field_definition<T, GetMem, SetMem> const& def) {
-            save_fn{}(json_map[def.name], (klass.*GetMem)());
-        });
-
-        out = std::move(json_map);
+        pending_key_.assign(k);
     }
-
-    template<serializable_optional OptionalT>
-    static void operator()(nlohmann::json& out, OptionalT const& opt)
+    void end_object()
     {
-        if (opt) {
-            save_fn{}(out, *opt);
-        } else {
-            out = nullptr;
-        }
-    }
-
-    template<serializable_proxy ProxyT>
-    static void operator()(nlohmann::json& out, ProxyT const& proxy)
-    {
-        save_fn{}(out, adapted_proxy_traits<ProxyT, format>::to_native_type(proxy));
-    }
-
-    template<serializable T>
-    [[nodiscard]] static nlohmann::json operator()(T const& value)
-    {
-        nlohmann::json out;
-        save_fn{}(out, value);
-        return out;
+        stack_.pop_back();
     }
 };
 
-// ----------------------------------------------------
+[[maybe_unused]] inline constexpr basic_save_fn<dom_writer> save{};
+
+
+namespace detail {
 
 struct load_fn
 {
@@ -295,9 +246,6 @@ struct load_fn
 };
 
 } // detail
-
-[[maybe_unused]] inline constexpr detail::save_fn save{};
-
 
 template<deserializable T>
     requires requires(nlohmann::json const& j) {

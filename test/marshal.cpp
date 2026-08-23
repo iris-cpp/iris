@@ -33,11 +33,13 @@ struct NonSerializable {};
 TEST_CASE("marshal: type traits (generic_format)")
 {
     STATIC_CHECK(marshal::detail::marshal_format<generic_format>);
+    STATIC_CHECK(!marshal::serializable_array<int*>);
 }
 
 TEST_CASE("marshal: type traits (json::format)")
 {
     STATIC_CHECK(marshal::detail::marshal_format<json::format>);
+    STATIC_CHECK(marshal::writer<json::dom_writer>);
 
     // CharT = char
     {
@@ -48,15 +50,15 @@ TEST_CASE("marshal: type traits (json::format)")
     // CharT = char32_t
     {
         STATIC_CHECK(marshal::adapted_proxy<char32_t const*, json::format>);
-        STATIC_CHECK(std::same_as<marshal::proxy_native_type_t<char32_t const*, json::format>, std::string>);
+        STATIC_CHECK(std::same_as<marshal::adapted_proxy_native_type_t<char32_t const*, json::format>, std::string>);
         STATIC_CHECK(marshal::detail::proxy_writable<char32_t const*, json::format>);
 
         STATIC_CHECK(marshal::adapted_proxy<std::u32string, json::format>);
-        STATIC_CHECK(std::same_as<marshal::proxy_native_type_t<std::u32string, json::format>, std::string>);
+        STATIC_CHECK(std::same_as<marshal::adapted_proxy_native_type_t<std::u32string, json::format>, std::string>);
         STATIC_CHECK(marshal::detail::proxy_writable<std::u32string, json::format>);
 
         STATIC_CHECK(marshal::adapted_proxy<std::u32string_view, json::format>);
-        STATIC_CHECK(std::same_as<marshal::proxy_native_type_t<std::u32string_view, json::format>, std::string>);
+        STATIC_CHECK(std::same_as<marshal::adapted_proxy_native_type_t<std::u32string_view, json::format>, std::string>);
         STATIC_CHECK(marshal::detail::proxy_writable<std::u32string_view, json::format>);
     }
 }
