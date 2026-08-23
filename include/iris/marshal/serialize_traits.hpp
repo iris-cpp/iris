@@ -264,13 +264,15 @@ concept serializable_tuple =
 template<class T, class Format = generic_format>
 concept serializable =
     detail::marshal_format<Format> &&
-    serializable_proxy<T, Format> ||
-    serializable_class<T, Format> ||
-    serializable_optional<T, Format> ||
-    serializable_scalar<T, Format> ||
-    serializable_map<T, Format> ||
-    serializable_array<T, Format> ||
-    serializable_tuple<T, Format>;
+    (
+        serializable_proxy<T, Format> ||
+        serializable_class<T, Format> ||
+        serializable_optional<T, Format> ||
+        serializable_scalar<T, Format> ||
+        serializable_map<T, Format> ||
+        serializable_array<T, Format> ||
+        serializable_tuple<T, Format>
+    );
 
 // ---------------------------------------------------
 
@@ -374,13 +376,16 @@ concept deserializable_tuple =
 
 template<class T, class Format = generic_format>
 concept deserializable =
-    deserializable_proxy<T, Format> ||
-    deserializable_class<T, Format> ||
-    deserializable_optional<T, Format> ||
-    deserializable_scalar<T, Format> ||
-    deserializable_map<T, Format> ||
-    deserializable_array<T, Format> ||
-    deserializable_tuple<T, Format>;
+    detail::marshal_format<Format> &&
+    (
+        deserializable_proxy<T, Format> ||
+        deserializable_class<T, Format> ||
+        deserializable_optional<T, Format> ||
+        deserializable_scalar<T, Format> ||
+        deserializable_map<T, Format> ||
+        deserializable_array<T, Format> ||
+        deserializable_tuple<T, Format>
+    );
 
 } // iris::marshal
 
