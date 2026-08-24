@@ -12,6 +12,8 @@
 #include <iris/alloy/tuple.hpp>
 #include <iris/alloy/utility.hpp>
 
+#include <concepts>
+
 namespace alloy = iris::alloy;
 
 struct NonAdaptedStruct
@@ -36,7 +38,7 @@ struct OldStyle
 template<>
 struct alloy::adaptor<OldStyle>
 {
-    using getters_list = make_getters_list<&OldStyle::get_int, &OldStyle::get_string>;
+    using getters_list = iris::constant_list<&OldStyle::get_int, &OldStyle::get_string>;
 };
 
 template<std::size_t I, class T>
@@ -60,15 +62,15 @@ TEST_CASE("adapt_struct")
 
         STATIC_CHECK(alloy::tuple_size_v<AdaptedStruct> == 2);
 
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, AdaptedStruct&>, int&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, AdaptedStruct const&>, int const&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, AdaptedStruct&&>, int&&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, AdaptedStruct const&&>, int const&&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, AdaptedStruct&>, int&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, AdaptedStruct const&>, int const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, AdaptedStruct&&>, int&&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, AdaptedStruct const&&>, int const&&>);
 
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, AdaptedStruct&>, double&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, AdaptedStruct const&>, double const&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, AdaptedStruct&&>, double&&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, AdaptedStruct const&&>, double const&&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, AdaptedStruct&>, double&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, AdaptedStruct const&>, double const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, AdaptedStruct&&>, double&&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, AdaptedStruct const&&>, double const&&>);
 
         constexpr AdaptedStruct a{42, 3.14};
 
@@ -81,10 +83,10 @@ TEST_CASE("adapt_struct")
 
         STATIC_CHECK(alloy::tuple_size_v<OldStyle> == 2);
 
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, OldStyle&>, int>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, OldStyle&&>, int>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, OldStyle&>, std::string const&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, OldStyle&&>, std::string const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, OldStyle&>, int>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, OldStyle&&>, int>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, OldStyle&>, std::string const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, OldStyle&&>, std::string const&>);
     }
 }
 
@@ -97,20 +99,45 @@ TEST_CASE("adapt_std_pair")
 
         STATIC_CHECK(alloy::tuple_size_v<Pair> == 2);
 
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, Pair&>, int&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, Pair const&>, int const&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, Pair&&>, int&&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, Pair const&&>, int const&&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Pair&>, int&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Pair const&>, int const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Pair&&>, int&&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Pair const&&>, int const&&>);
 
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, Pair&>, double&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, Pair const&>, double const&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, Pair&&>, double&&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, Pair const&&>, double const&&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Pair&>, double&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Pair const&>, double const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Pair&&>, double&&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Pair const&&>, double const&&>);
 
         constexpr Pair p(42, 3.14);
 
         STATIC_CHECK(alloy::get<0>(p) == 42);
         STATIC_CHECK(alloy::get<1>(p) == 3.14);
+    }
+    {
+        using Pair = std::pair<int&, double&>;
+
+        STATIC_CHECK(alloy::TupleLike<Pair>);
+
+        STATIC_CHECK(alloy::tuple_size_v<Pair> == 2);
+
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Pair&>, int&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Pair const&>, int&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Pair&&>, int&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Pair const&&>, int&>);
+
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Pair&>, double&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Pair const&>, double&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Pair&&>, double&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Pair const&&>, double&>);
+
+        int i = -1;
+        double d = -2;
+        Pair p(i, d);
+        alloy::get<0>(p) = 42;
+        alloy::get<1>(p) = 3.14;
+        CHECK(alloy::get<0>(p) == 42);
+        CHECK(alloy::get<1>(p) == 3.14);
     }
 }
 
@@ -123,20 +150,20 @@ TEST_CASE("adapt_std_tuple")
 
         STATIC_CHECK(alloy::tuple_size_v<Tuple> == 3);
 
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, Tuple&>, int&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, Tuple const&>, int const&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, Tuple&&>, int&&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, Tuple const&&>, int const&&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Tuple&>, int&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Tuple const&>, int const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Tuple&&>, int&&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Tuple const&&>, int const&&>);
 
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, Tuple&>, double&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, Tuple const&>, double const&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, Tuple&&>, double&&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, Tuple const&&>, double const&&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Tuple&>, double&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Tuple const&>, double const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Tuple&&>, double&&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Tuple const&&>, double const&&>);
 
-        STATIC_CHECK(std::is_same_v<alloy_get_t<2, Tuple&>, char&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<2, Tuple const&>, char const&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<2, Tuple&&>, char&&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<2, Tuple const&&>, char const&&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<2, Tuple&>, char&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<2, Tuple const&>, char const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<2, Tuple&&>, char&&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<2, Tuple const&&>, char const&&>);
 
         constexpr Tuple p(42, 3.14, 'A');
 
@@ -157,20 +184,20 @@ TEST_CASE("tuple")
 
         STATIC_CHECK(alloy::tuple_size_v<Tuple> == 3);
 
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, Tuple&>, int&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, Tuple const&>, int const&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, Tuple&&>, int&&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, Tuple const&&>, int const&&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Tuple&>, int&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Tuple const&>, int const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Tuple&&>, int&&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Tuple const&&>, int const&&>);
 
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, Tuple&>, double&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, Tuple const&>, double const&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, Tuple&&>, double&&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, Tuple const&&>, double const&&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Tuple&>, double&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Tuple const&>, double const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Tuple&&>, double&&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Tuple const&&>, double const&&>);
 
-        STATIC_CHECK(std::is_same_v<alloy_get_t<2, Tuple&>, char&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<2, Tuple const&>, char const&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<2, Tuple&&>, char&&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<2, Tuple const&&>, char const&&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<2, Tuple&>, char&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<2, Tuple const&>, char const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<2, Tuple&&>, char&&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<2, Tuple const&&>, char const&&>);
 
         constexpr Tuple t(42, 3.14, 'A');
 
@@ -187,20 +214,20 @@ TEST_CASE("tuple")
 
         STATIC_CHECK(alloy::tuple_size_v<Tuple> == 3);
 
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, Tuple&>, int&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, Tuple const&>, int&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, Tuple&&>, int&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, Tuple const&&>, int&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Tuple&>, int&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Tuple const&>, int&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Tuple&&>, int&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Tuple const&&>, int&>);
 
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, Tuple&>, double&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, Tuple const&>, double&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, Tuple&&>, double&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, Tuple const&&>, double&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Tuple&>, double&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Tuple const&>, double&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Tuple&&>, double&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Tuple const&&>, double&>);
 
-        STATIC_CHECK(std::is_same_v<alloy_get_t<2, Tuple&>, char&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<2, Tuple const&>, char&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<2, Tuple&&>, char&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<2, Tuple const&&>, char&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<2, Tuple&>, char&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<2, Tuple const&>, char&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<2, Tuple&&>, char&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<2, Tuple const&&>, char&>);
 
         int x = 42;
         double y = 3.14;
@@ -220,20 +247,20 @@ TEST_CASE("tuple")
 
         STATIC_CHECK(alloy::tuple_size_v<Tuple> == 3);
 
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, Tuple&>, int const&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, Tuple const&>, int const&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, Tuple&&>, int const&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<0, Tuple const&&>, int const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Tuple&>, int const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Tuple const&>, int const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Tuple&&>, int const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<0, Tuple const&&>, int const&>);
 
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, Tuple&>, double const&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, Tuple const&>, double const&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, Tuple&&>, double const&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<1, Tuple const&&>, double const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Tuple&>, double const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Tuple const&>, double const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Tuple&&>, double const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<1, Tuple const&&>, double const&>);
 
-        STATIC_CHECK(std::is_same_v<alloy_get_t<2, Tuple&>, char const&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<2, Tuple const&>, char const&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<2, Tuple&&>, char const&>);
-        STATIC_CHECK(std::is_same_v<alloy_get_t<2, Tuple const&&>, char const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<2, Tuple&>, char const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<2, Tuple const&>, char const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<2, Tuple&&>, char const&>);
+        STATIC_CHECK(std::same_as<alloy_get_t<2, Tuple const&&>, char const&>);
 
         int const x = 42;
         double const y = 3.14;
@@ -383,8 +410,8 @@ TEST_CASE("tuple")
         STATIC_CHECK(sizeof(b) == sizeof(OnlyChar));
     }
 
-    STATIC_CHECK(std::is_same_v<std::common_reference_t<alloy::tuple<int&, int&>, alloy::tuple<int, int>&>, alloy::tuple<int&, int&>>);
-    STATIC_CHECK(std::is_same_v<std::common_reference_t<AdaptedStruct&, alloy::tuple<int, double>&>, alloy::tuple<int&, double&>>);
+    STATIC_CHECK(std::same_as<std::common_reference_t<alloy::tuple<int&, int&>, alloy::tuple<int, int>&>, alloy::tuple<int&, int&>>);
+    STATIC_CHECK(std::same_as<std::common_reference_t<AdaptedStruct&, alloy::tuple<int, double>&>, alloy::tuple<int&, double&>>);
 
 #if __cpp_lib_reference_from_temporary >= 202202L
     STATIC_CHECK(!std::is_constructible_v<alloy::tuple<int const&>, double>);

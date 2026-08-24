@@ -61,6 +61,12 @@ struct type_list
     static constexpr std::size_t size = sizeof...(Ts);
 };
 
+template<auto... Vals>
+struct constant_list
+{
+    static constexpr std::size_t size = sizeof...(Vals);
+};
+
 template<auto...> using cvoid_t = void;
 
 namespace detail {

@@ -3,10 +3,15 @@
 
 // SPDX-License-Identifier: MIT
 
+#include <iris/config.hpp> // IWYU pragma: keep
+
 #include <iris/alloy/traits.hpp>
 #include <iris/alloy/tuple.hpp>
 
-#include <functional>
+#include <iris/utility.hpp>
+#include <iris/type_traits.hpp>
+
+#include <functional> // std::invoke
 #include <type_traits>
 #include <utility>
 
@@ -15,9 +20,6 @@
 namespace iris::alloy {
 
 namespace detail {
-
-template<class... Ts>
-struct type_list;
 
 template<class ResultTypeList, class IndexSeqList, class... Tuples>
 struct tuple_cat_result_impl;
@@ -30,10 +32,20 @@ struct tuple_cat_result_impl<type_list<ResultTypes...>, type_list<>>
 
 template<class... ResultTypes, std::size_t... Is, class... IndexSeqs, class Tuple, class... Tuples>
 struct tuple_cat_result_impl<type_list<ResultTypes...>, type_list<std::index_sequence<Is...>, IndexSeqs...>, Tuple, Tuples...>
-    : tuple_cat_result_impl<type_list<ResultTypes..., tuple_element_t<Is, std::remove_cvref_t<Tuple>>...>, type_list<IndexSeqs...>, Tuples...> {};
+    : tuple_cat_result_impl<
+        type_list<ResultTypes..., tuple_element_t<Is, std::remove_cvref_t<Tuple>>...>,
+        type_list<IndexSeqs...>,
+        Tuples...
+>
+{};
 
 template<class... Tuples>
-struct tuple_cat_result : tuple_cat_result_impl<type_list<>, type_list<std::make_index_sequence<tuple_size_v<std::remove_cvref_t<Tuples>>>...>, Tuples...> {};
+struct tuple_cat_result : tuple_cat_result_impl<
+    type_list<>,
+    type_list<std::make_index_sequence<tuple_size_v<std::remove_cvref_t<Tuples>>>...>,
+    Tuples...
+>
+{};
 
 template<class ResultTuple, class IndexSeqList, class... Tuples>
 struct tuple_cat_impl_base;
@@ -56,25 +68,31 @@ struct tuple_cat_impl_base<ResultTuple, type_list<std::index_sequence<Is...>, In
 {
     template<class... Args>
     static constexpr bool nothrow =
-        tuple_cat_impl_base<ResultTuple, type_list<IndexSeqs...>, Tuples...>::template nothrow<Args...> && (is_nothrow_gettable_v<Is, Tuple> && ...);
+        tuple_cat_impl_base<ResultTuple, type_list<IndexSeqs...>, Tuples...>::template nothrow<Args...> &&
+        (is_nothrow_gettable_v<Is, Tuple> && ...);
 
     template<class... Args>
     static constexpr ResultTuple apply(Tuple&& tuple, Tuples&&... tuples, Args&&... args) noexcept(nothrow<Args...>)
     {
-        return tuple_cat_impl_base<ResultTuple, type_list<IndexSeqs...>, Tuples...>::apply(std::forward<Tuples>(tuples)..., std::forward<Args>(args)...,
-                                                                                           alloy::get<Is>(std::forward<Tuple>(tuple))...);
+        return tuple_cat_impl_base<ResultTuple, type_list<IndexSeqs...>, Tuples...>::apply(
+            std::forward<Tuples>(tuples)..., std::forward<Args>(args)...,
+            alloy::get<Is>(std::forward<Tuple>(tuple))...
+        );
     }
 };
 
 template<class... Tuples>
 struct tuple_cat_impl
 {
-    using Base = tuple_cat_impl_base<typename tuple_cat_result<Tuples...>::type,
-                                     detail::type_list<std::make_index_sequence<tuple_size_v<std::remove_cvref_t<Tuples>>>...>, Tuples...>;
+    using Base = tuple_cat_impl_base<
+        typename tuple_cat_result<Tuples...>::type,
+        type_list<std::make_index_sequence<tuple_size_v<std::remove_cvref_t<Tuples>>>...>,
+        Tuples...
+    >;
 
     static constexpr bool nothrow = Base::template nothrow<>;
 
-    static constexpr typename tuple_cat_result<Tuples...>::type apply(Tuples&&... tuples) noexcept(nothrow)
+    static constexpr tuple_cat_result<Tuples...>::type apply(Tuples&&... tuples) noexcept(nothrow)
     {
         return Base::apply(std::forward<Tuples>(tuples)...);
     }
@@ -102,20 +120,20 @@ struct index_sequence_split : index_sequence_split_impl<N, std::index_sequence<>
 template<std::size_t N, class IndexSeq>
 struct index_sequence_take
 {
-    using type = typename index_sequence_split<N, IndexSeq>::head;
+    using type = index_sequence_split<N, IndexSeq>::head;
 };
 
 template<std::size_t N, class IndexSeq>
-using index_sequence_take_t = typename index_sequence_take<N, IndexSeq>::type;
+using index_sequence_take_t = index_sequence_take<N, IndexSeq>::type;
 
 template<std::size_t N, class IndexSeq>
 struct index_sequence_drop
 {
-    using type = typename index_sequence_split<N, IndexSeq>::tail;
+    using type = index_sequence_split<N, IndexSeq>::tail;
 };
 
 template<std::size_t N, class IndexSeq>
-using index_sequence_drop_t = typename index_sequence_drop<N, IndexSeq>::type;
+using index_sequence_drop_t = index_sequence_drop<N, IndexSeq>::type;
 
 template<std::size_t From, std::size_t To, class IndexSeq>
 struct index_sequence_subrange
@@ -124,7 +142,7 @@ struct index_sequence_subrange
 };
 
 template<std::size_t From, std::size_t To, class IndexSeq>
-using index_sequence_subrange_t = typename index_sequence_subrange<From, To, IndexSeq>::type;
+using index_sequence_subrange_t = index_sequence_subrange<From, To, IndexSeq>::type;
 
 template<class IndexSeq>
 struct index_sequence_sum;
@@ -152,7 +170,7 @@ struct index_sequence_cumulative_sum<std::index_sequence<Is...>>
     : index_sequence_cumulative_sum_impl<std::make_index_sequence<sizeof...(Is)>, std::index_sequence<Is...>> {};
 
 template<class IndexSeq>
-using index_sequence_cumulative_sum_t = typename index_sequence_cumulative_sum<IndexSeq>::type;
+using index_sequence_cumulative_sum_t = index_sequence_cumulative_sum<IndexSeq>::type;
 
 template<class IndexSeq, class FromIndexSeq, class ToIndexSeq>
 struct index_sequence_segment_impl;
@@ -171,12 +189,15 @@ struct index_sequence_segment<std::index_sequence<Is...>, Sizes...>
 {
     using CumSumIndexSeq = index_sequence_cumulative_sum_t<std::index_sequence<Sizes...>>;
 
-    using type = typename index_sequence_segment_impl<std::index_sequence<Is...>, index_sequence_take_t<sizeof...(Sizes), CumSumIndexSeq>,
-                                                      index_sequence_drop_t<1, CumSumIndexSeq>>::type;
+    using type = index_sequence_segment_impl<
+        std::index_sequence<Is...>,
+        index_sequence_take_t<sizeof...(Sizes), CumSumIndexSeq>,
+        index_sequence_drop_t<1, CumSumIndexSeq>
+    >::type;
 };
 
 template<class IndexSeq, std::size_t... Sizes>
-using index_sequence_segment_t = typename index_sequence_segment<IndexSeq, Sizes...>::type;
+using index_sequence_segment_t = index_sequence_segment<IndexSeq, Sizes...>::type;
 
 template<class Tuple, class IndexSeq>
 struct tuple_from_tuple_and_index_sequence;
@@ -188,7 +209,7 @@ struct tuple_from_tuple_and_index_sequence<Tuple, std::index_sequence<Is...>>
 };
 
 template<class Tuple, class IndexSeq>
-using tuple_from_tuple_and_index_sequence_t = typename tuple_from_tuple_and_index_sequence<Tuple, IndexSeq>::type;
+using tuple_from_tuple_and_index_sequence_t = tuple_from_tuple_and_index_sequence<Tuple, IndexSeq>::type;
 
 template<class Tuple, class SegmentedIndexSeqList>
 struct tuple_split_result_impl;
@@ -202,7 +223,7 @@ struct tuple_split_result_impl<Tuple, type_list<SegmentedIndexSeqs...>>
 template<class Tuple, std::size_t... Sizes>
 struct tuple_split_result
 {
-    using type = typename tuple_split_result_impl<Tuple, index_sequence_segment_t<std::make_index_sequence<tuple_size_v<std::remove_cvref_t<Tuple>>>, Sizes...>>::type;
+    using type = tuple_split_result_impl<Tuple, index_sequence_segment_t<std::make_index_sequence<tuple_size_v<std::remove_cvref_t<Tuple>>>, Sizes...>>::type;
 };
 
 template<class ResultInnerTuple, class Tuple, class IndexSeq>
@@ -237,8 +258,12 @@ struct tuple_split_make_outer<tuple<ResultInnerTuples...>, Tuple, type_list<Segm
 };
 
 template<class Tuple, std::size_t... Sizes>
-struct tuple_split_impl : tuple_split_make_outer<typename tuple_split_result<Tuple, Sizes...>::type, Tuple,
-                                                 index_sequence_segment_t<std::make_index_sequence<tuple_size_v<std::remove_cvref_t<Tuple>>>, Sizes...>> {};
+struct tuple_split_impl : tuple_split_make_outer<
+    typename tuple_split_result<Tuple, Sizes...>::type,
+    Tuple,
+    index_sequence_segment_t<std::make_index_sequence<tuple_size_v<std::remove_cvref_t<Tuple>>>, Sizes...>
+>
+{};
 
 template<class From, class To, class IndexSeq = std::make_index_sequence<tuple_size_v<std::remove_cvref_t<From>>>>
 struct tuple_assign_impl;
@@ -246,8 +271,10 @@ struct tuple_assign_impl;
 template<class From, class To, std::size_t... Is>
 struct tuple_assign_impl<From, To, std::index_sequence<Is...>>
 {
-    static constexpr bool nothrow = std::conjunction_v<std::conjunction<is_nothrow_gettable<Is, From>, is_nothrow_gettable<Is, To>>...,
-                                                       std::is_nothrow_assignable<tuple_get_t<Is, To>, tuple_get_t<Is, From>>...>;
+    static constexpr bool nothrow = std::conjunction_v<
+        std::conjunction<is_nothrow_gettable<Is, From>, is_nothrow_gettable<Is, To>>...,
+        std::is_nothrow_assignable<tuple_get_t<Is, To>, tuple_get_t<Is, From>>...
+    >;
 
     static constexpr void apply(From&& from, To&& to) noexcept(nothrow)
     {
@@ -274,21 +301,35 @@ template<std::size_t... Is>
 struct for_each_impl<std::index_sequence<Is...>>
 {
     template<class Tuple, class F>
-    static constexpr void apply(Tuple&& t, F&& f){
+    static constexpr void apply(Tuple&& t, F&& f)
+        noexcept(std::conjunction_v<
+            std::is_nothrow_invocable<F, tuple_get_t<Is, Tuple>>...
+        >)
+    {
         ((void)std::invoke(std::forward<F>(f), alloy::get<Is>(std::forward<Tuple>(t))), ...);
+    }
+
+    template<class Tuple, class F>
+        requires std::invocable<F, std::integral_constant<std::size_t, 0>, tuple_get_t<0, Tuple>>
+    static constexpr void apply(Tuple&& t, F&& f)
+        noexcept(std::conjunction_v<
+            std::is_nothrow_invocable<F, std::integral_constant<std::size_t, Is>, tuple_get_t<Is, Tuple>>...
+        >)
+    {
+        ((void)std::invoke(std::forward<F>(f), std::integral_constant<std::size_t, Is>{}, alloy::get<Is>(std::forward<Tuple>(t))), ...);
     }
 };
 
 } // detail
 
 template<class... Tuples>
-using tuple_cat_t = typename detail::tuple_cat_result<Tuples...>::type;
+using tuple_cat_t = detail::tuple_cat_result<Tuples...>::type;
 
 template<class Tuple, std::size_t... Sizes>
-using tuple_split_t = typename detail::tuple_split_result<Tuple, Sizes...>::type;
+using tuple_split_t = detail::tuple_split_result<Tuple, Sizes...>::type;
 
 template<class Tuple>
-using tuple_ref_t = typename detail::tuple_ref_result<Tuple>::type;
+using tuple_ref_t = detail::tuple_ref_result<Tuple>::type;
 
 template<TupleLike... Tuples>
 [[nodiscard]] constexpr tuple_cat_t<Tuples...> tuple_cat(Tuples&&... tuples) noexcept(detail::tuple_cat_impl<Tuples...>::nothrow)
@@ -318,8 +359,102 @@ template<TupleLike Tuple>
 
 template<TupleLike Tuple, class F>
 constexpr void for_each(Tuple&& t, F&& f)
+    noexcept(noexcept(detail::for_each_impl<std::make_index_sequence<tuple_size_v<std::remove_cvref_t<Tuple>>>>::apply(std::forward<Tuple>(t), std::forward<F>(f))))
 {
     return detail::for_each_impl<std::make_index_sequence<tuple_size_v<std::remove_cvref_t<Tuple>>>>::apply(std::forward<Tuple>(t), std::forward<F>(f));
+}
+
+namespace detail {
+
+template<class Tuple, class F>
+concept invocable_with_index =
+    std::invocable<F, std::integral_constant<std::size_t, 0>, tuple_get_t<0, Tuple>>;
+
+template<class Tuple, class F>
+struct visit_at_return_type
+{
+    using type = decltype(
+        std::invoke(std::declval<F>(), std::declval<tuple_get_t<0, Tuple>>())
+    );
+};
+
+template<class Tuple, class F>
+    requires invocable_with_index<Tuple, F>
+struct visit_at_return_type<Tuple, F>
+{
+    using type = decltype(
+        std::invoke(std::declval<F>(), std::declval<std::integral_constant<std::size_t, 0>>(), std::declval<tuple_get_t<0, Tuple>>())
+    );
+};
+
+template<class Tuple, std::size_t I, class F>
+struct visit_at_noexcept_impl
+{
+    static constexpr bool value = noexcept(
+        std::invoke(std::declval<F>(), std::declval<tuple_get_t<I, Tuple>>())
+    );
+};
+
+template<class Tuple, std::size_t I, class F>
+    requires invocable_with_index<Tuple, F>
+struct visit_at_noexcept_impl<Tuple, I, F>
+{
+    static constexpr bool value = noexcept(
+        std::invoke(std::declval<F>(), std::declval<std::integral_constant<std::size_t, I>>(), std::declval<tuple_get_t<I, Tuple>>())
+    );
+};
+
+template<class Tuple, class Seq, class F>
+struct visit_at_noexcept_impl_dispatch;
+
+template<class Tuple, class F, std::size_t... Is>
+struct visit_at_noexcept_impl_dispatch<Tuple, std::index_sequence<Is...>, F>
+    : std::conjunction<visit_at_noexcept_impl<Tuple, Is, F>...>
+{};
+
+template<class Tuple, class F>
+constexpr bool visit_at_all_noexcept = visit_at_noexcept_impl_dispatch<
+    Tuple,
+    std::make_index_sequence<tuple_size_v<Tuple>>,
+    F
+>::value;
+
+} // detail
+
+// `f(auto&& elem)`
+template<TupleLike Tuple, class F>
+    requires (!detail::invocable_with_index<Tuple, F>)
+IRIS_FORCEINLINE constexpr detail::visit_at_return_type<Tuple, F>::type
+visit_at(std::size_t const i, F&& f, Tuple&& tup)
+    noexcept(detail::visit_at_all_noexcept<Tuple, F>)
+{
+    return iris::invoke_with_index<tuple_size_v<Tuple>>(
+        i,
+        [&]<std::size_t I>(std::integral_constant<std::size_t, I>) constexpr
+            noexcept(noexcept(std::invoke(std::declval<F>(), std::declval<detail::tuple_get_t<I, Tuple>>())))
+            -> detail::visit_at_return_type<Tuple, F>::type
+        {
+            return std::invoke(std::forward<F>(f), alloy::get<I>(std::forward<Tuple>(tup)));
+        }
+    );
+}
+
+// `f<std::size_t I>(std::integral_constant<std::size_t, I>, auto&& elem)`
+template<TupleLike Tuple, class F>
+    requires detail::invocable_with_index<Tuple, F>
+IRIS_FORCEINLINE constexpr detail::visit_at_return_type<Tuple, F>::type
+visit_at(std::size_t const i, F&& f, Tuple&& tup)
+    noexcept(detail::visit_at_all_noexcept<Tuple, F>)
+{
+    return iris::invoke_with_index<tuple_size_v<Tuple>>(
+        i,
+        [&]<std::size_t I>(std::integral_constant<std::size_t, I>) constexpr
+            noexcept(noexcept(std::invoke(std::declval<F>(), std::declval<std::integral_constant<std::size_t, I>>(), std::declval<detail::tuple_get_t<I, Tuple>>())))
+            -> detail::visit_at_return_type<Tuple, F>::type
+        {
+            return std::invoke(std::forward<F>(f), std::integral_constant<std::size_t, I>{}, alloy::get<I>(std::forward<Tuple>(tup)));
+        }
+    );
 }
 
 } // iris::alloy

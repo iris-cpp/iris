@@ -3,6 +3,8 @@
 
 // SPDX-License-Identifier: MIT
 
+#include <iris/config.hpp> // IWYU pragma: keep
+
 #include <iris/io_fwd.hpp>
 
 #include <iris/alloy/tuple.hpp>
@@ -10,7 +12,7 @@
 #include <ostream>
 #include <utility>
 
-#include <cstddef>
+#include <cstddef> // IWYU pragma: keep
 
 namespace iris::alloy {
 

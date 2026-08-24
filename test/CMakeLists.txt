@@ -192,6 +192,7 @@ if(PROJECT_IS_TOP_LEVEL)
             interval_set
             snippet
             alloy
+            alloy_visit
         )
         foreach(test_name IN LISTS IRIS_TEST_IRIS_TESTS)
             iris_define_internal_test(${test_name} ${test_name}.cpp)
