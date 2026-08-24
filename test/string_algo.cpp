@@ -1,5 +1,6 @@
 #include "iris_test.hpp"
 
+#include <iris/string.hpp>
 #include <iris/string_algo.hpp>
 
 #include <format>
@@ -13,6 +14,77 @@
 using namespace std::string_view_literals;
 
 // NOLINTBEGIN(readability-container-size-empty)
+
+TEST_CASE("string: type traits")
+{
+    STATIC_CHECK(iris::CharLike<char>);
+    STATIC_CHECK(iris::CharLike<wchar_t>);
+    STATIC_CHECK(iris::CharLike<char8_t>);
+    STATIC_CHECK(iris::CharLike<char16_t>);
+    STATIC_CHECK(iris::CharLike<char32_t>);
+
+    STATIC_CHECK(iris::CharLike<char const>);
+    STATIC_CHECK(iris::CharLike<char volatile>);
+    STATIC_CHECK(iris::CharLike<char const volatile>);
+    STATIC_CHECK(!iris::CharLike<char const&>);
+    STATIC_CHECK(!iris::CharLike<char&>);
+
+    STATIC_CHECK(std::same_as<iris::char_type_for<char>, char>);
+    STATIC_CHECK(std::same_as<iris::char_type_for<char const>, char>);
+    STATIC_CHECK(std::same_as<iris::char_type_for<char volatile>, char>);
+    STATIC_CHECK(std::same_as<iris::char_type_for<char const volatile>, char>);
+
+    STATIC_CHECK(std::same_as<iris::char_type_for<char*>, char>);
+    STATIC_CHECK(std::same_as<iris::char_type_for<char const*>, char>);
+
+#define IRIS_CHECK_STRING_LIKE(CharT, type) \
+    STATIC_CHECK(iris::StringLike<type>); \
+    STATIC_CHECK(std::same_as<iris::char_type_for<type>, CharT>);
+
+    IRIS_CHECK_STRING_LIKE(char, char const*);
+    IRIS_CHECK_STRING_LIKE(char, char const* const);
+    IRIS_CHECK_STRING_LIKE(char, char const*&);
+    IRIS_CHECK_STRING_LIKE(char, char const* const&);
+    IRIS_CHECK_STRING_LIKE(char, char const*&&);
+    IRIS_CHECK_STRING_LIKE(char, char const* const&&);
+
+    IRIS_CHECK_STRING_LIKE(char, std::string_view);
+    IRIS_CHECK_STRING_LIKE(char, std::string_view const);
+    IRIS_CHECK_STRING_LIKE(char, std::string_view&);
+    IRIS_CHECK_STRING_LIKE(char, std::string_view const&);
+    IRIS_CHECK_STRING_LIKE(char, std::string_view&&);
+    IRIS_CHECK_STRING_LIKE(char, std::string_view const&&);
+
+    IRIS_CHECK_STRING_LIKE(char, std::string);
+    IRIS_CHECK_STRING_LIKE(char, std::string const);
+    IRIS_CHECK_STRING_LIKE(char, std::string&);
+    IRIS_CHECK_STRING_LIKE(char, std::string const&);
+    IRIS_CHECK_STRING_LIKE(char, std::string&&);
+    IRIS_CHECK_STRING_LIKE(char, std::string const&&);
+
+    IRIS_CHECK_STRING_LIKE(char32_t, char32_t const*);
+    IRIS_CHECK_STRING_LIKE(char32_t, char32_t const* const);
+    IRIS_CHECK_STRING_LIKE(char32_t, char32_t const*&);
+    IRIS_CHECK_STRING_LIKE(char32_t, char32_t const* const&);
+    IRIS_CHECK_STRING_LIKE(char32_t, char32_t const*&&);
+    IRIS_CHECK_STRING_LIKE(char32_t, char32_t const* const&&);
+
+    IRIS_CHECK_STRING_LIKE(char32_t, std::u32string_view);
+    IRIS_CHECK_STRING_LIKE(char32_t, std::u32string_view const);
+    IRIS_CHECK_STRING_LIKE(char32_t, std::u32string_view&);
+    IRIS_CHECK_STRING_LIKE(char32_t, std::u32string_view const&);
+    IRIS_CHECK_STRING_LIKE(char32_t, std::u32string_view&&);
+    IRIS_CHECK_STRING_LIKE(char32_t, std::u32string_view const&&);
+
+    IRIS_CHECK_STRING_LIKE(char32_t, std::u32string);
+    IRIS_CHECK_STRING_LIKE(char32_t, std::u32string const);
+    IRIS_CHECK_STRING_LIKE(char32_t, std::u32string&);
+    IRIS_CHECK_STRING_LIKE(char32_t, std::u32string const&);
+    IRIS_CHECK_STRING_LIKE(char32_t, std::u32string&&);
+    IRIS_CHECK_STRING_LIKE(char32_t, std::u32string const&&);
+
+#undef IRIS_CHECK_STRING_LIKE
+}
 
 TEST_CASE("string_algo: trim")
 {
