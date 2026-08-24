@@ -3,10 +3,12 @@
 
 // SPDX-License-Identifier: MIT
 
+#include <iris/config.hpp> // IWYU pragma: keep
+
 #include <bit>
 #include <memory>
 
-#include <cstddef>
+#include <cstddef> // IWYU pragma: keep
 
 // https://datatracker.ietf.org/doc/html/draft-eastlake-fnv-03#section-2
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=59406

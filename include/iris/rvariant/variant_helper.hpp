@@ -9,6 +9,8 @@
 // third-party codes may depend on only this header to
 // provide sufficient concepts for their code.
 
+#include <iris/config.hpp> // IWYU pragma: keep
+
 #include <iris/rvariant/detail/rvariant_fwd.hpp>
 #include <iris/type_traits.hpp>
 

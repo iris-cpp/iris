@@ -3,9 +3,10 @@
 
 // SPDX-License-Identifier: MIT
 
+#include <iris/config.hpp> // IWYU pragma: keep
+
 #include <format>
 #include <type_traits>
-
 
 namespace iris {
 

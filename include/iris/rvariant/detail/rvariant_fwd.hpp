@@ -7,16 +7,6 @@
 
 #include <cstddef> // IWYU pragma: keep
 
-#if !defined(IRIS_RVARIANT_VISIT_STRENGTHEN)
-# define IRIS_RVARIANT_VISIT_STRENGTHEN 1
-#endif
-
-#if IRIS_RVARIANT_VISIT_STRENGTHEN
-# define IRIS_RVARIANT_VISIT_NOEXCEPT(...) noexcept(__VA_ARGS__)
-#else
-# define IRIS_RVARIANT_VISIT_NOEXCEPT(...)
-#endif
-
 namespace iris {
 
 template<class... Ts>

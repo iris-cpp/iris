@@ -75,7 +75,7 @@ struct tuple_element {};
 template<std::size_t I, class... Ts>
 struct tuple_element<I, tuple<Ts...>>
 {
-    using type = IRIS_CORE_PACK_INDEXING(I, Ts...);
+    using type = IRIS_PACK_INDEXING(I, Ts...);
 };
 
 template<std::size_t I, class... Ts>

@@ -1,7 +1,9 @@
-﻿#ifndef IRIS_ZZ_RVARIANT_DETAIL_VARIANT_STORAGE_HPP
+#ifndef IRIS_ZZ_RVARIANT_DETAIL_VARIANT_STORAGE_HPP
 #define IRIS_ZZ_RVARIANT_DETAIL_VARIANT_STORAGE_HPP
 
 // SPDX-License-Identifier: MIT
+
+#include <iris/config.hpp> // IWYU pragma: keep
 
 // IWYU pragma: private, include <iris/rvariant.hpp>
 

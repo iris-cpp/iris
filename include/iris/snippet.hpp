@@ -3,7 +3,7 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <iris/config.hpp>
+#include <iris/config.hpp> // IWYU pragma: keep
 
 #include <iris/exception.hpp>
 #include <iris/interval.hpp>
@@ -23,7 +23,7 @@
 #include <utility>
 #include <stdexcept>
 
-#include <cstddef>
+#include <cstddef> // IWYU pragma: keep
 #include <cassert>
 
 namespace iris::snip {

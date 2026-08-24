@@ -11,7 +11,6 @@
 #include <iris/exception.hpp>
 
 #include <vector>
-#include <utility>
 
 #include <cassert>
 

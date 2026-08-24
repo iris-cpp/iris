@@ -179,6 +179,7 @@ if(PROJECT_IS_TOP_LEVEL)
     if(NOT DEFINED IRIS_CI_COMPONENT OR IRIS_CI_COMPONENT STREQUAL iris)
         set(
             IRIS_TEST_IRIS_TESTS
+            library_config
             core
             type_traits
             stdint

@@ -1,7 +1,9 @@
-﻿#ifndef IRIS_ZZ_COND_TRIVIAL_SMF_HPP
+#ifndef IRIS_ZZ_COND_TRIVIAL_SMF_HPP
 #define IRIS_ZZ_COND_TRIVIAL_SMF_HPP
 
 // SPDX-License-Identifier: MIT
+
+#include <iris/config.hpp> // IWYU pragma: keep
 
 #include <type_traits>
 

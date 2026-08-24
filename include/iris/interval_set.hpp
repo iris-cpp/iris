@@ -3,7 +3,7 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <iris/config.hpp>
+#include <iris/config.hpp> // IWYU pragma: keep
 #include <iris/iterator.hpp>
 
 #include <format>
@@ -14,7 +14,7 @@
 #include <utility>
 #include <compare>
 
-#include <cstddef>
+#include <cstddef> // IWYU pragma: keep
 
 namespace iris {
 

@@ -3,7 +3,7 @@
 
 // SPDX-License-Identifier: MIT
 
-#define IRIS_PP_CAT_I(a, b) a##b
-#define IRIS_PP_CAT(a, b) IRIS_PP_CAT_I(a, b)
+#define IRIS_ZZ_PP_CAT_I(a, b) a##b
+#define IRIS_PP_CAT(a, b) IRIS_ZZ_PP_CAT_I(a, b)
 
 #endif

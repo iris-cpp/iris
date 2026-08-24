@@ -3,8 +3,8 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <iris/config.hpp>
-#include <iris/interval.hpp>
+#include <iris/config.hpp> // IWYU pragma: keep
+#include <iris/interval.hpp> // IWYU pragma: export
 
 #include <concepts>
 #include <type_traits>
@@ -15,7 +15,7 @@
 #include <map>
 #include <set>
 
-#include <cstddef>
+#include <cstddef> // IWYU pragma: keep
 
 namespace iris {
 

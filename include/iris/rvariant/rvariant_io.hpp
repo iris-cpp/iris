@@ -3,6 +3,8 @@
 
 // SPDX-License-Identifier: MIT
 
+#include <iris/config.hpp> // IWYU pragma: keep
+
 #include <iris/rvariant/rvariant.hpp>
 
 #include <iris/format_traits.hpp>

@@ -1069,7 +1069,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     // <https://eel.is/c++draft/variant.visit#lib:visit,variant_>
     template<int = 0, class Self, class Visitor>
     constexpr decltype(auto) visit(this Self&& self, Visitor&& vis)
-        IRIS_RVARIANT_VISIT_NOEXCEPT(noexcept(iris::visit(
+        noexcept(noexcept(iris::visit(
             std::forward<Visitor>(vis),
             (typename base_type::template like_rvariant_t<Self>)self
         )))
@@ -1084,7 +1084,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     // <https://eel.is/c++draft/variant.visit#lib:visit,variant__>
     template<class R, class Self, class Visitor>
     constexpr R visit(this Self&& self, Visitor&& vis)
-        IRIS_RVARIANT_VISIT_NOEXCEPT(noexcept(iris::visit<R>(
+        noexcept(noexcept(iris::visit<R>(
             std::forward<Visitor>(vis),
             (typename base_type::template like_rvariant_t<Self>)self
         )))

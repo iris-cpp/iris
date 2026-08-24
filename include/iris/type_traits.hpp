@@ -104,7 +104,7 @@ using at_c_t = at_c<I, T>::type;
 // Note: GCC 15 emits "sorry, unimplemented: mangling type pack index"
 #if !(defined(__GNUC__) && !defined(__clang__) && __GNUC__ <= 15) && __cpp_pack_indexing >= 202311L
 
-# define IRIS_CORE_PACK_INDEXING(I, Ts_ellipsis) Ts_ellipsis[I]
+# define IRIS_PACK_INDEXING(I, Ts_ellipsis) Ts_ellipsis[I]
 
 template<std::size_t I, class... Ts> struct pack_indexing { using type = Ts...[I]; };
 template<std::size_t I, class... Ts> using pack_indexing_t = Ts...[I];
@@ -131,7 +131,7 @@ struct pack_indexing
 template<std::size_t I, class... Ts>
 using pack_indexing_t = pack_indexing<I, Ts...>::type;
 
-# define IRIS_CORE_PACK_INDEXING(I, Ts_ellipsis) ::iris::pack_indexing_t<I, Ts_ellipsis>
+# define IRIS_PACK_INDEXING(I, Ts_ellipsis) ::iris::pack_indexing_t<I, Ts_ellipsis>
 
 
 template<std::size_t I, auto... Ns>

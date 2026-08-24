@@ -3,6 +3,8 @@
 
 // SPDX-License-Identifier: MIT
 
+#include <iris/config.hpp> // IWYU pragma: keep
+
 #include <iris/string.hpp>
 #include <iris/enum_bitops.hpp>
 
