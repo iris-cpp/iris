@@ -5,7 +5,9 @@
 
 #include <iris/pp/if.hpp>
 
-#define IRIS_PP_IDENTITY(x) x
+#define IRIS_PP_IDENTITY(...) __VA_ARGS__
+
+#define IRIS_PP_EMPTY(...)
 
 #define IRIS_ZZ_PP_EXPAND_I(...) __VA_ARGS__
 #define IRIS_PP_EXPAND(...) IRIS_ZZ_PP_EXPAND_I(__VA_ARGS__)

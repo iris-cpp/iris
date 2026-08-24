@@ -386,3 +386,44 @@ TEST_CASE("marshal: serialize (class type)")
         CHECK(json::load<MyData>(j) == my_data);
     }
 }
+
+// ----------------------------------------------------
+// pimpl related
+
+#define IRIS_TEST_MY_PIMPL_DATA_FIELD_DEFS \
+    (((std::map<std::string, int>), int_map)) \
+    ((int, age))
+
+struct MyPimplData
+{
+    IRIS_MARSHAL_PIMPL_CLASS(MyPimplData);
+    IRIS_MARSHAL_PIMPL_FIELD_DECLARE(IRIS_TEST_MY_PIMPL_DATA_FIELD_DEFS);
+};
+
+IRIS_MARSHAL_ADAPT_DEFS(MyPimplData, IRIS_TEST_MY_PIMPL_DATA_FIELD_DEFS);
+
+// ----------------------------------
+
+struct MyPimplData::Impl
+{
+    IRIS_MARSHAL_PIMPL_FIELD_DEFS(IRIS_TEST_MY_PIMPL_DATA_FIELD_DEFS)
+};
+
+IRIS_MARSHAL_PIMPL_CLASS_DEFINE(MyPimplData);
+IRIS_MARSHAL_PIMPL_FIELD_ACCESS_DEFINE(MyPimplData, IRIS_TEST_MY_PIMPL_DATA_FIELD_DEFS);
+
+TEST_CASE("marshal: pimpl")
+{
+    nlohmann::json j;
+    MyPimplData p_data;
+    p_data.set_age(42);
+    p_data.set_int_map({{"foo", 5}});
+
+    json::save(j, p_data);
+    CHECK(j.at("age").get<int>() == 42);
+    CHECK(j.at("int_map").get<std::map<std::string, int>>() == std::map<std::string, int>{{"foo", 5}});
+
+    auto const loaded_p_data = json::load<MyPimplData>(j);
+    CHECK(loaded_p_data.get_age() == p_data.get_age());
+    CHECK(loaded_p_data.get_int_map() == p_data.get_int_map());
+}
