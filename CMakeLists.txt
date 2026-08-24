@@ -8,8 +8,12 @@ endif()
 
 project(iris VERSION 0.0.1 LANGUAGES CXX)
 
-set(IRIS_ROOT "${CMAKE_CURRENT_LIST_DIR}")
+if(DEFINED IRIS_ROOT AND NOT "${IRIS_ROOT}" PATH_EQUAL "${CMAKE_CURRENT_LIST_DIR}")
+    message(FATAL_ERROR "Cannot include Iris more than once")
+endif()
+set(CACHE{IRIS_ROOT} TYPE PATH VALUE "${CMAKE_CURRENT_LIST_DIR}")
 set_property(GLOBAL PROPERTY IRIS_ROOT "${IRIS_ROOT}")
+message(STATUS "IRIS_ROOT: ${IRIS_ROOT}")
 
 
 # -----------------------------------------------------------------
