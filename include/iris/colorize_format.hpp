@@ -1,6 +1,10 @@
 #ifndef IRIS_ZZ_COLORIZE_FORMAT_HPP
 #define IRIS_ZZ_COLORIZE_FORMAT_HPP
 
+// SPDX-License-Identifier: MIT
+
+#include <iris/config.hpp> // IWYU pragma: keep
+
 #include <iris/string.hpp>
 #include <iris/enum_bitops.hpp>
 #include <iris/enum_bitops_algorithm.hpp>

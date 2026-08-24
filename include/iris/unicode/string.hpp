@@ -28,6 +28,8 @@ DEALINGS IN THE SOFTWARE.
 #ifndef IRIS_ZZ_UNICODE_STRING_HPP
 #define IRIS_ZZ_UNICODE_STRING_HPP
 
+#include <iris/config.hpp> // IWYU pragma: keep
+
 #include <algorithm>
 #include <concepts>
 #include <stdexcept>

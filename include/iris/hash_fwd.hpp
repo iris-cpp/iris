@@ -3,6 +3,8 @@
 
 // SPDX-License-Identifier: MIT
 
+#include <iris/config.hpp> // IWYU pragma: keep
+
 #include <version>
 
 #if !defined(_MSC_VER) && __cplusplus <= 202302L || \

@@ -1,7 +1,9 @@
-﻿#ifndef IRIS_ZZ_RVARIANT_SUBSET_HPP
+#ifndef IRIS_ZZ_RVARIANT_SUBSET_HPP
 #define IRIS_ZZ_RVARIANT_SUBSET_HPP
 
 // SPDX-License-Identifier: MIT
+
+#include <iris/config.hpp> // IWYU pragma: keep
 
 #include <iris/rvariant/detail/rvariant_fwd.hpp>
 #include <iris/rvariant/variant_helper.hpp>

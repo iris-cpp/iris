@@ -3,6 +3,8 @@
 
 // SPDX-License-Identifier: MIT
 
+#include <iris/config.hpp> // IWYU pragma: keep
+
 #include <iris/bits/specialization_of.hpp>
 #include <iris/compare.hpp>
 #include <iris/hash.hpp>

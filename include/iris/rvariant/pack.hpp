@@ -1,7 +1,9 @@
-﻿#ifndef IRIS_ZZ_RVARIANT_PACK_HPP
+#ifndef IRIS_ZZ_RVARIANT_PACK_HPP
 #define IRIS_ZZ_RVARIANT_PACK_HPP
 
 // SPDX-License-Identifier: MIT
+
+#include <iris/config.hpp> // IWYU pragma: keep
 
 // Utilities related to [rvariant.pack]
 

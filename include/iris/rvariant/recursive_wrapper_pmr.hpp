@@ -3,6 +3,8 @@
 
 // SPDX-License-Identifier: MIT
 
+#include <iris/config.hpp> // IWYU pragma: keep
+
 #include <iris/rvariant/recursive_wrapper.hpp>
 
 #include <memory_resource>

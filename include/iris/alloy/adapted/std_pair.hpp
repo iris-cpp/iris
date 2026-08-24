@@ -9,7 +9,7 @@
 
 #include <utility> // IWYU pragma: export
 
-#include <cstddef>
+#include <cstddef> // IWYU pragma: keep
 
 namespace iris::alloy {
 
