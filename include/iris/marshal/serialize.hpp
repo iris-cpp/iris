@@ -113,7 +113,7 @@ struct basic_save_fn
     {
         wr.begin_object();
         constexpr auto const& fields = adapted_class_traits<ClassT>::fields;
-        alloy::for_each(fields, [&]<class T, auto GetMem, auto SetMem>(detail::field_definition<T, GetMem, SetMem> const& def) {
+        alloy::for_each(fields, [&]<class FieldT, auto GetMem, auto SetMem>(detail::field_definition<FieldT, GetMem, SetMem> const& def) {
             if constexpr (adapted_proxy<decltype(def.name), format>) {
                 wr.map_key(adapted_proxy_traits<decltype(def.name), format>::to_native_type(def.name));
             } else {
@@ -336,7 +336,7 @@ struct basic_load_fn
                 }
                 ++index;
             });
-            // unmatched map_key: ignored (policy)
+            // unmatched `map_key` is ignored ...
         });
 
         if (!ok) {
@@ -344,13 +344,9 @@ struct basic_load_fn
         }
 
         std::size_t index = 0;
-        alloy::for_each(fields, [&]<class T, auto GetMem, auto SetMem>(detail::field_definition<T, GetMem, SetMem> const& def) {
+        alloy::for_each(fields, [&](auto&& /* def */) {
             if (!seen.test(index)) {
-                if constexpr (requires { def.default_value; }) {
-                    (klass.*SetMem)(def.default_value);
-                } else {
-                    throw load_error{"object: missing required field"};
-                }
+                throw load_error{"object: missing required field"};
             }
             ++index;
         });
