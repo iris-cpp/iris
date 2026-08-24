@@ -80,3 +80,8 @@
 
 // Intentionally included later (do not do this in other tests)
 #include "iris_test.hpp"
+
+TEST_CASE("library_config")
+{
+    CHECK(true);
+}
