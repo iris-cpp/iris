@@ -12,6 +12,7 @@
 #include <iris/pp/tuple.hpp>
 #include <iris/pp/stringize.hpp>
 #include <iris/pp/cat.hpp>
+#include <iris/pp/arg.hpp>
 
 #include <string>
 #include <string_view>
@@ -58,22 +59,20 @@ struct field_definition
 } // detail
 
 
-#define IRIS_ZZ_SFIELD_EXPAND_TYPE(...) __VA_ARGS__
-
 #define IRIS_ZZ_SFIELD_DATA_MEMBER_NAME(field_name) field_name ## _
 
-#define IRIS_ZZ_SFIELD_DATA_MEMBER(paren_type, field_name, ...) \
+#define IRIS_ZZ_SFIELD_DATA_MEMBER(maybe_paren_type, field_name, ...) \
     private: \
-        IRIS_ZZ_SFIELD_EXPAND_TYPE paren_type IRIS_ZZ_SFIELD_DATA_MEMBER_NAME(field_name){__VA_ARGS__};
+        IRIS_PP_UNPAREN_IF_PAREN(maybe_paren_type) IRIS_ZZ_SFIELD_DATA_MEMBER_NAME(field_name){__VA_ARGS__};
 
-#define IRIS_ZZ_SFIELD_GETTER(paren_type, field_name) \
+#define IRIS_ZZ_SFIELD_GETTER(maybe_paren_type, field_name) \
     public: \
-        [[nodiscard]] constexpr iris::sfield::detail::getter_return_t<IRIS_ZZ_SFIELD_EXPAND_TYPE paren_type> get_ ## field_name () const noexcept \
+        [[nodiscard]] constexpr iris::sfield::detail::getter_return_t<IRIS_PP_UNPAREN_IF_PAREN(maybe_paren_type)> get_ ## field_name () const noexcept \
         { \
             return IRIS_ZZ_SFIELD_DATA_MEMBER_NAME(field_name); \
         } \
 
-#define IRIS_ZZ_SFIELD_GETTER_BOOL(paren_type, field_name) \
+#define IRIS_ZZ_SFIELD_GETTER_BOOL(maybe_paren_type, field_name) \
     public: \
         [[nodiscard]] constexpr bool is_ ## field_name () const noexcept \
         { \
@@ -86,45 +85,51 @@ struct field_definition
             return IRIS_ZZ_SFIELD_DATA_MEMBER_NAME(field_name); \
         }
 
-#define IRIS_ZZ_SFIELD_SETTER(paren_type, field_name) \
+#define IRIS_ZZ_SFIELD_SETTER(maybe_paren_type, field_name) \
     public: \
-        constexpr void set_ ## field_name (iris::sfield::detail::setter_param_t<IRIS_ZZ_SFIELD_EXPAND_TYPE paren_type> new_value) \
-            noexcept(std::is_nothrow_copy_assignable_v<IRIS_ZZ_SFIELD_EXPAND_TYPE paren_type>) \
+        constexpr void set_ ## field_name (iris::sfield::detail::setter_param_t<IRIS_PP_UNPAREN_IF_PAREN(maybe_paren_type)> new_value) \
+            noexcept(std::is_nothrow_copy_assignable_v<IRIS_PP_UNPAREN_IF_PAREN(maybe_paren_type)>) \
         { \
             IRIS_ZZ_SFIELD_DATA_MEMBER_NAME(field_name) = new_value; \
         }
 
-#define IRIS_SFIELD_GET(paren_type, field_name, ...) \
-    IRIS_ZZ_SFIELD_DATA_MEMBER(paren_type, field_name, __VA_ARGS__) \
-    IRIS_ZZ_SFIELD_GETTER(paren_type, field_name)
-
-#define IRIS_SFIELD_GET_SET(paren_type, field_name, ...) \
-    IRIS_ZZ_SFIELD_DATA_MEMBER(paren_type, field_name, __VA_ARGS__) \
-    IRIS_ZZ_SFIELD_GETTER(paren_type, field_name) \
-    IRIS_ZZ_SFIELD_SETTER(paren_type, field_name)
-
-#define IRIS_SFIELD(paren_type, field_name, ...) \
-    IRIS_SFIELD_GET_SET(paren_type, field_name, __VA_ARGS__)
-
 
 // Default value for bool field is mandatory because it is error prone if omitted
-#define IRIS_SFIELD_BOOL_GET(paren_type, field_name, default_value) \
-    IRIS_ZZ_SFIELD_DATA_MEMBER(paren_type, field_name, default_value) \
-    IRIS_ZZ_SFIELD_GETTER_BOOL(paren_type, field_name)
+#define IRIS_ZZ_SFIELD_BOOL_GET(maybe_paren_type, field_name, default_value) \
+    IRIS_ZZ_SFIELD_DATA_MEMBER(maybe_paren_type, field_name, default_value) \
+    IRIS_ZZ_SFIELD_GETTER_BOOL(maybe_paren_type, field_name)
 
 // Default value for bool field is mandatory because it is error prone if omitted
-#define IRIS_SFIELD_BOOL_GET_SET(paren_type, field_name, default_value) \
-    IRIS_ZZ_SFIELD_DATA_MEMBER(paren_type, field_name, default_value) \
-    IRIS_ZZ_SFIELD_GETTER_BOOL(paren_type, field_name) \
-    IRIS_ZZ_SFIELD_SETTER(paren_type, field_name)
+#define IRIS_ZZ_SFIELD_BOOL_GET_SET(maybe_paren_type, field_name, default_value) \
+    IRIS_ZZ_SFIELD_DATA_MEMBER(maybe_paren_type, field_name, default_value) \
+    IRIS_ZZ_SFIELD_GETTER_BOOL(maybe_paren_type, field_name) \
+    IRIS_ZZ_SFIELD_SETTER(maybe_paren_type, field_name)
 
 // Default value for bool field is mandatory because it is error prone if omitted
-#define IRIS_SFIELD_BOOL(paren_type, field_name, default_value) \
-    IRIS_SFIELD_BOOL_GET_SET(paren_type, field_name, default_value)
+#define IRIS_ZZ_SFIELD_BOOL(maybe_paren_type, field_name, default_value) \
+    IRIS_ZZ_SFIELD_BOOL_GET_SET(maybe_paren_type, field_name, default_value)
 
+
+#define IRIS_SFIELD_GET(maybe_paren_type, field_name, ...) \
+    IRIS_ZZ_SFIELD_DATA_MEMBER(maybe_paren_type, field_name, __VA_ARGS__) \
+    IRIS_ZZ_SFIELD_GETTER(maybe_paren_type, field_name)
+
+#define IRIS_SFIELD_GET_SET(maybe_paren_type, field_name, ...) \
+    IRIS_ZZ_SFIELD_DATA_MEMBER(maybe_paren_type, field_name, __VA_ARGS__) \
+    IRIS_ZZ_SFIELD_GETTER(maybe_paren_type, field_name) \
+    IRIS_ZZ_SFIELD_SETTER(maybe_paren_type, field_name)
+
+#define IRIS_ZZ_SFIELD_TYPE_IS_bool (bool)
+
+#define IRIS_SFIELD(maybe_paren_type, field_name, ...) \
+    IRIS_PP_IF( \
+        IRIS_PP_IS_PAREN( IRIS_PP_CAT_ONLY_TWO(IRIS_ZZ_SFIELD_TYPE_IS_, IRIS_PP_UNPAREN_IF_PAREN(maybe_paren_type)) ), \
+        IRIS_ZZ_SFIELD_BOOL_GET_SET, \
+        IRIS_SFIELD_GET_SET \
+    ) (maybe_paren_type, field_name, __VA_ARGS__)
 
 #define IRIS_SFIELD_CLASS(class_name) \
-    template<class Class> \
+    template<class ClassT> \
     friend struct ::iris::sfield::detail::adapted_class;
 
 // ------------------------------------------------------------
