@@ -49,7 +49,7 @@ struct tuple_traits : tuple_traits_impl<std::index_sequence_for<Ts...>, UTuple, 
 template<class UTuple, class... Ts>
 struct tuple_one_element_is_constructible_from_tuple
     : std::bool_constant<(sizeof...(Ts) == 1) &&
-                         (std::is_convertible_v<UTuple, IRIS_CORE_PACK_INDEXING(0, Ts...)> || std::is_constructible_v<IRIS_CORE_PACK_INDEXING(0, Ts...), UTuple>)>
+                         (std::is_convertible_v<UTuple, IRIS_PACK_INDEXING(0, Ts...)> || std::is_constructible_v<IRIS_PACK_INDEXING(0, Ts...), UTuple>)>
 {};
 
 template<class UTuple, class... Ts>
@@ -67,7 +67,7 @@ private:
     template<class... Us>
     static constexpr bool disambiguating_constraint = []() {
         if constexpr (sizeof...(Ts) == 1) {
-            return !std::is_same_v<std::remove_cvref_t<IRIS_CORE_PACK_INDEXING(0, Us...)>, tuple>;
+            return !std::is_same_v<std::remove_cvref_t<IRIS_PACK_INDEXING(0, Us...)>, tuple>;
         } else {
             return true;
         }

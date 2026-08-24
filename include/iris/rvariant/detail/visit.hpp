@@ -420,7 +420,7 @@ struct multi_visitor<std::index_sequence<Is...>>
 {
     template<class R, class Visitor, class... Storage>
     static constexpr R apply([[maybe_unused]] Visitor&& vis, [[maybe_unused]] Storage&&... storage)  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
-        IRIS_RVARIANT_VISIT_NOEXCEPT(multi_visit_noexcept<R, std::index_sequence<Is...>, Visitor, Storage...>::value)
+        noexcept(multi_visit_noexcept<R, std::index_sequence<Is...>, Visitor, Storage...>::value)
     {
         if constexpr (((!std::remove_cvref_t<Storage>::never_valueless && Is == 0) || ...)) {
             detail::throw_bad_variant_access();
@@ -462,7 +462,7 @@ struct visit_dispatch<-1>
 {
     template<class R, class OverloadSeq, class Visitor, class... Storage>
     [[nodiscard]] IRIS_FORCEINLINE static constexpr R apply(std::size_t const flat_i, [[maybe_unused]] Visitor&& vis, [[maybe_unused]] Storage&&... storage)
-        IRIS_RVARIANT_VISIT_NOEXCEPT(multi_visit_noexcept<R, OverloadSeq, Visitor, Storage...>::value)
+        noexcept(multi_visit_noexcept<R, OverloadSeq, Visitor, Storage...>::value)
     {
         constexpr auto const& table = visit_table<R, OverloadSeq, Visitor, Storage...>::table;
         auto const& f = table[flat_i];
@@ -484,7 +484,7 @@ struct visit_dispatch<-1>
     { \
         template<class R, class OverloadSeq, class Visitor, class... Storage> \
         [[nodiscard]] static constexpr R apply(std::size_t const flat_i, [[maybe_unused]] Visitor&& vis, [[maybe_unused]] Storage&&... storage) \
-            IRIS_RVARIANT_VISIT_NOEXCEPT(multi_visit_noexcept<R, OverloadSeq, Visitor, Storage...>::value) \
+            noexcept(multi_visit_noexcept<R, OverloadSeq, Visitor, Storage...>::value) \
         { \
             static_assert((1uz << ((strategy) * 2uz)) <= OverloadSeq::size && OverloadSeq::size <= (1uz << (((strategy) + 1) * 2uz))); \
             switch (flat_i) { \
@@ -579,7 +579,7 @@ struct visit_impl<
 {
     template<class Visitor, class... Variants, class OverloadSeq = make_OverloadSeq<Variants...>>
     static constexpr R apply(Visitor&& vis, Variants&&... vars)  // NOLINT(cppcoreguidelines-missing-std-forward)
-        IRIS_RVARIANT_VISIT_NOEXCEPT(multi_visit_noexcept<R, OverloadSeq, Visitor, forward_storage_t<as_variant_t<Variants>>...>::value)
+        noexcept(multi_visit_noexcept<R, OverloadSeq, Visitor, forward_storage_t<as_variant_t<Variants>>...>::value)
     {
         std::size_t const flat_i = flat_index<
             std::index_sequence<n...>,
@@ -603,7 +603,7 @@ template<
 >
 detail::visit_result_t<Visitor, detail::as_variant_t<Variants>...>
 IRIS_FORCEINLINE constexpr visit(Visitor&& vis, Variants&&... vars)
-    IRIS_RVARIANT_VISIT_NOEXCEPT(detail::multi_visit_noexcept<
+    noexcept(detail::multi_visit_noexcept<
         detail::visit_result_t<Visitor, detail::as_variant_t<Variants>...>,
         detail::make_OverloadSeq<Variants...>,
         Visitor,
@@ -637,7 +637,7 @@ template<
     class = std::void_t<detail::as_variant_t<Variants>...>
 >
 IRIS_FORCEINLINE constexpr R visit(Visitor&& vis, Variants&&... vars)
-    IRIS_RVARIANT_VISIT_NOEXCEPT(detail::multi_visit_noexcept<
+    noexcept(detail::multi_visit_noexcept<
         R,
         detail::make_OverloadSeq<Variants...>,
         Visitor,

@@ -4,8 +4,6 @@
 // such as names of functions and macros.
 // For more information see https://go.microsoft.com/fwlink/?linkid=865984
 
-#define IRIS_RVARIANT_VISIT_NOEXCEPT
-
 #define IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
 #define IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
@@ -18,5 +16,5 @@
 #define IRIS_FORCEINLINE
 #define IRIS_LIFETIMEBOUND
 
-#define IRIS_THROW_NORETURN [[noreturn]]
+#define IRIS_CONFIG_THROW_NORETURN [[noreturn]]
 

@@ -3,7 +3,7 @@
 
 // SPDX-License-Identifier: MIT
 
-#define IRIS_PP_STRINGIZE(...) IRIS_PP_STRINGIZE_I(__VA_ARGS__)
-#define IRIS_PP_STRINGIZE_I(...) #__VA_ARGS__
+#define IRIS_PP_STRINGIZE(...) IRIS_ZZ_PP_STRINGIZE_I(__VA_ARGS__)
+#define IRIS_ZZ_PP_STRINGIZE_I(...) #__VA_ARGS__
 
 #endif
