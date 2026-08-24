@@ -1,19 +1,24 @@
-#ifndef IRIS_ZZ_SFIELD_HPP
-#define IRIS_ZZ_SFIELD_HPP
+#ifndef IRIS_ZZ_SFIELD_ADAPT_HPP
+#define IRIS_ZZ_SFIELD_ADAPT_HPP
 
 // SPDX-License-Identifier: MIT
 
 #include <iris/config.hpp> // IWYU pragma: keep
 
+#include <iris/sfield/serialize.hpp>
+
 #include <iris/alloy/adapt.hpp> // IWYU pragma: export
 
 #include <iris/pp/tuple.hpp>
+#include <iris/pp/stringize.hpp>
+#include <iris/pp/cat.hpp>
 
 #include <concepts>
 #include <string>
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#include <array>
 
 #include <cassert>
 
@@ -49,6 +54,13 @@ using setter_param_t = std::conditional_t<
     T const&
 >;
 
+
+template<auto Mem>
+struct field_definition
+{
+    std::string_view name;
+};
+
 } // detail
 
 
@@ -70,6 +82,12 @@ using setter_param_t = std::conditional_t<
 #define IRIS_ZZ_SFIELD_GETTER_BOOL(paren_type, field_name) \
     public: \
         [[nodiscard]] constexpr bool is_ ## field_name () const noexcept \
+        { \
+            return IRIS_ZZ_SFIELD_DATA_MEMBER_NAME(field_name); \
+        } \
+    \
+    private: \
+        [[nodiscard]] constexpr bool get_ ## field_name () const noexcept \
         { \
             return IRIS_ZZ_SFIELD_DATA_MEMBER_NAME(field_name); \
         }
@@ -109,6 +127,31 @@ using setter_param_t = std::conditional_t<
 // Default value for bool field is mandatory because it is error prone if omitted
 #define IRIS_SFIELD_BOOL(paren_type, field_name, default_value) \
     IRIS_SFIELD_BOOL_GET_SET(paren_type, field_name, default_value)
+
+
+#define IRIS_SFIELD_CLASS(class_name) \
+    template<class Class> \
+    friend struct ::iris::sfield::detail::adapted_class;
+
+// ------------------------------------------------------------
+
+#define IRIS_ZZ_SFIELD_ADAPT_FIELD(field_name, class_name) \
+    ::iris::sfield::detail::field_definition< \
+        &class_name::IRIS_PP_CAT(get_, field_name) \
+    >{IRIS_PP_STRINGIZE(field_name)},
+
+#define IRIS_SFIELD_ADAPT(class_name, ...) \
+    template<> \
+    struct iris::sfield::detail::adapted_class<class_name> \
+    { \
+        inline static constexpr auto fields = ::iris::alloy::tuple{ \
+            IRIS_PP_SEQ_FOR_EACH( \
+                IRIS_PP_TUPLE_TO_SEQ((__VA_ARGS__)), \
+                IRIS_ZZ_SFIELD_ADAPT_FIELD, \
+                class_name \
+            ) \
+        }; \
+    };
 
 } // iris::sfield
 
