@@ -6,18 +6,16 @@
 #include <iris/config.hpp> // IWYU pragma: keep
 
 #include <iris/marshal/serialize.hpp>
-#include <iris/marshal/detail/field.hpp>
-
-#include <iris/alloy/utility.hpp>
-
-#include <iris/string.hpp>
 
 #include <iris/unicode/string.hpp>
+
+#include <iris/string.hpp>
 
 #include <nlohmann/json.hpp>
 
 #include <vector>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <type_traits>
 
@@ -87,27 +85,16 @@ template<class T> concept deserializable          = marshal::deserializable<T, f
 
 class dom_writer
 {
-    nlohmann::json& root_;
-    std::vector<nlohmann::json*> stack_;
-    std::string pending_key_;
-
-    [[nodiscard]] nlohmann::json& slot()
-    {
-        if (stack_.empty()) return root_;
-        auto& parent = *stack_.back();
-        return parent.is_object() ? parent[pending_key_] : parent.emplace_back();
-    }
-
 public:
     using format = json::format;
     using document_type = nlohmann::json;
 
-    explicit dom_writer(nlohmann::json& root)
-        : root_(root)
+    explicit dom_writer(document_type& node)
+        : node_(&node)
     {}
 
     template<class T>
-        requires format::loadable_scalar<T>
+        requires format::template loadable_scalar<T>
     void scalar(T const& value)
     {
         if constexpr (std::is_enum_v<T>) {
@@ -124,7 +111,7 @@ public:
 
     void begin_array()
     {
-        stack_.push_back(&(slot() = nlohmann::json::array()));
+        stack_.push_back(&(slot() = document_type::array()));
     }
     void end_array()
     {
@@ -133,7 +120,7 @@ public:
 
     void begin_object()
     {
-        stack_.push_back(&(slot() = nlohmann::json::object()));
+        stack_.push_back(&(slot() = document_type::object()));
     }
     void map_key(std::string_view k)
     {
@@ -143,126 +130,111 @@ public:
     {
         stack_.pop_back();
     }
+
+private:
+    [[nodiscard]] document_type& slot()
+    {
+        if (stack_.empty()) return *node_;
+        auto& parent = *stack_.back();
+        return parent.is_object() ? parent[pending_key_] : parent.emplace_back();
+    }
+
+    nlohmann::json* node_;
+    std::vector<nlohmann::json*> stack_;
+    std::string pending_key_;
 };
 
 [[maybe_unused]] inline constexpr basic_save_fn<dom_writer> save{};
 
 
-namespace detail {
-
-struct load_fn
+class dom_reader
 {
-    template<deserializable_scalar T>
-    static void operator()(nlohmann::json const& j, T& value)
+public:
+    using format = json::format;
+    using document_type = nlohmann::json;
+
+    explicit dom_reader(document_type const& node)
+        : node_{&node}
+    {}
+
+    [[nodiscard]] bool is_null() const
     {
-        if constexpr (std::is_arithmetic_v<T>) {
-            value = j.get<T>();
+        return node_->is_null();
+    }
+
+    template<class T>
+        requires format::template loadable_scalar<T>
+    [[nodiscard]] bool scalar(T& value) const
+    {
+        if constexpr (std::same_as<T, bool>) {
+            if (!node_->is_boolean()) return false;
+            value = node_->get<bool>();
+
+        } else if constexpr (std::is_integral_v<T>) {
+            if (!node_->is_number_integer() && !node_->is_number_unsigned()) return false;
+            auto const wide = node_->get<std::int64_t>();
+            if (!std::in_range<T>(wide)) return false;
+            value = static_cast<T>(wide);
+
+        } else if constexpr (std::is_floating_point_v<T>) {
+            if (!node_->is_number()) return false;
+            value = node_->get<T>();
 
         } else if constexpr (std::is_enum_v<T>) {
-            value = static_cast<T>(j.get<std::underlying_type_t<T>>());
+            std::underlying_type_t<T> underlying;
+            if (!scalar(underlying)) return false;
+            value = static_cast<T>(underlying);
 
-        } else if constexpr (StringLike<T>) {
-            using CharT = decltype(std::basic_string_view{value})::value_type;
-            value = unicode::transcode_ref<CharT>(j.get_ref<nlohmann::json::string_t const&>());
-
-        } else {
-            value = j.get_ref<T const&>();
+        } else { // string-like
+            if (!node_->is_string()) return false;
+            value = std::string_view{node_->get_ref<document_type::string_t const&>()};
         }
+        return true;
     }
 
-    template<deserializable_array R>
-    static void operator()(nlohmann::json const& j, R& arr)
+    template<class VisitorT>
+    [[nodiscard]] bool array(VisitorT&& vis) const
     {
-        R tmp;
-        for (auto const& elem_json : j) {
-            load_fn{}(elem_json, tmp.emplace_back());
+        if (!node_->is_array()) return false;
+
+        for (auto const& elem : *node_) {
+            dom_reader elem_rd{elem};
+            vis(elem_rd);
         }
-        arr = std::move(tmp);
+        return true;
     }
 
-    template<deserializable_map MapT>
-    static void operator()(nlohmann::json const& j, MapT& map)
+    template<class VisitorT>
+    [[nodiscard]] bool object(VisitorT&& vis) const
     {
-        MapT tmp;
-        for (auto const& [json_key, json_value] : j.items()) {
-            ranges::range_key_t<MapT> key;
-            load_fn{}(json_key, key);
+        if (!node_->is_object()) return false;
 
-            ranges::range_mapped_t<MapT> value;
-            load_fn{}(json_value, value);
-
-            if constexpr (ranges::unique_mapping_container<MapT>) {
-                tmp.insert_or_assign(std::move(key), std::move(value));
-            } else {
-                tmp.emplace(std::move(key), std::move(value));
-            }
+        for (auto const& [map_key, member] : node_->items()) {
+            dom_reader member_rd{member};
+            vis(std::string_view{map_key}, member_rd);
         }
-        map = std::move(tmp);
+        return true;
     }
 
-    template<deserializable_tuple TupleT>
-    static void operator()(nlohmann::json const& j, TupleT& tup)
-    {
-        TupleT tmp;
-        alloy::for_each(tmp, [&]<std::size_t I>(std::integral_constant<std::size_t, I>, auto& elem) {
-            load_fn{}(j.at(I), elem);
-        });
-        tup = std::move(tmp);
-    }
-
-    template<deserializable_class ClassT>
-    static void operator()(nlohmann::json const& j, ClassT& klass)
-    {
-        ClassT tmp;
-        constexpr auto const& fields = adapted_class_traits<ClassT>::fields;
-        alloy::for_each(fields, [&]<class T, auto GetMem, auto SetMem>(marshal::detail::field_definition<T, GetMem, SetMem> const& def) {
-            T value;
-            load_fn{}(j[def.name], value);
-            (tmp.*SetMem)(std::move(value));
-        });
-        klass = std::move(tmp);
-    }
-
-    template<deserializable_optional OptionalT>
-    static void operator()(nlohmann::json const& j, OptionalT& opt)
-    {
-        if (j.is_null()) {
-            opt = {};
-        } else {
-            adapted_optional_value_t<OptionalT> value;
-            load_fn{}(j, value);
-            opt = std::move(value);
-        }
-    }
-
-    template<deserializable_proxy ProxyT>
-    static void operator()(nlohmann::json const& j, ProxyT& proxy)
-    {
-        using traits = adapted_proxy_traits<ProxyT, format>;
-        proxy = traits::from_native_type(
-            j.get_ref<typename traits::native_type const&>()
-        );
-    }
+private:
+    document_type const* node_;
 };
-
-} // detail
 
 template<deserializable T>
     requires requires(nlohmann::json const& j) {
-        detail::load_fn{}(j, std::declval<T&>());
+        basic_load_fn<dom_reader>{}(j, std::declval<T&>());
     }
 [[nodiscard]] T load(nlohmann::json const& j)
 {
     T value; // default-initialize
-    detail::load_fn{}(j, value);
+    basic_load_fn<dom_reader>{}(j, value);
     return value;
 }
 
 template<deserializable T>
 void load(nlohmann::json const& j, T& value)
 {
-    static_assert(!std::is_const_v<T>, "cannot deserialize into const variable");
-    detail::load_fn{}(j, value);
+    basic_load_fn<dom_reader>{}(j, value);
 }
 
 } // iris::marshal::json

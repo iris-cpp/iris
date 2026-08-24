@@ -317,7 +317,9 @@ struct basic_load_fn
     static constexpr void operator()(ReaderT& rd, ClassT& klass)
     {
         constexpr auto const& fields = adapted_class_traits<ClassT>::fields;
-        std::bitset<fields.size()> seen;
+
+        std::bitset<alloy::tuple_size_v<std::remove_cvref_t<decltype(fields)>>>
+        seen;
 
         bool const ok = rd.object([&](std::string_view map_key, ReaderT& member_rd) {
             std::size_t index = 0;
