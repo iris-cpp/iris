@@ -100,7 +100,7 @@ class dom_writer
 
 public:
     using format = json::format;
-    using result_type = nlohmann::json;
+    using document_type = nlohmann::json;
 
     explicit dom_writer(nlohmann::json& root)
         : root_(root)
@@ -204,7 +204,7 @@ struct load_fn
     static void operator()(nlohmann::json const& j, TupleT& tup)
     {
         TupleT tmp;
-        alloy::for_each(tmp, [&]<std::size_t I>(std::in_place_index_t<I>, auto& elem) {
+        alloy::for_each(tmp, [&]<std::size_t I>(std::integral_constant<std::size_t, I>, auto& elem) {
             load_fn{}(j.at(I), elem);
         });
         tup = std::move(tmp);
