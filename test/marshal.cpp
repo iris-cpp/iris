@@ -322,10 +322,12 @@ struct MyData
     IRIS_MARSHAL_FIELD((std::pair<int, int>), pair)
     IRIS_MARSHAL_FIELD(int, age)
     IRIS_MARSHAL_FIELD(bool, enabled, true)
+
+    std::string public_mem_str;
 };
 
 IRIS_MARSHAL_ADAPT(
-    MyData, name, text, age, enabled
+    MyData, name, text, age, enabled, public_mem_str
 );
 
 template<>

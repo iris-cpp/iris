@@ -138,11 +138,29 @@ using setter_param_t = std::conditional_t<
 
 // ------------------------------------------------------------
 
+// Select `decltype(class_name::field_name)` if it exists; otherwise `decltype(class_name::field_name##_)`
+#define IRIS_ZZ_MARSHAL_SELECT_MEMBER(class_name, field_name) []<class ClassT>() consteval { \
+        if constexpr (requires { &ClassT::field_name; }) { \
+            return std::type_identity<decltype(ClassT::field_name)>{}; \
+        } else { \
+            return std::type_identity<decltype(ClassT::IRIS_ZZ_MARSHAL_FIELD_DATA_MEMBER_NAME(field_name))>{}; \
+        } \
+    }.template operator()<class_name>()
+
+// Select `&class_name::field_name` if it exists; otherwise `&class_name::(get|set)_field_name`
+#define IRIS_ZZ_MARSHAL_SELECT_MEMBER_ACCESS(class_name, field_name, access) []<class ClassT>() consteval { \
+        if constexpr (requires { &ClassT::field_name; }) { \
+            return &ClassT::field_name; \
+        } else { \
+            return &ClassT::IRIS_PP_CAT(access ## _, field_name); \
+        } \
+    }.template operator()<class_name>()
+
 #define IRIS_ZZ_MARSHAL_ADAPT_FIELD(field_name, class_name) \
     ::iris::marshal::detail::field_definition< \
-        decltype(class_name::IRIS_ZZ_MARSHAL_FIELD_DATA_MEMBER_NAME(field_name)), \
-        &class_name::IRIS_PP_CAT(get_, field_name), \
-        &class_name::IRIS_PP_CAT(set_, field_name) \
+        typename decltype(IRIS_ZZ_MARSHAL_SELECT_MEMBER(class_name, field_name))::type, \
+        IRIS_ZZ_MARSHAL_SELECT_MEMBER_ACCESS(class_name, field_name, get), \
+        IRIS_ZZ_MARSHAL_SELECT_MEMBER_ACCESS(class_name, field_name, set) \
     >{IRIS_PP_STRINGIZE(field_name)},
 
 #define IRIS_MARSHAL_ADAPT(class_name, ...) \

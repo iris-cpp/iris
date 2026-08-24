@@ -119,7 +119,7 @@ struct basic_save_fn
             } else {
                 wr.map_key(def.name);
             }
-            basic_save_fn{}(wr, (klass.*GetMem)());
+            basic_save_fn{}(wr, def.get(klass));
         });
         wr.end_object();
     }
@@ -325,11 +325,11 @@ struct basic_load_fn
             std::size_t index = 0;
             bool matched = false;
 
-            alloy::for_each(fields, [&]<class T, auto GetMem, auto SetMem>(detail::field_definition<T, GetMem, SetMem> const& def) {
+            alloy::for_each(fields, [&]<class FieldT, auto GetMem, auto SetMem>(detail::field_definition<FieldT, GetMem, SetMem> const& def) {
                 if (!matched && basic_load_fn::field_name_matches(def.name, map_key)) {
-                    T tmp{};
+                    FieldT tmp{};
                     basic_load_fn{}(member_rd, tmp);
-                    (klass.*SetMem)(std::move(tmp));
+                    def.set(klass, std::move(tmp));
 
                     seen.set(index);
                     matched = true;
