@@ -8,11 +8,17 @@ endif()
 
 project(iris VERSION 0.0.1 LANGUAGES CXX)
 
+get_directory_property(IRIS_PARENT_DIRECTORY PARENT_DIRECTORY)
+
 if(DEFINED IRIS_ROOT AND NOT "${IRIS_ROOT}" PATH_EQUAL "${CMAKE_CURRENT_LIST_DIR}")
     message(FATAL_ERROR "Cannot include Iris more than once")
 endif()
+
 set(IRIS_ROOT "${CMAKE_CURRENT_LIST_DIR}")
-set(IRIS_ROOT "${IRIS_ROOT}" PARENT_SCOPE)
+if(IRIS_PARENT_DIRECTORY)
+    set(IRIS_ROOT "${IRIS_ROOT}" PARENT_SCOPE)
+endif()
+
 set_property(GLOBAL PROPERTY IRIS_ROOT "${IRIS_ROOT}")
 message(STATUS "IRIS_ROOT: ${IRIS_ROOT}")
 
