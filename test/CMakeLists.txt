@@ -195,6 +195,7 @@ if(PROJECT_IS_TOP_LEVEL)
             snippet
             alloy
             alloy_visit
+            sfield
         )
         foreach(test_name IN LISTS IRIS_TEST_IRIS_TESTS)
             iris_define_internal_test(${test_name} ${test_name}.cpp)
