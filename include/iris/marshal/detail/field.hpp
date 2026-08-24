@@ -9,9 +9,10 @@
 
 namespace iris::marshal::detail {
 
-template<auto Mem>
+template<class T, auto GetMem, auto SetMem>
 struct field_definition
 {
+    using value_type = T;
     std::string_view name;
 };
 

@@ -25,23 +25,63 @@ namespace iris::marshal {
 
 struct generic_format
 {
+    // Checks whether the *exact* type `K` is eligible for the key of this format's "map" type
+    template<class K>
+    static constexpr bool map_key = true;
+
+    // Checks whether `K` can be converted to the key of this format's "map" type
+    template<class K>
+    static constexpr bool loadable_key = true;
+
     template<class T>
-    static constexpr bool key = true;
+    static constexpr bool loadable_scalar =
+        std::is_arithmetic_v<T> ||
+        std::is_enum_v<T> ||
+        StringLike<T>;
 };
 
-// Customization point: serialize T by converting it to/from proxy_type.
-template<class T>
+namespace detail {
+
+template<class Format>
+concept marshal_format = requires {
+    { Format::template map_key<int> } -> std::convertible_to<bool>;
+    { Format::template loadable_key<int> } -> std::convertible_to<bool>;
+    { Format::template loadable_scalar<int> } -> std::convertible_to<bool>;
+};
+
+} // detail
+
+// Customization point: serialize/deserialize `T` by converting it to/from `native_type`.
+template<class T, detail::marshal_format Format>
 struct adapted_proxy_traits;
 
-template<class T>
-concept adapted_proxy = requires(std::remove_cvref_t<T> const& v) {
-    typename adapted_proxy_traits<std::remove_cvref_t<T>>::proxy_type;
-    { adapted_proxy_traits<std::remove_cvref_t<T>>::to_proxy(v) }
-        -> std::convertible_to<typename adapted_proxy_traits<std::remove_cvref_t<T>>::proxy_type>;
-};
+template<class T, detail::marshal_format Format>
+using proxy_native_type_t = adapted_proxy_traits<std::remove_cvref_t<T>, Format>::native_type;
 
-template<class T>
-using adapted_proxy_t = adapted_proxy_traits<std::remove_cvref_t<T>>::proxy_type;
+template<class T, class Format>
+concept adapted_proxy =
+    detail::marshal_format<Format> &&
+    requires(std::remove_cvref_t<T> const& v) {
+        typename proxy_native_type_t<T, Format>;
+        { adapted_proxy_traits<std::remove_cvref_t<T>, Format>::to_native_type(v) }
+            -> std::convertible_to<proxy_native_type_t<T, Format>>;
+    };
+
+namespace detail {
+
+template<class T, class Format>
+concept proxy_writable =
+    detail::marshal_format<Format> &&
+    adapted_proxy<T, Format> &&
+    requires(proxy_native_type_t<T, Format> p) {
+        { adapted_proxy_traits<std::remove_cvref_t<T>, Format>::from_native_type(std::move(p)) }
+            -> std::convertible_to<std::remove_cvref_t<T>>;
+    } &&
+    std::is_assignable_v<std::remove_cvref_t<T>&, std::remove_cvref_t<T>>;
+
+} // detail
+
+// --------------------------------------------------------------
 
 // Customization point
 template<class ClassT>
@@ -57,6 +97,9 @@ template<class T>
 struct adapted_optional_traits;
 
 template<class T>
+using adapted_optional_value_t = adapted_optional_traits<std::remove_cvref_t<T>>::value_type;
+
+template<class T>
     requires is_ttp_specialization_of_v<T, std::optional>
 struct adapted_optional_traits<T>
 {
@@ -67,12 +110,20 @@ template<class T>
 concept adapted_optional = requires(T const& opt) {
     typename adapted_optional_traits<std::remove_cvref_t<T>>::value_type;
     static_cast<bool>(opt);
-    { *opt } -> std::convertible_to<typename adapted_optional_traits<std::remove_cvref_t<T>>::value_type const&>;
+    { *opt } -> std::convertible_to<adapted_optional_value_t<T> const&>;
 };
 
 namespace detail {
 
-template<class T, class Format>
+template<class T>
+concept optional_writable =
+    adapted_optional<T> &&
+    std::default_initializable<std::remove_cvref_t<T>> &&
+    std::is_assignable_v<std::remove_cvref_t<T>&, std::remove_cvref_t<T>> &&
+    std::is_assignable_v<std::remove_cvref_t<T>&, adapted_optional_value_t<T>>;
+
+
+template<class T, detail::marshal_format Format>
 [[nodiscard]] consteval bool is_serializable_impl();
 
 template<class T>
@@ -89,35 +140,36 @@ struct is_serializable_scalar<T> : std::true_type
 
 // ---------------------------------------------------
 
-template<class Tup, class Format, std::size_t I = 0>
+template<class Tup, detail::marshal_format Format, std::size_t I = 0>
 [[nodiscard]] consteval bool is_tuple_elements_serializable_impl();
 
-template<class T, class Format>
+template<class T, detail::marshal_format Format>
 consteval bool is_serializable_impl()
 {
     using V = std::remove_cvref_t<T>;
 
     static_assert(
-        !(adapted_class<V> && adapted_proxy<V>),
+        !(adapted_class<V> && adapted_proxy<V, Format>),
         "a type cannot be adapted both as a class and as a proxy"
     );
 
-    if constexpr (adapted_proxy<V>) {
-        return is_serializable_impl<adapted_proxy_t<V>, Format>();
+    if constexpr (adapted_proxy<V, Format>) {
+        return is_serializable_impl<proxy_native_type_t<V, Format>, Format>();
 
     } else if constexpr (adapted_class<V>) {
         return true;
 
     } else if constexpr (adapted_optional<V>) {
-        return is_serializable_impl<typename adapted_optional_traits<V>::value_type, Format>();
+        return is_serializable_impl<adapted_optional_value_t<V>, Format>();
 
     } else if constexpr (is_serializable_scalar<V>::value) {
         return true;
 
     } else if constexpr (ranges::key_value_range<V>) {
-        return Format::template key<ranges::range_key_t<V>> &&
-               is_serializable_impl<ranges::range_key_t<V>, Format>() &&
-               is_serializable_impl<ranges::range_mapped_t<V>, Format>();
+        return
+            Format::template map_key<ranges::range_key_t<V>> &&
+            is_serializable_impl<ranges::range_key_t<V>, Format>() &&
+            is_serializable_impl<ranges::range_mapped_t<V>, Format>();
 
     } else if constexpr (std::ranges::input_range<V>) {
         return is_serializable_impl<std::ranges::range_value_t<V>, Format>();
@@ -130,7 +182,7 @@ consteval bool is_serializable_impl()
     }
 }
 
-template<class Tup, class Format, std::size_t I>
+template<class Tup, detail::marshal_format Format, std::size_t I>
 consteval bool is_tuple_elements_serializable_impl()
 {
     if constexpr (I == alloy::tuple_size_v<Tup>) {
@@ -149,23 +201,27 @@ consteval bool is_tuple_elements_serializable_impl()
 
 template<class T, class Format = generic_format>
 concept serializable_proxy =
-    adapted_proxy<T> &&
-    detail::is_serializable_impl<adapted_proxy_t<T>, Format>();
+    detail::marshal_format<Format> &&
+    adapted_proxy<T, Format> &&
+    detail::is_serializable_impl<proxy_native_type_t<T, Format>, Format>();
 
 template<class T, class Format = generic_format>
 concept serializable_class =
+    detail::marshal_format<Format> &&
     !serializable_proxy<T, Format> &&
     adapted_class<T>;
 
 template<class T, class Format = generic_format>
 concept serializable_optional =
+    detail::marshal_format<Format> &&
     !serializable_proxy<T, Format> &&
     !serializable_class<T, Format> &&
     adapted_optional<T> &&
-    detail::is_serializable_impl<typename adapted_optional_traits<std::remove_cvref_t<T>>::value_type, Format>();
+    detail::is_serializable_impl<adapted_optional_value_t<T>, Format>();
 
 template<class T, class Format = generic_format>
 concept serializable_scalar =
+    detail::marshal_format<Format> &&
     !serializable_proxy<T, Format> &&
     !serializable_class<T, Format> &&
     !adapted_optional<T> &&
@@ -173,17 +229,19 @@ concept serializable_scalar =
 
 template<class T, class Format = generic_format>
 concept serializable_map =
+    detail::marshal_format<Format> &&
     !serializable_proxy<T, Format> &&
     !serializable_class<T, Format> &&
     !adapted_optional<T> &&
     !serializable_scalar<T, Format> &&
     ranges::key_value_range<T> &&
-    Format::template key<ranges::range_key_t<T>> &&
+    Format::template map_key<ranges::range_key_t<T>> &&
     detail::is_serializable_impl<ranges::range_key_t<T>, Format>() &&
     detail::is_serializable_impl<ranges::range_mapped_t<T>, Format>();
 
 template<class T, class Format = generic_format>
 concept serializable_array =
+    detail::marshal_format<Format> &&
     !serializable_proxy<T, Format> &&
     !serializable_class<T, Format> &&
     !adapted_optional<T> &&
@@ -194,6 +252,7 @@ concept serializable_array =
 
 template<class T, class Format = generic_format>
 concept serializable_tuple =
+    detail::marshal_format<Format> &&
     !serializable_proxy<T, Format> &&
     !serializable_class<T, Format> &&
     !adapted_optional<T> &&
@@ -204,6 +263,7 @@ concept serializable_tuple =
 
 template<class T, class Format = generic_format>
 concept serializable =
+    detail::marshal_format<Format> &&
     serializable_proxy<T, Format> ||
     serializable_class<T, Format> ||
     serializable_optional<T, Format> ||
@@ -211,6 +271,116 @@ concept serializable =
     serializable_map<T, Format> ||
     serializable_array<T, Format> ||
     serializable_tuple<T, Format>;
+
+// ---------------------------------------------------
+
+namespace detail {
+
+template<class T, marshal_format Format>
+[[nodiscard]] consteval bool is_deserializable_impl();
+
+template<class T, class Format>
+concept loadable =
+    marshal_format<Format> &&
+    std::default_initializable<std::remove_cvref_t<T>> &&
+    std::movable<std::remove_cvref_t<T>> &&
+    is_deserializable_impl<std::remove_cvref_t<T>, Format>();
+
+template<class T, marshal_format Format>
+consteval bool is_deserializable_impl()
+{
+    using V = std::remove_cvref_t<T>;
+
+    if constexpr (std::is_const_v<std::remove_reference_t<T>>) {
+        return false;
+
+    } else if constexpr (!is_serializable_impl<V, Format>()) {
+        return false;
+
+    } else if constexpr (adapted_proxy<V, Format>) {
+        return loadable<proxy_native_type_t<V, Format>, Format> && proxy_writable<V, Format>;
+
+    } else if constexpr (adapted_class<V>) {
+        return true;
+
+    } else if constexpr (adapted_optional<V>) {
+        return loadable<adapted_optional_value_t<V>, Format> && optional_writable<V>;
+
+    } else if constexpr (is_serializable_scalar<V>::value) {
+        return Format::template loadable_scalar<V>;
+
+    } else if constexpr (ranges::key_value_range<V>) {
+        return
+            ranges::key_value_container<V> &&
+            Format::template loadable_key<ranges::range_key_t<V>> &&
+            loadable<ranges::range_key_t<V>, Format> &&
+            loadable<ranges::range_mapped_t<V>, Format>;
+
+    } else if constexpr (std::ranges::input_range<V>) {
+        if constexpr (ranges::growable_array_writable<V>) {
+            return loadable<std::ranges::range_value_t<V>, Format>;
+
+        } else if constexpr (ranges::fixed_array_writable<V>) {
+            return is_deserializable_impl<std::ranges::range_value_t<V>, Format>();
+
+        } else {
+            return false;
+        }
+
+    } else if constexpr (alloy::TupleLike<V>) {
+        return is_tuple_elements_serializable_impl<V, Format>();   // non-const get<I> + recurse
+
+    } else {
+        return false;
+    }
+}
+
+} // detail
+
+template<class T, class Format = generic_format>
+concept deserializable_proxy =
+    serializable_proxy<T, Format> &&
+    detail::is_deserializable_impl<T, Format>();
+
+template<class T, class Format = generic_format>
+concept deserializable_class =
+    serializable_class<T, Format> &&
+    detail::is_deserializable_impl<T, Format>();
+
+template<class T, class Format = generic_format>
+concept deserializable_optional =
+    serializable_optional<T, Format> &&
+    detail::is_deserializable_impl<T, Format>();
+
+template<class T, class Format = generic_format>
+concept deserializable_scalar =
+    serializable_scalar<T, Format> &&
+    detail::is_deserializable_impl<T, Format>();
+
+template<class T, class Format = generic_format>
+concept deserializable_map =
+    serializable_map<T, Format> &&
+    detail::loadable<T, Format>;
+
+template<class T, class Format = generic_format>
+concept deserializable_array =
+    serializable_array<T, Format> &&
+    detail::loadable<T, Format>;
+
+template<class T, class Format = generic_format>
+concept deserializable_tuple =
+    serializable_tuple<T, Format> &&
+    detail::loadable<T, Format>;
+
+template<class T, class Format = generic_format>
+concept deserializable =
+    deserializable_proxy<T, Format> ||
+    deserializable_class<T, Format> ||
+    deserializable_optional<T, Format> ||
+    deserializable_scalar<T, Format> ||
+    deserializable_map<T, Format> ||
+    deserializable_array<T, Format> ||
+    deserializable_tuple<T, Format>;
 
 } // iris::marshal
 

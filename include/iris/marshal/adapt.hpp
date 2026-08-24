@@ -140,7 +140,9 @@ using setter_param_t = std::conditional_t<
 
 #define IRIS_ZZ_MARSHAL_ADAPT_FIELD(field_name, class_name) \
     ::iris::marshal::detail::field_definition< \
-        &class_name::IRIS_PP_CAT(get_, field_name) \
+        decltype(class_name::IRIS_ZZ_MARSHAL_FIELD_DATA_MEMBER_NAME(field_name)), \
+        &class_name::IRIS_PP_CAT(get_, field_name), \
+        &class_name::IRIS_PP_CAT(set_, field_name) \
     >{IRIS_PP_STRINGIZE(field_name)},
 
 #define IRIS_MARSHAL_ADAPT(class_name, ...) \
