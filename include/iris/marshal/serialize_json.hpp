@@ -1,17 +1,17 @@
-#ifndef IRIS_ZZ_SFIELD_SERIALIZE_JSON_HPP
-#define IRIS_ZZ_SFIELD_SERIALIZE_JSON_HPP
+#ifndef IRIS_ZZ_MARSHAL_SERIALIZE_JSON_HPP
+#define IRIS_ZZ_MARSHAL_SERIALIZE_JSON_HPP
 
 // SPDX-License-Identifier: MIT
 
 #include <iris/config.hpp> // IWYU pragma: keep
 
-#include <iris/sfield/serialize_traits.hpp>
+#include <iris/marshal/serialize_traits.hpp>
 
 #include <iris/alloy/utility.hpp>
 
 #include <nlohmann/json.hpp>
 
-namespace iris::sfield {
+namespace iris::marshal {
 
 template<serializable_primitive T>
 void save(nlohmann::json& json, T const& value)
@@ -135,6 +135,6 @@ void load(nlohmann::json const& json, ClassT& klass)
 }
 
 
-} // iris::sfield
+} // iris::marshal
 
 #endif
