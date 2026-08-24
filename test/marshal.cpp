@@ -112,8 +112,17 @@ TEST_CASE("marshal: serialize (builtin types)")
     STATIC_CHECK(!json::serializable_array<std::map<int, int>>);
     STATIC_CHECK(!json::serializable<std::map<int, NonSerializable>>);
 
-    //IRIS_CHECK_SERIALIZABLE(map, std::vector<std::pair<std::string, int>>); // TODO
-    STATIC_CHECK(!json::serializable_map<std::vector<std::pair<int, int>>>);
+    // NOT map
+    IRIS_CHECK_SERIALIZABLE(array, std::vector<std::pair<std::string, int>>);
+    STATIC_CHECK(!json::serializable_map<std::vector<std::pair<std::string, int>>>);
+    STATIC_CHECK(!json::deserializable_map<std::vector<std::pair<std::string, int>>>);
+
+    // Adapted map
+    {
+        using PipedPairVec = decltype(std::declval<std::vector<std::pair<std::string, int>>>() | iris::ranges::as_map);
+        STATIC_CHECK(json::serializable_map<PipedPairVec>);
+        STATIC_CHECK(!json::deserializable_map<PipedPairVec>);
+    }
 
 #undef IRIS_CHECK_SERIALIZABLE
 
@@ -174,6 +183,20 @@ TEST_CASE("marshal: serialize (builtin types)")
         std::vector<std::u32string> const arr{U"foo", U"あいう"};
         json::save(j, arr);
         CHECK(json::load<std::vector<std::u32string>>(j) == arr);
+    }
+
+    {
+        nlohmann::json j;
+        std::vector<std::pair<std::string, int>> const arr{{"foo", 0}};
+        json::save(j, arr);
+        CHECK(j.get<std::vector<std::pair<std::string, int>>>() == arr);
+        CHECK(json::load<std::vector<std::pair<std::string, int>>>(j) == arr);
+    }
+    {
+        nlohmann::json j;
+        std::vector<std::pair<std::u32string, int>> const arr{{U"あいう", 0}};
+        json::save(j, arr);
+        CHECK(json::load<std::vector<std::pair<std::u32string, int>>>(j) == arr);
     }
 
     {

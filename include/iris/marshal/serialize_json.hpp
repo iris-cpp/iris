@@ -240,7 +240,7 @@ struct load_fn
             ranges::range_mapped_t<MapT> value;
             load_fn{}(json_value, value);
 
-            if constexpr (ranges::unique_key_value_container<MapT>) {
+            if constexpr (ranges::unique_mapping_container<MapT>) {
                 tmp.insert_or_assign(std::move(key), std::move(value));
             } else {
                 tmp.emplace(std::move(key), std::move(value));

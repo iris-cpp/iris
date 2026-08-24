@@ -165,7 +165,7 @@ consteval bool is_serializable_impl()
     } else if constexpr (is_serializable_scalar<V>::value) {
         return true;
 
-    } else if constexpr (ranges::key_value_range<V>) {
+    } else if constexpr (ranges::mapping_range<V>) {
         return
             Format::template map_key<ranges::range_key_t<V>> &&
             is_serializable_impl<ranges::range_key_t<V>, Format>() &&
@@ -234,7 +234,7 @@ concept serializable_map =
     !serializable_class<T, Format> &&
     !adapted_optional<T> &&
     !serializable_scalar<T, Format> &&
-    ranges::key_value_range<T> &&
+    ranges::mapping_range<T> &&
     Format::template map_key<ranges::range_key_t<T>> &&
     detail::is_serializable_impl<ranges::range_key_t<T>, Format>() &&
     detail::is_serializable_impl<ranges::range_mapped_t<T>, Format>();
@@ -246,7 +246,7 @@ concept serializable_array =
     !serializable_class<T, Format> &&
     !adapted_optional<T> &&
     !serializable_scalar<T, Format> &&
-    !ranges::key_value_range<T> &&
+    !ranges::mapping_range<T> &&
     std::ranges::input_range<T> &&
     detail::is_serializable_impl<std::ranges::range_value_t<T>, Format>();
 
@@ -309,9 +309,9 @@ consteval bool is_deserializable_impl()
     } else if constexpr (is_serializable_scalar<V>::value) {
         return Format::template loadable_scalar<V>;
 
-    } else if constexpr (ranges::key_value_range<V>) {
+    } else if constexpr (ranges::mapping_range<V>) {
         return
-            ranges::key_value_container<V> &&
+            ranges::mapping_container<V> &&
             Format::template loadable_key<ranges::range_key_t<V>> &&
             loadable<ranges::range_key_t<V>, Format> &&
             loadable<ranges::range_mapped_t<V>, Format>;
