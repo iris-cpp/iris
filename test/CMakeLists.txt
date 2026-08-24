@@ -182,6 +182,7 @@ if(PROJECT_IS_TOP_LEVEL)
             library_config
             core
             type_traits
+            ranges
             stdint
             enum
             indirect
