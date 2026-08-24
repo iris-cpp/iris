@@ -3,9 +3,11 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <iris/alloy/detail/integer_seq_transform.hpp>
+#include <iris/config.hpp> // IWYU pragma: keep
 
-#include <tuple>
+#include <iris/alloy/detail/std_get.hpp>
+
+#include <tuple> // IWYU pragma: export
 #include <utility>
 
 #include <cstddef>
@@ -13,32 +15,51 @@
 namespace iris::alloy {
 
 template<class T>
+struct tuple_size;
+
+template<class... Ts>
+struct tuple_size<std::tuple<Ts...>> : std::integral_constant<std::size_t, sizeof...(Ts)>
+{};
+
+template<class... Ts>
+struct tuple_size<std::tuple<Ts...> const> : std::integral_constant<std::size_t, sizeof...(Ts)>
+{};
+
+template<class... Ts>
+struct tuple_size<std::tuple<Ts...> volatile> : std::integral_constant<std::size_t, sizeof...(Ts)>
+{};
+
+template<class... Ts>
+struct tuple_size<std::tuple<Ts...> const volatile> : std::integral_constant<std::size_t, sizeof...(Ts)>
+{};
+
+template<std::size_t I, class Tuple>
+struct tuple_element;
+
+template<std::size_t I, class... Ts>
+struct tuple_element<I, std::tuple<Ts...>> : std::tuple_element<I, std::tuple<Ts...>>
+{};
+
+template<std::size_t I, class... Ts>
+struct tuple_element<I, std::tuple<Ts...> const> : std::tuple_element<I, std::tuple<Ts...> const>
+{};
+
+template<std::size_t I, class... Ts>
+struct tuple_element<I, std::tuple<Ts...> volatile> : std::tuple_element<I, std::tuple<Ts...> volatile>
+{};
+
+template<std::size_t I, class... Ts>
+struct tuple_element<I, std::tuple<Ts...> const volatile> : std::tuple_element<I, std::tuple<Ts...> const volatile>
+{};
+
+
+template<class T>
 struct adaptor;
-
-namespace detail {
-
-template<std::size_t I>
-struct call_std_get
-{
-    template<class Tuple>
-    static constexpr decltype(auto) operator()(Tuple&& t)
-    {
-        return std::get<I>(static_cast<Tuple&&>(t));
-    }
-};
-
-template<std::size_t I>
-struct make_call_std_get
-{
-    static constexpr auto value = call_std_get<I>{};
-};
-
-} // detail
 
 template<class... Ts>
 struct adaptor<std::tuple<Ts...>>
 {
-    using getters_list = detail::integer_seq_transform_t<std::make_index_sequence<sizeof...(Ts)>, detail::make_call_std_get>;
+    using getters_list = detail::call_std_get<std::index_sequence_for<Ts...>>::type;
 };
 
 } // iris::alloy

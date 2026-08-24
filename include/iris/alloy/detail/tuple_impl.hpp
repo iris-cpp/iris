@@ -5,7 +5,7 @@
 
 #ifndef IRIS_ALLOY_GENERATE_PREPROCESSED
 
-#include <iris/config.hpp>
+#include <iris/config.hpp> // IWYU pragma: keep
 
 #include <iris/alloy/detail/tuple_comparison.hpp>
 
@@ -15,7 +15,7 @@
 
 #include <type_traits>
 
-#include <cstddef>
+#include <cstddef> // IWYU pragma: keep
 
 #endif
 

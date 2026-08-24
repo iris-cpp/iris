@@ -3,6 +3,8 @@
 
 // SPDX-License-Identifier: MIT
 
+#include <iris/config.hpp> // IWYU pragma: keep
+
 #ifndef IRIS_USE_PREPROCESSED
 #define IRIS_USE_PREPROCESSED 1
 #endif
@@ -13,7 +15,6 @@
 #include <iris/alloy/detail/tuple_impl.hpp>
 #endif
 
-#include <iris/alloy/detail/integer_seq_transform.hpp>
 #include <iris/alloy/detail/tuple_comparison.hpp>
 
 #include <type_traits>
@@ -24,9 +25,6 @@
 namespace iris::alloy {
 
 namespace detail {
-
-template<class... Ts>
-struct type_list;
 
 template<class IndexSeq, class UTuple, class... Ts>
 struct tuple_traits_impl;

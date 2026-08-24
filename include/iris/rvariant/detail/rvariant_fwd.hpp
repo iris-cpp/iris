@@ -3,7 +3,9 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <cstddef>
+#include <iris/config.hpp> // IWYU pragma: keep
+
+#include <cstddef> // IWYU pragma: keep
 
 #if !defined(IRIS_RVARIANT_VISIT_STRENGTHEN)
 # define IRIS_RVARIANT_VISIT_STRENGTHEN 1

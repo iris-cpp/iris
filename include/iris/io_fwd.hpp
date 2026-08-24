@@ -3,6 +3,8 @@
 
 // SPDX-License-Identifier: MIT
 
+#include <iris/config.hpp> // IWYU pragma: keep
+
 #include <concepts>
 #include <iosfwd>
 #include <type_traits>

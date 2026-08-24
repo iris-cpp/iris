@@ -3,6 +3,8 @@
 
 // SPDX-License-Identifier: MIT
 
+#include <iris/config.hpp> // IWYU pragma: keep
+
 #include <iris/alloy/detail/deduce.hpp>
 
 #include <iris/type_traits.hpp>
@@ -17,31 +19,12 @@ namespace iris::alloy {
 template<class T>
 struct adaptor;
 
-namespace detail {
-
-template<class T>
-struct non_type_list_size {};
-
-template<template<auto...> class TList, auto... Vs>
-struct non_type_list_size<TList<Vs...>> : std::integral_constant<std::size_t, sizeof...(Vs)> {};
-
-template<std::size_t I, class NonTypeList>
-struct non_type_list_indexing {};
-
-template<std::size_t I, template<auto...> class TList, auto... Vs>
-struct non_type_list_indexing<I, TList<Vs...>> : cpack_indexing<I, Vs...> {};
-
-} // detail
-
 struct value_initialize_t {};
 
 inline constexpr value_initialize_t value_initialize{};
 
 template<class... Ts>
 class tuple;
-
-template<class T>
-struct adaptor;
 
 namespace detail {
 
@@ -71,11 +54,17 @@ struct tuple_size {};
 template<class T>
 struct tuple_size<T const> : tuple_size<T> {};
 
+template<class T>
+struct tuple_size<T volatile> : tuple_size<T> {};
+
+template<class T>
+struct tuple_size<T const volatile> : tuple_size<T> {};
+
 template<class... Ts>
 struct tuple_size<tuple<Ts...>> : std::integral_constant<std::size_t, sizeof...(Ts)> {};
 
 template<Adapted T>
-struct tuple_size<T> : detail::non_type_list_size<typename adaptor<T>::getters_list> {};
+struct tuple_size<T> : std::integral_constant<std::size_t, adaptor<std::remove_cvref_t<T>>::getters_list::size> {};
 
 template<class T>
 inline constexpr std::size_t tuple_size_v = tuple_size<T>::value;
@@ -89,8 +78,27 @@ struct tuple_element<I, tuple<Ts...>>
     using type = IRIS_CORE_PACK_INDEXING(I, Ts...);
 };
 
+template<std::size_t I, class... Ts>
+struct tuple_element<I, tuple<Ts...> const>
+{
+    using type = tuple_element<I, tuple<Ts...>>::type const;
+};
+
+template<std::size_t I, class... Ts>
+struct tuple_element<I, tuple<Ts...> volatile>
+{
+    using type = tuple_element<I, tuple<Ts...>>::type volatile;
+};
+
+template<std::size_t I, class... Ts>
+struct tuple_element<I, tuple<Ts...> const volatile>
+{
+    using type = tuple_element<I, tuple<Ts...>>::type const volatile;
+};
+
+
 template<std::size_t I, class Tuple>
-using tuple_element_t = typename tuple_element<I, Tuple>::type;
+using tuple_element_t = tuple_element<I, Tuple>::type;
 
 template<std::size_t I, class... Ts>
 [[nodiscard]] constexpr tuple_element_t<I, tuple<Ts...>>& get(tuple<Ts...>& t) noexcept;
@@ -106,17 +114,42 @@ template<std::size_t I, class... Ts>
 
 namespace detail {
 
-template<std::size_t I, Adapted T>
-inline constexpr auto getter_of = non_type_list_indexing<I, typename adaptor<T>::getters_list>::value;
+template<Adapted T, std::size_t I, auto... Getters>
+struct adaptor_getter_t_impl;
 
-}  // namespace detail
-
-template<std::size_t I, Adapted T>
-[[nodiscard]] constexpr auto get(T&& x)
-    noexcept(std::is_nothrow_invocable_v<decltype(detail::getter_of<I, std::remove_cvref_t<T>>), T>)
-    -> std::invoke_result_t<decltype(detail::getter_of<I, std::remove_cvref_t<T>>), T>
+template<Adapted T, auto Getter, auto... Getters>
+struct adaptor_getter_t_impl<T, 0, Getter, Getters...>
 {
-    return std::invoke(detail::getter_of<I, std::remove_cvref_t<T>>, std::forward<T>(x));
+    static constexpr auto getter = Getter;
+    using getter_type = decltype(Getter);
+    using type = decltype(std::invoke(Getter, std::declval<T>()));
+};
+
+template<Adapted T, std::size_t I, auto Getter, auto... Getters>
+struct adaptor_getter_t_impl<T, I, Getter, Getters...>
+    : adaptor_getter_t_impl<T, I - 1, Getters...>
+{};
+
+template<Adapted T, std::size_t I, class GettersListT>
+struct adaptor_getter_t_dispatch;
+
+template<Adapted T, std::size_t I, auto... Getters>
+struct adaptor_getter_t_dispatch<T, I, constant_list<Getters...>>
+{
+    using type = adaptor_getter_t_impl<T, I, Getters...>;
+};
+
+template<std::size_t I, Adapted T>
+using adaptor_getter_t = adaptor_getter_t_dispatch<T, I, typename adaptor<std::remove_cvref_t<T>>::getters_list>::type;
+
+} // detail
+
+template<std::size_t I, Adapted T>
+[[nodiscard]] constexpr detail::adaptor_getter_t<I, T>::type
+get(T&& x)
+    noexcept(std::is_nothrow_invocable_v<typename detail::adaptor_getter_t<I, T>::getter_type, T>)
+{
+    return std::invoke(detail::adaptor_getter_t<I, T>::getter, std::forward<T>(x));
 }
 
 namespace detail {
@@ -189,7 +222,7 @@ struct basic_common_reference_impl<TTuple, UTuple, TQual, UQual, std::index_sequ
 // Doing so would produce some hard errors on completely irrelevant
 // context; for example, calling `std::map<T, U>{}.rbegin()` would
 // inevitably *check* `TupleLike` for `std::pair<T const, U>` thus
-// leads to instantiation of `getter_of`. Then if the instantiation
+// leads to instantiation of `alloy::get`. Then if the instantiation
 // yields hard error for some reason, the error is propagated to the
 // caller in SFINAE-unfriendly context.
 template<class TTuple, class UTuple, template<class> class TQual, template<class> class UQual>
