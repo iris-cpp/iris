@@ -15,36 +15,36 @@ TEST_CASE("run_length_sequence")
 {
     using namespace std::string_view_literals;
 
-    using List = iris::run_length_sequence<double>;
-    STATIC_CHECK(std::same_as<List::item_type, double>);
-    STATIC_CHECK(std::same_as<List::index_type, unsigned>);
+    using RLS = iris::run_length_sequence<double>;
+    STATIC_CHECK(std::same_as<RLS::item_type, double>);
+    STATIC_CHECK(std::same_as<RLS::index_type, unsigned>);
 
-    STATIC_CHECK(std::same_as<List::value_type, iris::indexed_value<unsigned, double>>);
-    STATIC_CHECK(std::is_trivially_copyable_v<List::value_type>);
+    STATIC_CHECK(std::same_as<RLS::value_type, iris::indexed_value<unsigned, double>>);
+    STATIC_CHECK(std::is_trivially_copyable_v<RLS::value_type>);
 
-    STATIC_CHECK(std::same_as<List::value_type, std::iter_value_t<List::iterator>>);
-    STATIC_CHECK(std::same_as<List::reference, std::iter_reference_t<List::iterator>>);
-    STATIC_CHECK(std::same_as<List::const_reference, std::iter_reference_t<List::const_iterator>>);
+    STATIC_CHECK(std::same_as<RLS::value_type, std::iter_value_t<RLS::iterator>>);
+    STATIC_CHECK(std::same_as<RLS::reference, std::iter_reference_t<RLS::iterator>>);
+    STATIC_CHECK(std::same_as<RLS::const_reference, std::iter_reference_t<RLS::const_iterator>>);
 
-    STATIC_CHECK(std::indirectly_readable<List::iterator>);
-    STATIC_CHECK(std::bidirectional_iterator<List::iterator>);
+    STATIC_CHECK(std::indirectly_readable<RLS::iterator>);
+    STATIC_CHECK(std::bidirectional_iterator<RLS::iterator>);
 
-    STATIC_CHECK(std::indirectly_readable<List::const_iterator>);
-    STATIC_CHECK(std::bidirectional_iterator<List::const_iterator>);
+    STATIC_CHECK(std::indirectly_readable<RLS::const_iterator>);
+    STATIC_CHECK(std::bidirectional_iterator<RLS::const_iterator>);
 
-    STATIC_CHECK(std::ranges::bidirectional_range<List>);
-    STATIC_CHECK(std::ranges::bidirectional_range<List const>);
+    STATIC_CHECK(std::ranges::bidirectional_range<RLS>);
+    STATIC_CHECK(std::ranges::bidirectional_range<RLS const>);
 
-    STATIC_CHECK(std::sized_sentinel_for<List::const_iterator, List::iterator>);
+    STATIC_CHECK(std::sized_sentinel_for<RLS::const_iterator, RLS::iterator>);
 
-    STATIC_CHECK(std::default_initializable<List>);
-    STATIC_CHECK(std::is_copy_constructible_v<List>);
-    STATIC_CHECK(std::is_copy_assignable_v<List>);
-    STATIC_CHECK(std::is_move_constructible_v<List>);
-    STATIC_CHECK(std::is_move_assignable_v<List>);
+    STATIC_CHECK(std::default_initializable<RLS>);
+    STATIC_CHECK(std::is_copy_constructible_v<RLS>);
+    STATIC_CHECK(std::is_copy_assignable_v<RLS>);
+    STATIC_CHECK(std::is_move_constructible_v<RLS>);
+    STATIC_CHECK(std::is_move_assignable_v<RLS>);
 
     {
-        List::value_type iv{};
+        RLS::value_type iv{};
         auto&& [index, value] = iv;
         index = 42;
         value = 1.0;
@@ -52,7 +52,7 @@ TEST_CASE("run_length_sequence")
         CHECK(iv.value == 1.0);
     }
     {
-        List::value_type iv{};
+        RLS::value_type iv{};
         auto [index, value] = iv;
         index = 42;
         value = 1.0;
@@ -60,184 +60,184 @@ TEST_CASE("run_length_sequence")
         CHECK(iv.value == 0.0);  // NOLINT(readability-container-size-empty)
     }
 
-    List list;
-    CHECK(list.empty());
-    CHECK(list.size() == 0);  // NOLINT(readability-container-size-empty)
-    CHECK(list.begin() == list.end());
-    CHECK(list == list);
-    CHECK((list <=> list) == std::strong_ordering::equal);
+    RLS seq;
+    CHECK(seq.empty());
+    CHECK(seq.size() == 0);  // NOLINT(readability-container-size-empty)
+    CHECK(seq.begin() == seq.end());
+    CHECK(seq == seq);
+    CHECK((seq <=> seq) == std::strong_ordering::equal);
 
-    CHECK_NOTHROW((void)(list.cbegin() = list.begin()));
+    CHECK_NOTHROW((void)(seq.cbegin() = seq.begin()));
 
     {
-        auto&& elem = list.emplace_back(1.0);
-        REQUIRE(list.size() == 1);
-        REQUIRE(list.segment_count() == 1);
+        auto&& elem = seq.emplace_back(1.0);
+        REQUIRE(seq.size() == 1);
+        REQUIRE(seq.segment_count() == 1);
         CHECK(elem.index == 0);
         CHECK(elem.value == 1.0);
 
-        auto it = list.begin();
+        auto it = seq.begin();
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e0 = *it++;
         CHECK(e0.index == 0);
         CHECK(e0.value == 1.0);
 
-        REQUIRE(it == list.end());
+        REQUIRE(it == seq.end());
     }
     {
-        auto&& elem = list.emplace_back(1.0);
-        REQUIRE(list.size() == 2);
-        REQUIRE(list.segment_count() == 1);
+        auto&& elem = seq.emplace_back(1.0);
+        REQUIRE(seq.size() == 2);
+        REQUIRE(seq.segment_count() == 1);
         CHECK(elem.index == 1);
         CHECK(elem.value == 1.0);
 
-        auto it = list.begin();
+        auto it = seq.begin();
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e0 = *it++;
         CHECK(e0.index == 0);
         CHECK(e0.value == 1.0);
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e1 = *it++;
         CHECK(e1.index == 1);
         CHECK(e1.value == 1.0);
 
-        REQUIRE(it == list.end());
+        REQUIRE(it == seq.end());
     }
     {
-        auto&& elem = list.emplace_back(1.1);
-        REQUIRE(list.size() == 3);
-        REQUIRE(list.segment_count() == 2);
+        auto&& elem = seq.emplace_back(1.1);
+        REQUIRE(seq.size() == 3);
+        REQUIRE(seq.segment_count() == 2);
         CHECK(elem.index == 2);
         CHECK(elem.value == 1.1);
 
-        auto it = list.begin();
+        auto it = seq.begin();
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e0 = *it++;
         CHECK(e0.index == 0);
         CHECK(e0.value == 1.0);
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e1 = *it++;
         CHECK(e1.index == 1);
         CHECK(e1.value == 1.0);
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e2 = *it++;
         CHECK(e2.index == 2);
         CHECK(e2.value == 1.1);
 
-        REQUIRE(it == list.end());
+        REQUIRE(it == seq.end());
     }
     {
-        auto&& elem = list.emplace_back(1.1);
-        REQUIRE(list.size() == 4);
-        REQUIRE(list.segment_count() == 2);
+        auto&& elem = seq.emplace_back(1.1);
+        REQUIRE(seq.size() == 4);
+        REQUIRE(seq.segment_count() == 2);
         CHECK(elem.index == 3);
         CHECK(elem.value == 1.1);
 
-        auto it = list.begin();
+        auto it = seq.begin();
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e0 = *it++;
         CHECK(e0.index == 0);
         CHECK(e0.value == 1.0);
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e1 = *it++;
         CHECK(e1.index == 1);
         CHECK(e1.value == 1.0);
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e2 = *it++;
         CHECK(e2.index == 2);
         CHECK(e2.value == 1.1);
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e3 = *it++;
         CHECK(e3.index == 3);
         CHECK(e3.value == 1.1);
 
-        REQUIRE(it == list.end());
+        REQUIRE(it == seq.end());
     }
     {
-        auto&& elem = list.emplace_back(1.1);
-        REQUIRE(list.size() == 5);
-        REQUIRE(list.segment_count() == 2);
+        auto&& elem = seq.emplace_back(1.1);
+        REQUIRE(seq.size() == 5);
+        REQUIRE(seq.segment_count() == 2);
         CHECK(elem.index == 4);
         CHECK(elem.value == 1.1);
 
-        auto it = list.begin();
+        auto it = seq.begin();
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e0 = *it++;
         CHECK(e0.index == 0);
         CHECK(e0.value == 1.0);
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e1 = *it++;
         CHECK(e1.index == 1);
         CHECK(e1.value == 1.0);
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e2 = *it++;
         CHECK(e2.index == 2);
         CHECK(e2.value == 1.1);
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e3 = *it++;
         CHECK(e3.index == 3);
         CHECK(e3.value == 1.1);
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e4 = *it++;
         CHECK(e4.index == 4);
         CHECK(e4.value == 1.1);
 
-        REQUIRE(it == list.end());
+        REQUIRE(it == seq.end());
     }
     {
-        auto&& elem = list.emplace_back(1.2);
-        REQUIRE(list.size() == 6);
-        REQUIRE(list.segment_count() == 3);
+        auto&& elem = seq.emplace_back(1.2);
+        REQUIRE(seq.size() == 6);
+        REQUIRE(seq.segment_count() == 3);
         CHECK(elem.index == 5);
         CHECK(elem.value == 1.2);
 
-        auto it = list.begin();
+        auto it = seq.begin();
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e0 = *it++;
         CHECK(e0.index == 0);
         CHECK(e0.value == 1.0);
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e1 = *it++;
         CHECK(e1.index == 1);
         CHECK(e1.value == 1.0);
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e2 = *it++;
         CHECK(e2.index == 2);
         CHECK(e2.value == 1.1);
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e3 = *it++;
         CHECK(e3.index == 3);
         CHECK(e3.value == 1.1);
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e4 = *it++;
         CHECK(e4.index == 4);
         CHECK(e4.value == 1.1);
 
-        REQUIRE(it != list.end());
+        REQUIRE(it != seq.end());
         auto&& e5 = *it++;
         CHECK(e5.index == 5);
         CHECK(e5.value == 1.2);
 
-        REQUIRE(it == list.end());
+        REQUIRE(it == seq.end());
     }
 }

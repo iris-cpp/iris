@@ -35,9 +35,9 @@ namespace iris {
 // A compressed bidirectional container that holds only one instance of `T`
 // per each adjacent equivalent elements.
 //
-// Iterator invalidation does not follow `ListT`: any insertion that starts a
-// new segment may invalidate all iterators, regardless of `ListT`. Reference
-// stability of the elements follows `ListT`.
+// Iterator invalidation does not follow `RunContainerT`: any insertion that starts a
+// new segment may invalidate all iterators, regardless of `RunContainerT`. Reference
+// stability of the elements follows `RunContainerT`.
 //
 // `run_length_sequence` can be either mutable or immutable, depending on the user's
 // preference. By default, `run_length_sequence` allows access to the mutable reference
@@ -56,19 +56,19 @@ namespace iris {
 //     emplace_back(U&& value)`, the list directly compares `value` with the
 //     existing element without creating a temporary `T` object. Then, if
 //     the comparison failed, a new instance of `T` will be directly inserted
-//     into `ListT` via `std::forward<U>(value)`.
+//     into `RunContainerT` via `std::forward<U>(value)`.
 //
 // When inserting an element, `run_length_sequence` does lazy construction of the
 // actual element object iff heterogeneous comparison is supported for the given
 // type `U`; otherwise,
-//   - If `ListT` supports `list_.pop_back()` or `list_.erase(iterator to the
+//   - If `RunContainerT` supports `runs_.pop_back()` or `runs_.erase(iterator to the
 //     last inserted element)`, the element is first constructed in-place and
 //     the resulting object is used for comparison; when the comparison holds, the
 //     last element is popped back or erased. Otherwise,
 //
 //   - The element is first constructed as a local variable `temp` and is used for
 //     comparison; when the comparison does not hold, the object is move-inserted
-//     into `ListT` as if by `list_.emplace_back(std::forward<T>(temp))`.
+//     into `RunContainerT` as if by `runs_.emplace_back(std::forward<T>(temp))`.
 //
 // The semantics described in the previous section applies similarly to `emplace_front`.
 //
@@ -80,7 +80,7 @@ namespace iris {
 //   A A A B B C C C C
 //
 // then the internal state is:
-//   list_:
+//   runs_:
 //     [A] [B] [C]
 //
 //   offsets_:
@@ -88,14 +88,14 @@ namespace iris {
 template<
     class T,
     class IndexT = unsigned,
-    class ListT = std::vector<T, default_init_allocator<T>>
+    class RunContainerT = std::vector<T, default_init_allocator<T>>
 >
 class run_length_sequence
 {
 public:
     static_assert(!std::is_const_v<T>);
     static_assert(unsigned_numeric_integral<IndexT> && !std::is_const_v<IndexT>);
-    static_assert(!std::is_const_v<ListT>);
+    static_assert(!std::is_const_v<RunContainerT>);
 
     using size_type = std::common_type_t<std::size_t, IndexT>;
     using difference_type = std::ptrdiff_t;
@@ -114,7 +114,7 @@ private:
     struct iterator_impl
     {
     private:
-        using value_iterator = std::ranges::iterator_t<std::conditional_t<IsConst, ListT const, ListT>>;
+        using value_iterator = std::ranges::iterator_t<std::conditional_t<IsConst, RunContainerT const, RunContainerT>>;
         using offset_iterator = offsets_type::const_iterator;
 
     public:
@@ -233,7 +233,7 @@ private:
 public:
     using item_type = T;
     using index_type = IndexT;
-    using list_type = ListT;
+    using run_container_type = RunContainerT;
 
     using value_type = indexed_value<IndexT, T>;
     using reference = indexed_value<IndexT, T&>;
@@ -244,30 +244,30 @@ public:
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    [[nodiscard]] constexpr iterator begin() noexcept { check_range_concepts(); return iterator{std::ranges::begin(list_), offsets_.begin()}; }
-    [[nodiscard]] constexpr const_iterator begin() const noexcept { check_range_concepts(); return const_iterator{std::ranges::begin(list_), offsets_.begin()}; }
+    [[nodiscard]] constexpr iterator begin() noexcept { check_range_concepts(); return iterator{std::ranges::begin(runs_), offsets_.begin()}; }
+    [[nodiscard]] constexpr const_iterator begin() const noexcept { check_range_concepts(); return const_iterator{std::ranges::begin(runs_), offsets_.begin()}; }
     [[nodiscard]] constexpr const_iterator cbegin() const noexcept { check_range_concepts(); return begin(); }
 
     [[nodiscard]] constexpr iterator end() noexcept
     {
         check_range_concepts();
         if (offsets_.empty()) {
-            assert(std::ranges::empty(list_));
-            return iterator{std::ranges::end(list_), offsets_.end()};
+            assert(std::ranges::empty(runs_));
+            return iterator{std::ranges::end(runs_), offsets_.end()};
         } else {
             assert(offsets_.size() >= 2);
-            return iterator{std::ranges::end(list_), std::prev(offsets_.end())};
+            return iterator{std::ranges::end(runs_), std::prev(offsets_.end())};
         }
     }
     [[nodiscard]] constexpr const_iterator end() const noexcept
     {
         check_range_concepts();
         if (offsets_.empty()) {
-            assert(std::ranges::empty(list_));
-            return const_iterator{std::ranges::end(list_), offsets_.end()};
+            assert(std::ranges::empty(runs_));
+            return const_iterator{std::ranges::end(runs_), offsets_.end()};
         } else {
             assert(offsets_.size() >= 2);
-            return const_iterator{std::ranges::end(list_), std::prev(offsets_.end())};
+            return const_iterator{std::ranges::end(runs_), std::prev(offsets_.end())};
         }
     }
     [[nodiscard]] constexpr const_iterator cend() const noexcept { check_range_concepts(); return end(); }
@@ -281,32 +281,32 @@ public:
 
     [[nodiscard]] constexpr bool empty() const noexcept
     {
-        static_assert(std::ranges::sized_range<ListT>);
-        assert(std::ranges::empty(list_) == offsets_.empty());
+        static_assert(std::ranges::sized_range<RunContainerT>);
+        assert(std::ranges::empty(runs_) == offsets_.empty());
         return offsets_.empty();
     }
 
     [[nodiscard]] constexpr size_type size() const noexcept
     {
-        static_assert(std::ranges::sized_range<ListT>);
+        static_assert(std::ranges::sized_range<RunContainerT>);
         if (offsets_.empty()) return 0uz;
-        assert(!std::ranges::empty(list_));
+        assert(!std::ranges::empty(runs_));
         assert(offsets_.size() >= 2);
         return static_cast<size_type>(offsets_.back());
     }
 
     [[nodiscard]] constexpr size_type segment_count() const noexcept
     {
-        static_assert(std::ranges::sized_range<ListT>);
-        return static_cast<size_type>(std::ranges::size(list_));
+        static_assert(std::ranges::sized_range<RunContainerT>);
+        return static_cast<size_type>(std::ranges::size(runs_));
     }
 
     constexpr void clear() noexcept
-        requires requires(ListT& list) { list.clear(); }
+        requires requires(RunContainerT& list) { list.clear(); }
     {
         static_assert(req::Cpp17Destructible<T>);
         IRIS_ZZ_RUN_LENGTH_SEQUENCE_INVARIANT_GUARD
-        list_.clear();
+        runs_.clear();
         offsets_.clear();
     }
 
@@ -323,40 +323,40 @@ public:
             [[maybe_unused]] ofs_insertion_guard<true, true> ofs_insertion_guard{this};
             offsets_.emplace_back(static_cast<IndexT>(0u));
             offsets_.emplace_back(static_cast<IndexT>(1u)); // sentinel
-            auto& elem = ranges::emplace_back_ref(list_, std::forward<U>(value));
+            auto& elem = ranges::emplace_back_ref(runs_, std::forward<U>(value));
             ofs_insertion_guard.clear();
             return {static_cast<IndexT>(0u), elem};
 
         } else {
-            assert(!std::ranges::empty(list_));
+            assert(!std::ranges::empty(runs_));
             assert(offsets_.size() >= 2);
             if (offsets_.back() == max_size()) {
                 throwf<std::length_error>("run_length_sequence capacity exceeded");
             }
             if constexpr (req::half_equality_comparable<T, U>) {
-                if (ranges::back(std::as_const(list_)) == std::as_const(value)) {
+                if (ranges::back(std::as_const(runs_)) == std::as_const(value)) {
                     // Equivalent element already exists; no need to insert.
-                    return {offsets_.back()++, ranges::back(list_)};
+                    return {offsets_.back()++, ranges::back(runs_)};
                 }
                 // Need to insert new element
                 auto const new_pos = offsets_.back();
                 offsets_.emplace_back(new_pos + static_cast<IndexT>(1u)); // new sentinel
                 [[maybe_unused]] ofs_insertion_guard<true, false> ofs_insertion_guard{this};
-                auto& elem = ranges::emplace_back_ref(list_, std::forward<U>(value));
+                auto& elem = ranges::emplace_back_ref(runs_, std::forward<U>(value));
                 ofs_insertion_guard.clear();
                 return {new_pos, elem};
 
-            } else if constexpr (requires { ranges::weak_pop_back(list_); }) {
-                auto& elem = ranges::emplace_back_ref(list_, std::forward<U>(value));
+            } else if constexpr (requires { ranges::weak_pop_back(runs_); }) {
+                auto& elem = ranges::emplace_back_ref(runs_, std::forward<U>(value));
                 [[maybe_unused]] elem_insertion_guard<true> elem_insertion_guard{this};
 
-                auto const prev_it = std::ranges::prev(std::ranges::end(list_), 2);
+                auto const prev_it = std::ranges::prev(std::ranges::end(runs_), 2);
 
                 if (std::as_const(*prev_it) == std::as_const(elem)) {
                     // Equivalent element already exists; no need to insert.
                     elem_insertion_guard.clear();
-                    ranges::weak_pop_back(list_);
-                    return {offsets_.back()++, ranges::back(list_)};
+                    ranges::weak_pop_back(runs_);
+                    return {offsets_.back()++, ranges::back(runs_)};
                 }
 
                 // Need to insert new element
@@ -367,15 +367,15 @@ public:
 
             } else {
                 T temp(std::forward<U>(value));
-                if (ranges::back(std::as_const(list_)) == std::as_const(temp)) {
+                if (ranges::back(std::as_const(runs_)) == std::as_const(temp)) {
                     // Equivalent element already exists; no need to insert.
-                    return {offsets_.back()++, ranges::back(list_)};
+                    return {offsets_.back()++, ranges::back(runs_)};
                 }
                 // Need to insert new element
                 auto const new_pos = offsets_.back();
                 offsets_.emplace_back(new_pos + static_cast<IndexT>(1u)); // new sentinel
                 [[maybe_unused]] ofs_insertion_guard<true, false> ofs_insertion_guard{this};
-                auto& elem = ranges::emplace_back_ref(list_, std::move(temp));
+                auto& elem = ranges::emplace_back_ref(runs_, std::move(temp));
                 ofs_insertion_guard.clear();
                 return {new_pos, elem};
             }
@@ -385,12 +385,12 @@ public:
 private:
     constexpr void check_range_concepts() const noexcept
     {
-        static_assert(std::ranges::bidirectional_range<ListT>);
-        static_assert(std::same_as<std::ranges::range_value_t<ListT>, T>);
-        static_assert(std::same_as<std::ranges::range_reference_t<ListT>, T&>);
-        static_assert(std::same_as<std::ranges::range_reference_t<ListT const>, T const&>);
+        static_assert(std::ranges::bidirectional_range<RunContainerT>);
+        static_assert(std::same_as<std::ranges::range_value_t<RunContainerT>, T>);
+        static_assert(std::same_as<std::ranges::range_reference_t<RunContainerT>, T&>);
+        static_assert(std::same_as<std::ranges::range_reference_t<RunContainerT const>, T const&>);
 
-        static_assert(requires (ListT& list) {
+        static_assert(requires (RunContainerT& list) {
             { list.back() } -> std::same_as<T&>;
             { list.front() } -> std::same_as<T&>;
         });
@@ -444,7 +444,7 @@ private:
         {
             if (!self_) return;
             if constexpr (IsBack) {
-                ranges::weak_pop_back(self_->list_);
+                ranges::weak_pop_back(self_->runs_);
             } else {
                 static_assert(false, "sorry, not implemented");
             }
@@ -466,9 +466,9 @@ private:
         constexpr ~check_invariant_guard() noexcept
         {
             if (self_->offsets_.empty()) {
-                assert(std::ranges::empty(self_->list_));
+                assert(std::ranges::empty(self_->runs_));
             } else {
-                assert(self_->offsets_.size() == std::ranges::size(self_->list_) + 1);
+                assert(self_->offsets_.size() == std::ranges::size(self_->runs_) + 1);
                 assert(self_->offsets_[0] == 0);
                 for (std::size_t i = 0; i < self_->offsets_.size() - 1; ++i) {
                     assert(self_->offsets_[i] < self_->offsets_[i + 1]);
@@ -484,7 +484,7 @@ private:
 
     friend struct detail::run_length_sequence_comp;
 
-    ListT list_;
+    RunContainerT runs_;
     offsets_type offsets_;
 
 #undef IRIS_ZZ_RUN_LENGTH_SEQUENCE_INVARIANT_GUARD
@@ -495,34 +495,34 @@ namespace detail {
 
 struct run_length_sequence_comp
 {
-    template<class T, class PosT, class ListT>
-    [[nodiscard]] static constexpr bool equals(run_length_sequence<T, PosT, ListT> const& a, run_length_sequence<T, PosT, ListT> const& b) noexcept
+    template<class T, class IndexT, class RunContainerT>
+    [[nodiscard]] static constexpr bool equals(run_length_sequence<T, IndexT, RunContainerT> const& a, run_length_sequence<T, IndexT, RunContainerT> const& b) noexcept
     {
-        return a.offsets_ == b.offsets_ && a.list_ == b.list_;
+        return a.offsets_ == b.offsets_ && a.runs_ == b.runs_;
     }
 
-    template<class T, class PosT, class ListT>
-    [[nodiscard]] static constexpr cmp::synth_three_way_result<ListT>
-    compare(run_length_sequence<T, PosT, ListT> const& a, run_length_sequence<T, PosT, ListT> const& b) noexcept
+    template<class T, class IndexT, class RunContainerT>
+    [[nodiscard]] static constexpr cmp::synth_three_way_result<RunContainerT>
+    compare(run_length_sequence<T, IndexT, RunContainerT> const& a, run_length_sequence<T, IndexT, RunContainerT> const& b) noexcept
     {
         if (auto const comp = a.offsets_ <=> b.offsets_; comp != 0) {
             return comp;
         }
-        return cmp::synth_three_way{}(a.list_, b.list_);
+        return cmp::synth_three_way{}(a.runs_, b.runs_);
     }
 };
 
 } // detail
 
-template<class T, class PosT, class ListT>
-[[nodiscard]] constexpr bool operator==(run_length_sequence<T, PosT, ListT> const& a, run_length_sequence<T, PosT, ListT> const& b) noexcept
+template<class T, class IndexT, class RunContainerT>
+[[nodiscard]] constexpr bool operator==(run_length_sequence<T, IndexT, RunContainerT> const& a, run_length_sequence<T, IndexT, RunContainerT> const& b) noexcept
 {
     return detail::run_length_sequence_comp::equals(a, b);
 }
 
-template<class T, class PosT, class ListT>
-[[nodiscard]] constexpr cmp::synth_three_way_result<ListT>
-operator<=>(run_length_sequence<T, PosT, ListT> const& a, run_length_sequence<T, PosT, ListT> const& b) noexcept
+template<class T, class IndexT, class RunContainerT>
+[[nodiscard]] constexpr cmp::synth_three_way_result<RunContainerT>
+operator<=>(run_length_sequence<T, IndexT, RunContainerT> const& a, run_length_sequence<T, IndexT, RunContainerT> const& b) noexcept
 {
     return detail::run_length_sequence_comp::compare(a, b);
 }
