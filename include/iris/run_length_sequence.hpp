@@ -224,6 +224,18 @@ public:
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
+
+    constexpr run_length_sequence() = default;
+
+    template<ranges::container_compatible_range<T> R>
+    constexpr run_length_sequence(std::from_range_t, R&& r)
+    {
+        for (auto&& elem : r) {
+            this->emplace_back(std::forward<decltype(elem)>(elem));
+        }
+    }
+
+
     [[nodiscard]] constexpr const_iterator begin() const noexcept { check_range_concepts(); return const_iterator{std::ranges::begin(runs_), offsets_.begin()}; }
     [[nodiscard]] constexpr const_iterator cbegin() const noexcept { return begin(); }
 

@@ -4,14 +4,15 @@
 
 #include <iris/indexed_value.hpp>
 
+#include <functional>
 #include <string>
 #include <concepts>
 #include <type_traits>
 
+using iris::indexed_value;
+
 TEST_CASE("indexed_value")
 {
-    using iris::indexed_value;
-
     using V =   indexed_value<int, std::string>;
     //using CV =  indexed_value<int, std::string const>;
     using LR =  indexed_value<int, std::string&>;
@@ -101,4 +102,15 @@ TEST_CASE("indexed_value")
         CHECK(index == 42);
         CHECK(&element == &value);
     }
+}
+
+TEST_CASE("indexed_value: tuple/pair")
+{
+    STATIC_CHECK(std::equal_to{}(indexed_value<int, double>{}, indexed_value<int, double>{}));
+
+    STATIC_CHECK(std::equal_to{}(indexed_value<int, double>{}, std::tuple<int, double>{}));
+    STATIC_CHECK(std::equal_to{}(std::tuple<int, double>{}, indexed_value<int, double>{}));
+
+    STATIC_CHECK(std::equal_to{}(indexed_value<int, double>{}, std::pair<int, double>{}));
+    STATIC_CHECK(std::equal_to{}(std::pair<int, double>{}, indexed_value<int, double>{}));
 }

@@ -4,6 +4,7 @@
 
 #include <iris/run_length_sequence.hpp>
 
+#include <algorithm>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -59,7 +60,24 @@ TEST_CASE("run_length_sequence")
         CHECK(iv.index == 0);
         CHECK(iv.value == 0.0);  // NOLINT(readability-container-size-empty)
     }
+}
 
+TEST_CASE("run_length_sequence: misc")
+{
+    {
+        // TODO
+        //iris::run_length_sequence<int> seq{std::from_range, std::initializer_list{2, 3, 3, 4, 2, 2, 3, 4, 4}};
+        //constexpr auto expected_arr = std::array{2, 3, 4};
+        //auto expected = std::views::zip(std::views::iota(0u), expected_arr);
+        //auto aaa = seq | std::ranges::to<std::vector>();
+        //auto bbb = expected | std::ranges::to<std::vector>();
+        //CHECK(aaa == bbb);
+    }
+}
+
+TEST_CASE("run_length_sequence: sequential insertion")
+{
+    using RLS = iris::run_length_sequence<double>;
     RLS seq;
     CHECK(seq.empty());
     CHECK(seq.size() == 0);  // NOLINT(readability-container-size-empty)

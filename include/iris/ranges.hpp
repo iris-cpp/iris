@@ -398,6 +398,12 @@ concept fixed_array_writable =
 template<class T>
 using dummy_fixed_array = T[1];
 
+
+template<class R, class ElemT>
+concept container_compatible_range =
+    std::ranges::input_range<R> &&
+    std::convertible_to<std::ranges::range_reference_t<R>, ElemT>;
+
 } // iris::ranges
 
 #endif
