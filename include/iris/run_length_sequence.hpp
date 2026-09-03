@@ -223,21 +223,9 @@ public:
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    [[nodiscard]] constexpr iterator begin() noexcept { check_range_concepts(); return iterator{std::ranges::begin(runs_), offsets_.begin()}; }
     [[nodiscard]] constexpr const_iterator begin() const noexcept { check_range_concepts(); return const_iterator{std::ranges::begin(runs_), offsets_.begin()}; }
     [[nodiscard]] constexpr const_iterator cbegin() const noexcept { return begin(); }
 
-    [[nodiscard]] constexpr iterator end() noexcept
-    {
-        check_range_concepts();
-        if (offsets_.empty()) {
-            assert(std::ranges::empty(runs_));
-            return iterator{std::ranges::end(runs_), offsets_.end()};
-        } else {
-            assert(offsets_.size() >= 2);
-            return iterator{std::ranges::end(runs_), std::prev(offsets_.end())};
-        }
-    }
     [[nodiscard]] constexpr const_iterator end() const noexcept
     {
         check_range_concepts();
@@ -251,10 +239,8 @@ public:
     }
     [[nodiscard]] constexpr const_iterator cend() const noexcept { return end(); }
 
-    [[nodiscard]] constexpr reverse_iterator rbegin() noexcept { return reverse_iterator{end()}; }
     [[nodiscard]] constexpr const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator{end()}; }
     [[nodiscard]] constexpr const_reverse_iterator crbegin() const noexcept { return rbegin(); }
-    [[nodiscard]] constexpr reverse_iterator rend() noexcept { return reverse_iterator{begin()}; }
     [[nodiscard]] constexpr const_reverse_iterator rend() const noexcept { return const_reverse_iterator{begin()}; }
     [[nodiscard]] constexpr const_reverse_iterator crend() const noexcept { return rend(); }
 
