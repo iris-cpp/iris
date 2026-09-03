@@ -372,6 +372,14 @@ public:
         }
     }
 
+    constexpr void swap(run_length_sequence& other)
+        noexcept(std::is_nothrow_swappable_v<RunContainerT> && std::is_nothrow_swappable_v<offsets_type>)
+    {
+        using std::swap;
+        swap(runs_, other.runs_);
+        swap(offsets_, other.offsets_);
+    }
+
 private:
     static constexpr void check_range_concepts() noexcept
     {
@@ -490,6 +498,13 @@ private:
 
 #undef IRIS_ZZ_RUN_LENGTH_SEQUENCE_INVARIANT_GUARD
 };
+
+template<class T, class IndexT, class RunContainerT>
+constexpr void swap(run_length_sequence<T, IndexT, RunContainerT>& a, run_length_sequence<T, IndexT, RunContainerT>& b)
+    noexcept(noexcept(a.swap(b)))
+{
+    a.swap(b);
+}
 
 
 namespace detail {

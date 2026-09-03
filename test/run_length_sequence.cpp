@@ -66,6 +66,11 @@ TEST_CASE("run_length_sequence")
     CHECK(seq.begin() == seq.end());
     CHECK(seq == seq);
 
+    {
+        using std::swap;
+        swap(seq, seq);
+    }
+
     CHECK_NOTHROW((void)(seq.cbegin() = seq.begin()));
 
     {
