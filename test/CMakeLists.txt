@@ -196,6 +196,8 @@ if(PROJECT_IS_TOP_LEVEL)
             alloy
             alloy_visit
             marshal
+            indexed_value
+            run_length_sequence
         )
         foreach(test_name IN LISTS IRIS_TEST_IRIS_TESTS)
             iris_define_internal_test(${test_name} ${test_name}.cpp)

@@ -4,7 +4,6 @@
 // SPDX-License-Identifier: MIT
 
 #include <iris/config.hpp> // IWYU pragma: keep
-#include <iris/iterator.hpp>
 
 #include <format>
 #include <concepts>
@@ -29,20 +28,24 @@ public:
     using map_type = MapT;
     using offset_type = IntervalT::value_type;
 
-    class const_iterator : public iterator_base<typename map_type::const_iterator>
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+
+    class const_iterator
     {
-        using typename iterator_base<typename map_type::const_iterator>::iterator_base_type;
-        static_assert(std::bidirectional_iterator<iterator_base_type>);
-        iterator_base_type it_;
+        map_type::const_iterator it_;
 
     public:
+        using iterator_concept = std::bidirectional_iterator_tag;
+        using iterator_category = std::bidirectional_iterator_tag;
+
         using value_type = IntervalT;
-        using pointer    = IntervalT const*;
         using reference  = IntervalT;
+        using difference_type = interval_set::difference_type;
 
         constexpr const_iterator() noexcept = default;
 
-        constexpr explicit const_iterator(iterator_base_type it) noexcept
+        constexpr explicit const_iterator(map_type::const_iterator it) noexcept
             : it_(std::move(it))
         {}
 

@@ -28,6 +28,12 @@ concept boolean_testable = detail::boolean_testable_impl<T> && requires(T&& t) {
     { !std::forward<T>(t) } -> detail::boolean_testable_impl;
 };
 
+template<class T, class U>
+concept half_equality_comparable = requires(std::remove_reference_t<T> const& a, std::remove_reference_t<U> const& b) {
+    { a == b } -> boolean_testable;
+    { a != b } -> boolean_testable;
+};
+
 // https://eel.is/c++draft/utility.arg.requirements#tab:cpp17.equalitycomparable
 template<class T>
 concept Cpp17EqualityComparable =

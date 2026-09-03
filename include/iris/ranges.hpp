@@ -204,6 +204,162 @@ concept back_emplaceable =
     );
 
 template<class T>
+concept default_front_emplaceable = requires(T c) {
+    std::forward<T>(c).emplace_front();
+};
+
+template<class T>
+concept front_emplaceable =
+    requires(T c, std::ranges::range_value_t<std::remove_cvref_t<T>> v) {
+        std::forward<T>(c).emplace_front(std::move(v));
+    } &&
+    (
+        !std::default_initializable<std::ranges::range_value_t<std::remove_cvref_t<T>>> ||
+        default_front_emplaceable<T>
+    );
+
+namespace detail {
+
+struct front_fn
+{
+    template<class R>
+    static constexpr bool has_front = requires(R&& r) { std::forward<R>(r).front(); };
+
+    template<std::ranges::range R>
+        requires has_front<R>
+    [[nodiscard]] static constexpr auto&& operator()(R&& r) noexcept
+    {
+        return std::forward<R>(r).front();
+    }
+
+    template<std::ranges::input_range R>
+        requires (!has_front<R>)
+    [[nodiscard]] static constexpr auto&& operator()(R&& r) noexcept
+    {
+        return *std::ranges::begin(std::forward<R>(r));
+    }
+};
+
+struct back_fn
+{
+    template<class R>
+    static constexpr bool has_back = requires(R&& r) { std::forward<R>(r).back(); };
+
+    template<std::ranges::range R>
+        requires has_back<R>
+    [[nodiscard]] static constexpr auto&& operator()(R&& r) noexcept
+    {
+        return std::forward<R>(r).back();
+    }
+
+    template<std::ranges::bidirectional_range R>
+        requires (!has_back<R>)
+    [[nodiscard]] static constexpr auto&& operator()(R&& r) noexcept
+    {
+        return *std::ranges::prev(std::ranges::end(std::forward<R>(r)));
+    }
+};
+
+} // detail
+
+[[nodiscard]] inline constexpr detail::front_fn front{};
+[[nodiscard]] inline constexpr detail::back_fn back{};
+
+namespace detail {
+
+struct emplace_front_ref_fn
+{
+    template<front_emplaceable ContainerT, class... Args>
+    [[nodiscard]] static constexpr auto& operator()(ContainerT& cont, Args&&... args)
+        noexcept(noexcept(cont.emplace_front(std::forward<Args>(args)...)))
+    {
+        if constexpr (std::is_void_v<decltype(cont.emplace_front(std::forward<Args>(args)...))>) {
+            cont.emplace_front(std::forward<Args>(args)...);
+            return front(cont);
+        } else {
+            return cont.emplace_front(std::forward<Args>(args)...);
+        }
+    }
+};
+
+struct emplace_back_ref_fn
+{
+    template<back_emplaceable ContainerT, class... Args>
+    [[nodiscard]] static constexpr auto& operator()(ContainerT& cont, Args&&... args)
+        noexcept(noexcept(cont.emplace_back(std::forward<Args>(args)...)))
+    {
+        if constexpr (std::is_void_v<decltype(cont.emplace_back(std::forward<Args>(args)...))>) {
+            cont.emplace_back(std::forward<Args>(args)...);
+            return back(cont);
+        } else {
+            return cont.emplace_back(std::forward<Args>(args)...);
+        }
+    }
+};
+
+} // detail
+
+[[nodiscard]] inline constexpr detail::emplace_front_ref_fn emplace_front_ref{};
+[[nodiscard]] inline constexpr detail::emplace_back_ref_fn emplace_back_ref{};
+
+
+namespace detail {
+
+struct weak_pop_front_fn
+{
+    template<class ContainerT>
+    static constexpr bool has_pop_front = requires (ContainerT& cont) {
+        cont.pop_front();
+    };
+
+    template<class ContainerT>
+        requires has_pop_front<ContainerT>
+    static constexpr void operator()(ContainerT& cont)
+        noexcept(noexcept(cont.pop_front()))
+    {
+        cont.pop_front();
+    }
+
+    template<std::ranges::range ContainerT>
+        requires (!has_pop_front<ContainerT>)
+    static constexpr void operator()(ContainerT& cont)
+        noexcept(noexcept(cont.erase(std::ranges::begin(cont))))
+    {
+        cont.erase(std::ranges::begin(cont));
+    }
+};
+
+struct weak_pop_back_fn
+{
+    template<class ContainerT>
+    static constexpr bool has_pop_back = requires (ContainerT& cont) {
+        cont.pop_back();
+    };
+
+    template<class ContainerT>
+        requires has_pop_back<ContainerT>
+    static constexpr void operator()(ContainerT& cont)
+        noexcept(noexcept(cont.pop_back()))
+    {
+        cont.pop_back();
+    }
+
+    template<std::ranges::bidirectional_range ContainerT>
+        requires (!has_pop_back<ContainerT>)
+    static constexpr void operator()(ContainerT& cont)
+        noexcept(noexcept(cont.erase(std::ranges::prev(std::ranges::end(cont)))))
+    {
+        cont.erase(std::ranges::prev(std::ranges::end(cont)));
+    }
+};
+
+} // detail
+
+[[nodiscard]] inline constexpr detail::weak_pop_front_fn weak_pop_front{};
+[[nodiscard]] inline constexpr detail::weak_pop_back_fn weak_pop_back{};
+
+
+template<class T>
 concept default_emplaceable = requires(T c) {
     std::forward<T>(c).emplace();
 };
