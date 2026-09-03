@@ -262,8 +262,8 @@ struct back_fn
 
 } // detail
 
-[[nodiscard]] inline constexpr detail::front_fn front{};
-[[nodiscard]] inline constexpr detail::back_fn back{};
+[[maybe_unused]] inline constexpr detail::front_fn front{};
+[[maybe_unused]] inline constexpr detail::back_fn back{};
 
 namespace detail {
 
@@ -299,8 +299,8 @@ struct emplace_back_ref_fn
 
 } // detail
 
-[[nodiscard]] inline constexpr detail::emplace_front_ref_fn emplace_front_ref{};
-[[nodiscard]] inline constexpr detail::emplace_back_ref_fn emplace_back_ref{};
+[[maybe_unused]] inline constexpr detail::emplace_front_ref_fn emplace_front_ref{};
+[[maybe_unused]] inline constexpr detail::emplace_back_ref_fn emplace_back_ref{};
 
 
 namespace detail {
@@ -355,8 +355,8 @@ struct weak_pop_back_fn
 
 } // detail
 
-[[nodiscard]] inline constexpr detail::weak_pop_front_fn weak_pop_front{};
-[[nodiscard]] inline constexpr detail::weak_pop_back_fn weak_pop_back{};
+[[maybe_unused]] inline constexpr detail::weak_pop_front_fn weak_pop_front{};
+[[maybe_unused]] inline constexpr detail::weak_pop_back_fn weak_pop_back{};
 
 
 template<class T>
