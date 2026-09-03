@@ -3,7 +3,9 @@
 
 // SPDX-License-Identifier: MIT
 
-#include <iris/config.hpp>
+#include <iris/config.hpp> // IWYU pragma: keep
+#include <iris/requirements.hpp>
+#include <iris/compare.hpp>
 
 #include <concepts>
 #include <type_traits>
@@ -86,6 +88,35 @@ struct indexed_value
         };
     }
 };
+
+template<class IndexT, class T, class IndexU, class U>
+    requires req::half_equality_comparable<IndexT, IndexU> && req::half_equality_comparable<T, U>
+[[nodiscard]] constexpr bool operator==(indexed_value<IndexT, T> const& a, indexed_value<IndexU, U> const& b)
+    noexcept(noexcept(a.index == b.index) && noexcept(a.value == b.value))
+{
+    return a.index == b.index && a.value == b.value;
+}
+
+template<class IndexT, class T, class IndexU, class U>
+    requires requires (IndexT const& i, IndexU const& j, T const& t, U const& u) {
+        cmp::synth_three_way{}(i, j);
+        cmp::synth_three_way{}(t, u);
+    }
+[[nodiscard]] constexpr auto operator<=>(indexed_value<IndexT, T> const& a, indexed_value<IndexU, U> const& b)
+    noexcept(
+        noexcept(cmp::synth_three_way{}(a.index, b.index)) &&
+        noexcept(cmp::synth_three_way{}(a.value, b.value))
+    )
+    -> std::common_comparison_category_t<
+        cmp::synth_three_way_result<IndexT, IndexU>,
+        cmp::synth_three_way_result<T, U>
+    >
+{
+    if (auto const comp = cmp::synth_three_way{}(a.index, b.index); comp != 0) {
+        return comp;
+    }
+    return cmp::synth_three_way{}(a.value, b.value);
+}
 
 template<std::size_t I, class IndexT, class T>
 [[nodiscard]] constexpr decltype(auto) get(indexed_value<IndexT, T>& elem) noexcept

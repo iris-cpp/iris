@@ -74,6 +74,8 @@ TEST_CASE("run_length_sequence")
         REQUIRE(seq.run_count() == 1);
         CHECK(elem.index == 0);
         CHECK(elem.value == 1.0);
+        CHECK(seq.front() == elem);
+        CHECK(seq.back() == elem);
 
         auto it = seq.begin();
 
@@ -81,6 +83,8 @@ TEST_CASE("run_length_sequence")
         auto&& e0 = *it++;
         CHECK(e0.index == 0);
         CHECK(e0.value == 1.0);
+        CHECK(seq.front() == elem);
+        CHECK(seq.back() == e0);
 
         REQUIRE(it == seq.end());
     }
@@ -90,6 +94,7 @@ TEST_CASE("run_length_sequence")
         REQUIRE(seq.run_count() == 1);
         CHECK(elem.index == 1);
         CHECK(elem.value == 1.0);
+        CHECK(seq.back() == elem);
 
         auto it = seq.begin();
 
@@ -111,6 +116,7 @@ TEST_CASE("run_length_sequence")
         REQUIRE(seq.run_count() == 2);
         CHECK(elem.index == 2);
         CHECK(elem.value == 1.1);
+        CHECK(seq.back() == elem);
 
         auto it = seq.begin();
 
@@ -137,6 +143,7 @@ TEST_CASE("run_length_sequence")
         REQUIRE(seq.run_count() == 2);
         CHECK(elem.index == 3);
         CHECK(elem.value == 1.1);
+        CHECK(seq.back() == elem);
 
         auto it = seq.begin();
 
@@ -168,6 +175,7 @@ TEST_CASE("run_length_sequence")
         REQUIRE(seq.run_count() == 2);
         CHECK(elem.index == 4);
         CHECK(elem.value == 1.1);
+        CHECK(seq.back() == elem);
 
         auto it = seq.begin();
 
@@ -204,6 +212,7 @@ TEST_CASE("run_length_sequence")
         REQUIRE(seq.run_count() == 3);
         CHECK(elem.index == 5);
         CHECK(elem.value == 1.2);
+        CHECK(seq.back() == elem);
 
         auto it = seq.begin();
 

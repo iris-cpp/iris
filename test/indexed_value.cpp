@@ -95,6 +95,8 @@ TEST_CASE("indexed_value")
     {
         std::string value{"foo"};
         LR indexed{42, value};
+        CHECK(indexed == indexed);
+        CHECK((indexed <=> indexed) == std::strong_ordering::equal);
         auto [index, element] = indexed;
         CHECK(index == 42);
         CHECK(&element == &value);

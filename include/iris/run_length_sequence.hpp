@@ -276,6 +276,17 @@ public:
         offsets_.clear();
     }
 
+    [[nodiscard]] constexpr const_reference front() const noexcept IRIS_LIFETIMEBOUND
+    {
+        assert(!this->empty());
+        return {static_cast<IndexT>(0u), ranges::front(runs_)};
+    }
+    [[nodiscard]] constexpr const_reference back() const noexcept IRIS_LIFETIMEBOUND
+    {
+        assert(!this->empty());
+        return {static_cast<IndexT>(offsets_.back() - static_cast<IndexT>(1u)), ranges::back(runs_)};
+    }
+
     template<class U>
         requires std::constructible_from<T, U> && req::half_equality_comparable<T, U>
     constexpr const_reference emplace_back(U&& value) IRIS_LIFETIMEBOUND
