@@ -34,6 +34,9 @@ namespace iris {
 // A compressed bidirectional container that holds only one instance of `T`
 // per each adjacent equivalent elements.
 //
+// Invariant: adjacent runs never compare equal. This makes the representation
+// canonical, which `operator==` relies on.
+//
 // Iterator invalidation does not follow `RunContainerT`: any insertion that starts a
 // new run may invalidate all iterators, regardless of `RunContainerT`. Reference
 // stability of the elements follows `RunContainerT`.
@@ -53,8 +56,6 @@ namespace iris {
 //   - The element is first constructed as a local variable `temp` and is used for
 //     comparison; when the comparison does not hold, the object is move-inserted
 //     into `RunContainerT` as if by `runs_.emplace_back(std::forward<T>(temp))`.
-//
-// The semantics described in the previous section applies similarly to `emplace_front`.
 //
 // Internal structure is maintained with two independent containers, where the first
 // container holds one element instance per each run and the other one holds the
@@ -300,7 +301,7 @@ public:
             // Need to insert new element
             auto const new_pos = offsets_.back();
             offsets_.emplace_back(new_pos + static_cast<IndexT>(1u)); // new sentinel
-            [[maybe_unused]] ofs_insertion_guard<true, false> ofs_insertion_guard{this};
+            [[maybe_unused]] ofs_insertion_guard<false> ofs_insertion_guard{this};
             auto& elem = ranges::emplace_back_ref(runs_, std::forward<U>(value));
             ofs_insertion_guard.clear();
             return {new_pos, elem};
@@ -326,7 +327,7 @@ public:
             }
             if constexpr (requires { ranges::weak_pop_back(runs_); }) {
                 auto& elem = ranges::emplace_back_ref(runs_, std::forward<Args>(args)...);
-                [[maybe_unused]] elem_insertion_guard<true> elem_insertion_guard{this};
+                [[maybe_unused]] elem_insertion_guard elem_insertion_guard{this};
 
                 auto const prev_it = std::ranges::prev(std::ranges::end(runs_), 2);
 
@@ -352,7 +353,7 @@ public:
                 // Need to insert new element
                 auto const new_pos = offsets_.back();
                 offsets_.emplace_back(new_pos + static_cast<IndexT>(1u)); // new sentinel
-                [[maybe_unused]] ofs_insertion_guard<true, false> ofs_insertion_guard{this};
+                [[maybe_unused]] ofs_insertion_guard<false> ofs_insertion_guard{this};
                 auto& elem = ranges::emplace_back_ref(runs_, std::move(temp));
                 ofs_insertion_guard.clear();
                 return {new_pos, elem};
@@ -378,7 +379,7 @@ private:
     constexpr const_reference emplace_back_on_empty(Args&&... args) IRIS_LIFETIMEBOUND
     {
         assert(this->empty());
-        [[maybe_unused]] ofs_insertion_guard<true, true> ofs_insertion_guard{this};
+        [[maybe_unused]] ofs_insertion_guard<true> ofs_insertion_guard{this};
         offsets_.emplace_back(static_cast<IndexT>(0u));
         offsets_.emplace_back(static_cast<IndexT>(1u)); // sentinel
         auto& elem = ranges::emplace_back_ref(runs_, std::forward<Args>(args)...);
@@ -386,7 +387,7 @@ private:
         return {static_cast<IndexT>(0u), elem};
     }
 
-    template<bool IsBack, bool WasEmpty>
+    template<bool WasEmpty>
     struct [[nodiscard]] ofs_insertion_guard
     {
         constexpr explicit ofs_insertion_guard(run_length_sequence* self) noexcept
@@ -401,24 +402,19 @@ private:
         constexpr ~ofs_insertion_guard() noexcept
         {
             if (!self_) return;
-            if constexpr (IsBack) {
-                if constexpr (WasEmpty) {
-                    self_->offsets_.clear();
-                } else {
-                    self_->offsets_.pop_back();
-                }
+            if constexpr (WasEmpty) {
+                self_->offsets_.clear();
             } else {
-                static_assert(false, "sorry, not implemented");
+                self_->offsets_.pop_back();
             }
         }
 
     private:
         run_length_sequence* self_;
     };
-    template<bool IsBack, bool WasEmpty>
+    template<bool WasEmpty>
     friend struct ofs_insertion_guard;
 
-    template<bool IsBack>
     struct [[nodiscard]] elem_insertion_guard
     {
         constexpr explicit elem_insertion_guard(run_length_sequence* self) noexcept
@@ -433,17 +429,12 @@ private:
         constexpr ~elem_insertion_guard() noexcept
         {
             if (!self_) return;
-            if constexpr (IsBack) {
-                ranges::weak_pop_back(self_->runs_);
-            } else {
-                static_assert(false, "sorry, not implemented");
-            }
+            ranges::weak_pop_back(self_->runs_);
         }
 
     private:
         run_length_sequence* self_;
     };
-    template<bool IsBack>
     friend struct elem_insertion_guard;
 
 #ifndef NDEBUG
