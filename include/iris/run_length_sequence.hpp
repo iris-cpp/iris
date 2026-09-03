@@ -94,6 +94,7 @@ class run_length_sequence
 public:
     static_assert(!std::is_const_v<T>);
     static_assert(unsigned_numeric_integral<IndexT> && !std::is_const_v<IndexT>);
+    static_assert(sizeof(IndexT) >= sizeof(int), "Small index type has no practical benefit");
     static_assert(!std::is_const_v<RunContainerT>);
 
     using size_type = std::common_type_t<std::size_t, IndexT>;
@@ -103,7 +104,7 @@ public:
     {
         constexpr auto a = std::numeric_limits<IndexT>::max();
         constexpr auto b = std::numeric_limits<difference_type>::max();
-        return std::cmp_less(b, a) ? b : a;
+        return std::cmp_less(b, a) ? static_cast<size_type>(b) : static_cast<size_type>(a);
     }
 
 private:
@@ -245,7 +246,7 @@ public:
 
     [[nodiscard]] constexpr iterator begin() noexcept { check_range_concepts(); return iterator{std::ranges::begin(runs_), offsets_.begin()}; }
     [[nodiscard]] constexpr const_iterator begin() const noexcept { check_range_concepts(); return const_iterator{std::ranges::begin(runs_), offsets_.begin()}; }
-    [[nodiscard]] constexpr const_iterator cbegin() const noexcept { check_range_concepts(); return begin(); }
+    [[nodiscard]] constexpr const_iterator cbegin() const noexcept { return begin(); }
 
     [[nodiscard]] constexpr iterator end() noexcept
     {
@@ -269,14 +270,14 @@ public:
             return const_iterator{std::ranges::end(runs_), std::prev(offsets_.end())};
         }
     }
-    [[nodiscard]] constexpr const_iterator cend() const noexcept { check_range_concepts(); return end(); }
+    [[nodiscard]] constexpr const_iterator cend() const noexcept { return end(); }
 
-    [[nodiscard]] constexpr reverse_iterator rbegin() noexcept { check_range_concepts(); return reverse_iterator{end()}; }
-    [[nodiscard]] constexpr const_reverse_iterator rbegin() const noexcept { check_range_concepts(); return const_reverse_iterator{end()}; }
-    [[nodiscard]] constexpr const_reverse_iterator crbegin() const noexcept { check_range_concepts(); return rbegin(); }
-    [[nodiscard]] constexpr reverse_iterator rend() noexcept { check_range_concepts(); return reverse_iterator{begin()}; }
-    [[nodiscard]] constexpr const_reverse_iterator rend() const noexcept { check_range_concepts(); return const_reverse_iterator{begin()}; }
-    [[nodiscard]] constexpr const_reverse_iterator crend() const noexcept { check_range_concepts(); return rend(); }
+    [[nodiscard]] constexpr reverse_iterator rbegin() noexcept { return reverse_iterator{end()}; }
+    [[nodiscard]] constexpr const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator{end()}; }
+    [[nodiscard]] constexpr const_reverse_iterator crbegin() const noexcept { return rbegin(); }
+    [[nodiscard]] constexpr reverse_iterator rend() noexcept { return reverse_iterator{begin()}; }
+    [[nodiscard]] constexpr const_reverse_iterator rend() const noexcept { return const_reverse_iterator{begin()}; }
+    [[nodiscard]] constexpr const_reverse_iterator crend() const noexcept { return rend(); }
 
     [[nodiscard]] constexpr bool empty() const noexcept
     {
@@ -294,7 +295,7 @@ public:
         return static_cast<size_type>(offsets_.back());
     }
 
-    [[nodiscard]] constexpr size_type segment_count() const noexcept
+    [[nodiscard]] constexpr size_type run_count() const noexcept
     {
         static_assert(std::ranges::sized_range<RunContainerT>);
         return static_cast<size_type>(std::ranges::size(runs_));
@@ -310,21 +311,15 @@ public:
     }
 
     template<class U>
-        requires std::is_constructible_v<T, U>
+        requires std::constructible_from<T, U> && req::half_equality_comparable<T, U>
     constexpr reference emplace_back(U&& value) IRIS_LIFETIMEBOUND
     {
         check_range_concepts();
         static_assert(std::equality_comparable<T>);
-
         IRIS_ZZ_RUN_LENGTH_SEQUENCE_INVARIANT_GUARD
 
         if (offsets_.empty()) {
-            [[maybe_unused]] ofs_insertion_guard<true, true> ofs_insertion_guard{this};
-            offsets_.emplace_back(static_cast<IndexT>(0u));
-            offsets_.emplace_back(static_cast<IndexT>(1u)); // sentinel
-            auto& elem = ranges::emplace_back_ref(runs_, std::forward<U>(value));
-            ofs_insertion_guard.clear();
-            return {static_cast<IndexT>(0u), elem};
+            return this->emplace_back_on_empty(std::forward<U>(value));
 
         } else {
             assert(!std::ranges::empty(runs_));
@@ -332,21 +327,40 @@ public:
             if (offsets_.back() == max_size()) {
                 throwf<std::length_error>("run_length_sequence capacity exceeded");
             }
-            if constexpr (req::half_equality_comparable<T, U>) {
-                if (ranges::back(std::as_const(runs_)) == std::as_const(value)) {
-                    // Equivalent element already exists; no need to insert.
-                    return {offsets_.back()++, ranges::back(runs_)};
-                }
-                // Need to insert new element
-                auto const new_pos = offsets_.back();
-                offsets_.emplace_back(new_pos + static_cast<IndexT>(1u)); // new sentinel
-                [[maybe_unused]] ofs_insertion_guard<true, false> ofs_insertion_guard{this};
-                auto& elem = ranges::emplace_back_ref(runs_, std::forward<U>(value));
-                ofs_insertion_guard.clear();
-                return {new_pos, elem};
 
-            } else if constexpr (requires { ranges::weak_pop_back(runs_); }) {
-                auto& elem = ranges::emplace_back_ref(runs_, std::forward<U>(value));
+            if (ranges::back(std::as_const(runs_)) == std::as_const(value)) {
+                // Equivalent element already exists; no need to insert.
+                return {offsets_.back()++, ranges::back(runs_)};
+            }
+            // Need to insert new element
+            auto const new_pos = offsets_.back();
+            offsets_.emplace_back(new_pos + static_cast<IndexT>(1u)); // new sentinel
+            [[maybe_unused]] ofs_insertion_guard<true, false> ofs_insertion_guard{this};
+            auto& elem = ranges::emplace_back_ref(runs_, std::forward<U>(value));
+            ofs_insertion_guard.clear();
+            return {new_pos, elem};
+        }
+    }
+
+    template<class... Args>
+        requires std::constructible_from<T, Args...>
+    constexpr reference emplace_back(Args&&... args) IRIS_LIFETIMEBOUND
+    {
+        check_range_concepts();
+        static_assert(std::equality_comparable<T>);
+        IRIS_ZZ_RUN_LENGTH_SEQUENCE_INVARIANT_GUARD
+
+        if (offsets_.empty()) {
+            return this->emplace_back_on_empty(std::forward<Args>(args)...);
+
+        } else {
+            assert(!std::ranges::empty(runs_));
+            assert(offsets_.size() >= 2);
+            if (offsets_.back() == max_size()) {
+                throwf<std::length_error>("run_length_sequence capacity exceeded");
+            }
+            if constexpr (requires { ranges::weak_pop_back(runs_); }) {
+                auto& elem = ranges::emplace_back_ref(runs_, std::forward<Args>(args)...);
                 [[maybe_unused]] elem_insertion_guard<true> elem_insertion_guard{this};
 
                 auto const prev_it = std::ranges::prev(std::ranges::end(runs_), 2);
@@ -365,7 +379,7 @@ public:
                 return {new_pos, elem};
 
             } else {
-                T temp(std::forward<U>(value));
+                T temp(std::forward<Args>(args)...);
                 if (ranges::back(std::as_const(runs_)) == std::as_const(temp)) {
                     // Equivalent element already exists; no need to insert.
                     return {offsets_.back()++, ranges::back(runs_)};
@@ -382,7 +396,7 @@ public:
     }
 
 private:
-    constexpr void check_range_concepts() const noexcept
+    static constexpr void check_range_concepts() noexcept
     {
         static_assert(std::ranges::bidirectional_range<RunContainerT>);
         static_assert(std::same_as<std::ranges::range_value_t<RunContainerT>, T>);
@@ -393,6 +407,18 @@ private:
             { list.back() } -> std::same_as<T&>;
             { list.front() } -> std::same_as<T&>;
         });
+    }
+
+    template<class... Args>
+    constexpr reference emplace_back_on_empty(Args&&... args) IRIS_LIFETIMEBOUND
+    {
+        assert(this->empty());
+        [[maybe_unused]] ofs_insertion_guard<true, true> ofs_insertion_guard{this};
+        offsets_.emplace_back(static_cast<IndexT>(0u));
+        offsets_.emplace_back(static_cast<IndexT>(1u)); // sentinel
+        auto& elem = ranges::emplace_back_ref(runs_, std::forward<Args>(args)...);
+        ofs_insertion_guard.clear();
+        return {static_cast<IndexT>(0u), elem};
     }
 
     template<bool IsBack, bool WasEmpty>
@@ -464,15 +490,17 @@ private:
 
         constexpr ~check_invariant_guard() noexcept
         {
-            if (self_->offsets_.empty()) {
-                assert(std::ranges::empty(self_->runs_));
-            } else {
-                assert(self_->offsets_.size() == std::ranges::size(self_->runs_) + 1);
-                assert(self_->offsets_[0] == 0);
-                for (std::size_t i = 0; i < self_->offsets_.size() - 1; ++i) {
-                    assert(self_->offsets_[i] < self_->offsets_[i + 1]);
-                }
+            auto const& offsets = self_->offsets_;
+            auto const& runs = self_->runs_;
+            if (offsets.empty()) {
+                assert(std::ranges::empty(runs));
+                return;
             }
+            assert(offsets.size() >= 2);
+            assert(offsets.size() == std::ranges::size(runs) + 1);
+            assert(offsets.front() == static_cast<IndexT>(0u));
+            auto const n = offsets.size();
+            assert(offsets[n - 2] < offsets[n - 1]);
         }
 
     private:
