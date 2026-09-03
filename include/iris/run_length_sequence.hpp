@@ -35,7 +35,7 @@ namespace iris {
 // per each adjacent equivalent elements.
 //
 // Iterator invalidation does not follow `RunContainerT`: any insertion that starts a
-// new segment may invalidate all iterators, regardless of `RunContainerT`. Reference
+// new run may invalidate all iterators, regardless of `RunContainerT`. Reference
 // stability of the elements follows `RunContainerT`.
 //
 // Precondition for heterogeneous comparison: `e == value` must hold iff
@@ -56,8 +56,8 @@ namespace iris {
 //
 // The semantics described in the previous section applies similarly to `emplace_front`.
 //
-// Internal structure is maintained with two independent lists, where the first
-// list holds one element instance per each segment and the other list holds the
+// Internal structure is maintained with two independent containers, where the first
+// container holds one element instance per each run and the other one holds the
 // *offsets* that represent each insertion of elements.
 //
 // For example, when items are emplaced in this order:
@@ -281,7 +281,7 @@ public:
     }
 
     constexpr void clear() noexcept
-        requires requires(RunContainerT& list) { list.clear(); }
+        requires requires(RunContainerT& runs) { runs.clear(); }
     {
         static_assert(req::Cpp17Destructible<T>);
         IRIS_ZZ_RUN_LENGTH_SEQUENCE_INVARIANT_GUARD
@@ -382,9 +382,9 @@ private:
         static_assert(std::same_as<std::ranges::range_reference_t<RunContainerT>, T&>);
         static_assert(std::same_as<std::ranges::range_reference_t<RunContainerT const>, T const&>);
 
-        static_assert(requires (RunContainerT& list) {
-            { list.back() } -> std::same_as<T&>;
-            { list.front() } -> std::same_as<T&>;
+        static_assert(requires (RunContainerT& runs) {
+            { runs.back() } -> std::same_as<T&>;
+            { runs.front() } -> std::same_as<T&>;
         });
     }
 
@@ -513,39 +513,10 @@ struct run_length_sequence_comp
         noexcept(noexcept(std::declval<T const&>() == std::declval<T const&>()))
     {
         static_assert(std::equality_comparable<T>);
-
-        if (a.size() != b.size()) return false;
-        if (a.empty()) return true;
-
-        auto ra = std::ranges::begin(a.runs_);
-        auto rb = std::ranges::begin(b.runs_);
-        auto oa = a.offsets_.begin(); // current run's start; *(oa + 1) is its end
-        auto ob = b.offsets_.begin();
-        auto const ra_end = std::ranges::end(a.runs_);
-
-        while (true) {
-            if (!(*ra == *rb)) return false;
-
-            auto const next_a = *(oa + 1);
-            auto const next_b = *(ob + 1);
-
-            if (next_a == next_b) {
-                ++ra; ++oa;
-                ++rb; ++ob;
-
-            } else if (next_a < next_b) {
-                ++ra; ++oa;
-
-            } else {
-                ++rb; ++ob;
-            }
-
-            if (ra == ra_end) {
-                // Logical sizes are equal, so b must be exhausted here too.
-                assert(rb == std::ranges::end(b.runs_));
-                return true;
-            }
-        }
+        static_assert(std::equality_comparable<RunContainerT>);
+        // Adjacent runs never compare equal (class invariant), so the representation
+        // is canonical and representational equality is logical equality.
+        return a.offsets_ == b.offsets_ && a.runs_ == b.runs_;
     }
 };
 
