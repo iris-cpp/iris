@@ -93,22 +93,9 @@ template<
 class run_length_sequence
 {
 public:
-    static_assert(req::Cpp17Destructible<T> && !std::is_const_v<T>);
-    static_assert(std::equality_comparable<T>);
-
+    static_assert(!std::is_const_v<T>);
     static_assert(unsigned_numeric_integral<IndexT> && !std::is_const_v<IndexT>);
-
     static_assert(!std::is_const_v<ListT>);
-    static_assert(std::ranges::bidirectional_range<ListT>);
-    static_assert(std::ranges::sized_range<ListT>);
-    static_assert(std::same_as<std::ranges::range_value_t<ListT>, T>);
-    static_assert(std::same_as<std::ranges::range_reference_t<ListT>, T&>);
-    static_assert(std::same_as<std::ranges::range_reference_t<ListT const>, T const&>);
-
-    static_assert(requires (ListT& list) {
-        { list.back() } -> std::same_as<T&>;
-        { list.front() } -> std::same_as<T&>;
-    });
 
     using size_type = std::common_type_t<std::size_t, IndexT>;
     using difference_type = std::ptrdiff_t;
@@ -257,12 +244,13 @@ public:
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    [[nodiscard]] constexpr iterator begin() noexcept { return iterator{std::ranges::begin(list_), offsets_.begin()}; }
-    [[nodiscard]] constexpr const_iterator begin() const noexcept { return const_iterator{std::ranges::begin(list_), offsets_.begin()}; }
-    [[nodiscard]] constexpr const_iterator cbegin() const noexcept { return begin(); }
+    [[nodiscard]] constexpr iterator begin() noexcept { check_range_concepts(); return iterator{std::ranges::begin(list_), offsets_.begin()}; }
+    [[nodiscard]] constexpr const_iterator begin() const noexcept { check_range_concepts(); return const_iterator{std::ranges::begin(list_), offsets_.begin()}; }
+    [[nodiscard]] constexpr const_iterator cbegin() const noexcept { check_range_concepts(); return begin(); }
 
     [[nodiscard]] constexpr iterator end() noexcept
     {
+        check_range_concepts();
         if (offsets_.empty()) {
             assert(std::ranges::empty(list_));
             return iterator{std::ranges::end(list_), offsets_.end()};
@@ -273,6 +261,7 @@ public:
     }
     [[nodiscard]] constexpr const_iterator end() const noexcept
     {
+        check_range_concepts();
         if (offsets_.empty()) {
             assert(std::ranges::empty(list_));
             return const_iterator{std::ranges::end(list_), offsets_.end()};
@@ -281,23 +270,25 @@ public:
             return const_iterator{std::ranges::end(list_), std::prev(offsets_.end())};
         }
     }
-    [[nodiscard]] constexpr const_iterator cend() const noexcept { return end(); }
+    [[nodiscard]] constexpr const_iterator cend() const noexcept { check_range_concepts(); return end(); }
 
-    [[nodiscard]] constexpr reverse_iterator rbegin() noexcept { return reverse_iterator{end()}; }
-    [[nodiscard]] constexpr const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator{end()}; }
-    [[nodiscard]] constexpr const_reverse_iterator crbegin() const noexcept { return rbegin(); }
-    [[nodiscard]] constexpr reverse_iterator rend() noexcept { return reverse_iterator{begin()}; }
-    [[nodiscard]] constexpr const_reverse_iterator rend() const noexcept { return const_reverse_iterator{begin()}; }
-    [[nodiscard]] constexpr const_reverse_iterator crend() const noexcept { return rend(); }
+    [[nodiscard]] constexpr reverse_iterator rbegin() noexcept { check_range_concepts(); return reverse_iterator{end()}; }
+    [[nodiscard]] constexpr const_reverse_iterator rbegin() const noexcept { check_range_concepts(); return const_reverse_iterator{end()}; }
+    [[nodiscard]] constexpr const_reverse_iterator crbegin() const noexcept { check_range_concepts(); return rbegin(); }
+    [[nodiscard]] constexpr reverse_iterator rend() noexcept { check_range_concepts(); return reverse_iterator{begin()}; }
+    [[nodiscard]] constexpr const_reverse_iterator rend() const noexcept { check_range_concepts(); return const_reverse_iterator{begin()}; }
+    [[nodiscard]] constexpr const_reverse_iterator crend() const noexcept { check_range_concepts(); return rend(); }
 
     [[nodiscard]] constexpr bool empty() const noexcept
     {
+        static_assert(std::ranges::sized_range<ListT>);
         assert(std::ranges::empty(list_) == offsets_.empty());
         return offsets_.empty();
     }
 
     [[nodiscard]] constexpr size_type size() const noexcept
     {
+        static_assert(std::ranges::sized_range<ListT>);
         if (offsets_.empty()) return 0uz;
         assert(!std::ranges::empty(list_));
         assert(offsets_.size() >= 2);
@@ -306,12 +297,14 @@ public:
 
     [[nodiscard]] constexpr size_type segment_count() const noexcept
     {
+        static_assert(std::ranges::sized_range<ListT>);
         return static_cast<size_type>(std::ranges::size(list_));
     }
 
     constexpr void clear() noexcept
         requires requires(ListT& list) { list.clear(); }
     {
+        static_assert(req::Cpp17Destructible<T>);
         IRIS_ZZ_RUN_LENGTH_SEQUENCE_INVARIANT_GUARD
         list_.clear();
         offsets_.clear();
@@ -321,6 +314,9 @@ public:
         requires std::is_constructible_v<T, U>
     constexpr reference emplace_back(U&& value) IRIS_LIFETIMEBOUND
     {
+        check_range_concepts();
+        static_assert(std::equality_comparable<T>);
+
         IRIS_ZZ_RUN_LENGTH_SEQUENCE_INVARIANT_GUARD
 
         if (offsets_.empty()) {
@@ -387,6 +383,19 @@ public:
     }
 
 private:
+    constexpr void check_range_concepts() const noexcept
+    {
+        static_assert(std::ranges::bidirectional_range<ListT>);
+        static_assert(std::same_as<std::ranges::range_value_t<ListT>, T>);
+        static_assert(std::same_as<std::ranges::range_reference_t<ListT>, T&>);
+        static_assert(std::same_as<std::ranges::range_reference_t<ListT const>, T const&>);
+
+        static_assert(requires (ListT& list) {
+            { list.back() } -> std::same_as<T&>;
+            { list.front() } -> std::same_as<T&>;
+        });
+    }
+
     template<bool IsBack, bool WasEmpty>
     struct [[nodiscard]] ofs_insertion_guard
     {
