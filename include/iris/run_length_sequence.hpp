@@ -10,7 +10,6 @@
 
 #include <iris/default_init_allocator.hpp>
 #include <iris/ranges.hpp>
-#include <iris/compare.hpp>
 #include <iris/requirements.hpp>
 #include <iris/type_traits.hpp>
 
@@ -496,35 +495,53 @@ namespace detail {
 struct run_length_sequence_comp
 {
     template<class T, class IndexT, class RunContainerT>
-    [[nodiscard]] static constexpr bool equals(run_length_sequence<T, IndexT, RunContainerT> const& a, run_length_sequence<T, IndexT, RunContainerT> const& b) noexcept
+    [[nodiscard]] static constexpr bool equals(run_length_sequence<T, IndexT, RunContainerT> const& a, run_length_sequence<T, IndexT, RunContainerT> const& b)
+        noexcept(noexcept(std::declval<T const&>() == std::declval<T const&>()))
     {
-        return a.offsets_ == b.offsets_ && a.runs_ == b.runs_;
-    }
+        static_assert(std::equality_comparable<T>);
 
-    template<class T, class IndexT, class RunContainerT>
-    [[nodiscard]] static constexpr cmp::synth_three_way_result<RunContainerT>
-    compare(run_length_sequence<T, IndexT, RunContainerT> const& a, run_length_sequence<T, IndexT, RunContainerT> const& b) noexcept
-    {
-        if (auto const comp = a.offsets_ <=> b.offsets_; comp != 0) {
-            return comp;
+        if (a.size() != b.size()) return false;
+        if (a.empty()) return true;
+
+        auto ra = std::ranges::begin(a.runs_);
+        auto rb = std::ranges::begin(b.runs_);
+        auto oa = a.offsets_.begin(); // current run's start; *(oa + 1) is its end
+        auto ob = b.offsets_.begin();
+        auto const ra_end = std::ranges::end(a.runs_);
+
+        while (true) {
+            if (!(*ra == *rb)) return false;
+
+            auto const next_a = *(oa + 1);
+            auto const next_b = *(ob + 1);
+
+            if (next_a == next_b) {
+                ++ra; ++oa;
+                ++rb; ++ob;
+
+            } else if (next_a < next_b) {
+                ++ra; ++oa;
+
+            } else {
+                ++rb; ++ob;
+            }
+
+            if (ra == ra_end) {
+                // Logical sizes are equal, so b must be exhausted here too.
+                assert(rb == std::ranges::end(b.runs_));
+                return true;
+            }
         }
-        return cmp::synth_three_way{}(a.runs_, b.runs_);
     }
 };
 
 } // detail
 
 template<class T, class IndexT, class RunContainerT>
-[[nodiscard]] constexpr bool operator==(run_length_sequence<T, IndexT, RunContainerT> const& a, run_length_sequence<T, IndexT, RunContainerT> const& b) noexcept
+[[nodiscard]] constexpr bool operator==(run_length_sequence<T, IndexT, RunContainerT> const& a, run_length_sequence<T, IndexT, RunContainerT> const& b)
+    noexcept(noexcept(detail::run_length_sequence_comp::equals(a, b)))
 {
     return detail::run_length_sequence_comp::equals(a, b);
-}
-
-template<class T, class IndexT, class RunContainerT>
-[[nodiscard]] constexpr cmp::synth_three_way_result<RunContainerT>
-operator<=>(run_length_sequence<T, IndexT, RunContainerT> const& a, run_length_sequence<T, IndexT, RunContainerT> const& b) noexcept
-{
-    return detail::run_length_sequence_comp::compare(a, b);
 }
 
 } // iris

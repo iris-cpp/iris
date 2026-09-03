@@ -65,7 +65,6 @@ TEST_CASE("run_length_sequence")
     CHECK(seq.size() == 0);  // NOLINT(readability-container-size-empty)
     CHECK(seq.begin() == seq.end());
     CHECK(seq == seq);
-    CHECK((seq <=> seq) == std::strong_ordering::equal);
 
     CHECK_NOTHROW((void)(seq.cbegin() = seq.begin()));
 
