@@ -38,24 +38,9 @@ namespace iris {
 // new segment may invalidate all iterators, regardless of `RunContainerT`. Reference
 // stability of the elements follows `RunContainerT`.
 //
-// `run_length_sequence` can be either mutable or immutable, depending on the user's
-// preference. By default, `run_length_sequence` allows access to the mutable reference
-// of the underlying elements. When the user chooses to modify the element,
-// `run_length_sequence` inevitably becomes "uncompressed," as the adjacent equivalence
-// would no longer hold. However, `run_length_sequence` still can be used even in such
-// partially-altered state, since all other invariants shall remain intact.
-//
-// Supports heterogeneous comparison iff `T` supports heterogeneous comparison
-// for arbitrary type `U`:
-//   - Equivalence is checked by `operator==(T const& e, U const& value)`, where
-//     `e` is the reference to the existing item and `value` is the object
-//     that is passed to the relevant member function.
-//
-//   - For example, when `value` is a parameter given to `run_length_sequence<T>::
-//     emplace_back(U&& value)`, the list directly compares `value` with the
-//     existing element without creating a temporary `T` object. Then, if
-//     the comparison failed, a new instance of `T` will be directly inserted
-//     into `RunContainerT` via `std::forward<U>(value)`.
+// Precondition for heterogeneous comparison: `e == value` must hold iff
+// `e == T(value)`; otherwise the run structure would depend on which overload
+// of `emplace_back` (or relevant insertion members) was chosen.
 //
 // When inserting an element, `run_length_sequence` does lazy construction of the
 // actual element object iff heterogeneous comparison is supported for the given
@@ -110,11 +95,10 @@ public:
 private:
     using offsets_type = std::vector<IndexT, default_init_allocator<IndexT>>;
 
-    template<bool IsConst>
     struct iterator_impl
     {
     private:
-        using value_iterator = std::ranges::iterator_t<std::conditional_t<IsConst, RunContainerT const, RunContainerT>>;
+        using value_iterator = std::ranges::iterator_t<RunContainerT const>;
         using offset_iterator = offsets_type::const_iterator;
 
     public:
@@ -147,11 +131,6 @@ private:
             , ofs_it_(std::move(ofs_it))
             , rel_pos_(pos)
         {}
-
-        [[nodiscard]] constexpr operator iterator_impl<true>() const noexcept requires (IsConst == false)
-        {
-            return iterator_impl<true>{value_it_, ofs_it_, rel_pos_};
-        }
 
         [[nodiscard]] constexpr reference operator*() const noexcept
         {
@@ -236,11 +215,11 @@ public:
     using run_container_type = RunContainerT;
 
     using value_type = indexed_value<IndexT, T>;
-    using reference = indexed_value<IndexT, T&>;
     using const_reference = indexed_value<IndexT, T const&>;
+    using reference = const_reference;
 
-    using iterator = iterator_impl<false>;
-    using const_iterator = iterator_impl<true>;
+    using const_iterator = iterator_impl;
+    using iterator = const_iterator;
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
@@ -312,7 +291,7 @@ public:
 
     template<class U>
         requires std::constructible_from<T, U> && req::half_equality_comparable<T, U>
-    constexpr reference emplace_back(U&& value) IRIS_LIFETIMEBOUND
+    constexpr const_reference emplace_back(U&& value) IRIS_LIFETIMEBOUND
     {
         check_range_concepts();
         static_assert(std::equality_comparable<T>);
@@ -344,7 +323,7 @@ public:
 
     template<class... Args>
         requires std::constructible_from<T, Args...>
-    constexpr reference emplace_back(Args&&... args) IRIS_LIFETIMEBOUND
+    constexpr const_reference emplace_back(Args&&... args) IRIS_LIFETIMEBOUND
     {
         check_range_concepts();
         static_assert(std::equality_comparable<T>);
@@ -410,7 +389,7 @@ private:
     }
 
     template<class... Args>
-    constexpr reference emplace_back_on_empty(Args&&... args) IRIS_LIFETIMEBOUND
+    constexpr const_reference emplace_back_on_empty(Args&&... args) IRIS_LIFETIMEBOUND
     {
         assert(this->empty());
         [[maybe_unused]] ofs_insertion_guard<true, true> ofs_insertion_guard{this};
@@ -501,6 +480,13 @@ private:
             assert(offsets.front() == static_cast<IndexT>(0u));
             auto const n = offsets.size();
             assert(offsets[n - 2] < offsets[n - 1]);
+
+            // Adjacent runs must differ
+            if (n >= 3) {
+                auto const last = std::ranges::prev(std::ranges::end(runs));
+                auto const before_last = std::ranges::prev(last);
+                assert(!(*before_last == *last));
+            }
         }
 
     private:
