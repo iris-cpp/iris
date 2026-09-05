@@ -258,13 +258,10 @@ public:
     [[nodiscard]] constexpr const_iterator end() const noexcept
     {
         check_range_concepts();
-        if (offsets_.empty()) {
-            assert(std::ranges::empty(runs_));
-            return const_iterator{std::ranges::end(runs_), offsets_.end()};
-        } else {
-            assert(offsets_.size() >= 2);
-            return const_iterator{std::ranges::end(runs_), std::prev(offsets_.end())};
-        }
+        assert(std::ranges::empty(runs_) || offsets_.size() >= 2);
+        return offsets_.empty()
+            ? const_iterator{std::ranges::end(runs_), offsets_.end()}
+            : const_iterator{std::ranges::end(runs_), std::prev(offsets_.end())};
     }
     [[nodiscard]] constexpr const_iterator cend() const noexcept { return end(); }
 
@@ -283,10 +280,8 @@ public:
     [[nodiscard]] constexpr size_type size() const noexcept
     {
         static_assert(std::ranges::sized_range<RunContainerT>);
-        if (offsets_.empty()) return 0uz;
-        assert(!std::ranges::empty(runs_));
-        assert(offsets_.size() >= 2);
-        return static_cast<size_type>(offsets_.back());
+        assert(std::ranges::empty(runs_) || offsets_.size() >= 2);
+        return offsets_.empty() ? static_cast<size_type>(0uz) : static_cast<size_type>(offsets_.back());
     }
 
     constexpr void clear() noexcept
