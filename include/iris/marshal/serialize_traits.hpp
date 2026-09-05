@@ -11,6 +11,7 @@
 
 #include <iris/string.hpp>
 #include <iris/ranges.hpp>
+#include <iris/container_traits.hpp>
 
 #include <iris/bits/specialization_of.hpp>
 
@@ -313,16 +314,16 @@ consteval bool is_deserializable_impl()
 
     } else if constexpr (ranges::mapping_range<V>) {
         return
-            ranges::mapping_container<V> &&
+            container::mapping_container<V> &&
             Format::template loadable_key<ranges::range_key_t<V>> &&
             loadable<ranges::range_key_t<V>, Format> &&
             loadable<ranges::range_mapped_t<V>, Format>;
 
     } else if constexpr (std::ranges::input_range<V>) {
-        if constexpr (ranges::growable_array_writable<V>) {
+        if constexpr (container::growable_array<V>) {
             return loadable<std::ranges::range_value_t<V>, Format>;
 
-        } else if constexpr (ranges::fixed_array_writable<V>) {
+        } else if constexpr (container::fixed_array<V>) {
             return is_deserializable_impl<std::ranges::range_value_t<V>, Format>();
 
         } else {

@@ -21,7 +21,7 @@
 
 namespace iris {
 
-template<std::signed_integral T>
+template<std::integral T>
 struct interval
 {
     using value_type = T;
@@ -61,7 +61,7 @@ struct interval
     // Returns `true` if `other` shares any point with `*this`.
     // Note 1: intersects(∅) always returns `false`.
     // Note 2: Adjacent-only contact is touches(); for intersects-or-touches use connected().
-    template<std::signed_integral U = T>
+    template<std::integral U = T>
     [[nodiscard]] constexpr bool intersects(interval<U> const other) const noexcept
     {
         return (lower < other.upper && other.lower < upper) && !empty() && !other.empty();
@@ -69,7 +69,7 @@ struct interval
 
     // !intersects
     // Note: disjoint(∅) always returns `true`.
-    template<std::signed_integral U = T>
+    template<std::integral U = T>
     [[nodiscard]] constexpr bool disjoint(interval<U> const other) const noexcept
     {
         return (upper <= other.lower || other.upper <= lower) || empty() || other.empty();
@@ -77,7 +77,7 @@ struct interval
 
     // Closures meet but the sets share no point.
     // Note: touches(∅) always returns `false`.
-    template<std::signed_integral U = T>
+    template<std::integral U = T>
     [[nodiscard]] constexpr bool touches(interval<U> const other) const noexcept
     {
         return (upper == other.lower || other.upper == lower) && !empty() && !other.empty();
@@ -85,7 +85,7 @@ struct interval
 
     // intersects || touches
     // Note: connected(∅) always returns `false`.
-    template<std::signed_integral U = T>
+    template<std::integral U = T>
     [[nodiscard]] constexpr bool connected(interval<U> const other) const noexcept
     {
         return (lower <= other.upper && other.lower <= upper) && !empty() && !other.empty();
@@ -94,7 +94,7 @@ struct interval
     // Returns `true` if every point of `other` is a point of `*this`.
     // Note: covers(∅) always returns `true`.
     // See also: `encloses(other)`.
-    template<std::signed_integral U = T>
+    template<std::integral U = T>
     [[nodiscard]] constexpr bool covers(interval<U> const other) const noexcept
     {
         return (lower <= other.lower && other.upper <= upper) || other.empty();
@@ -103,7 +103,7 @@ struct interval
     // Returns `true` if `other`'s bounds lie within [lower, upper].
     // For nonempty `other`: identical to `covers(other)`.
     // For empty `other`: position-respecting (treats it like a 0-length "text caret".)
-    template<std::signed_integral U = T>
+    template<std::integral U = T>
     [[nodiscard]] constexpr bool encloses(interval<U> const other) const noexcept
     {
         return lower <= other.lower && other.upper <= upper;
@@ -134,7 +134,7 @@ struct interval
     // Returns `true` if both intervals have exactly same bounds.
     // Note: All empty intervals denote ∅ and are mutually equal regardless of
     //       bounds. Differs from `operator==`, which compares data representations.
-    template<std::signed_integral U = T>
+    template<std::integral U = T>
     [[nodiscard]] constexpr bool equals(interval<U> const other) const noexcept
     {
         return (lower == other.lower && upper == other.upper) || (empty() && other.empty());
@@ -143,14 +143,14 @@ struct interval
     // -------------------------------------------
 
     // A ∩ B. Result is canonical empty [0,0) when the sets share no point.
-    template<std::signed_integral U = T>
+    template<std::integral U = T>
     [[nodiscard]] constexpr interval intersection(interval<U> const other) const noexcept
     {
         auto const lo = std::max<value_type>(lower, static_cast<value_type>(other.lower));
         auto const hi = std::min<value_type>(upper, static_cast<value_type>(other.upper));
         return lo < hi ? interval{lo, hi} : interval{};
     }
-    template<std::signed_integral U = T>
+    template<std::integral U = T>
     [[nodiscard]] constexpr interval operator&(interval<U> const other) const noexcept
     {
         return intersection(other);

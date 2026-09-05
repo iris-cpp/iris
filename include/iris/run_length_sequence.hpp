@@ -5,14 +5,17 @@
 
 #include <iris/config.hpp> // IWYU pragma: keep
 #include <iris/indexed_value.hpp>
+#include <iris/interval.hpp>
 
 #include <iris/error/throwf.hpp>
 
 #include <iris/default_init_allocator.hpp>
 #include <iris/ranges.hpp>
+#include <iris/container_traits.hpp>
 #include <iris/requirements.hpp>
 #include <iris/type_traits.hpp>
 
+#include <algorithm>
 #include <vector>
 #include <ranges>
 #include <iterator>
@@ -22,7 +25,7 @@
 #include <concepts>
 #include <type_traits>
 
-#include <cstddef>
+#include <cstddef> // IWYU pragma: keep
 #include <cassert>
 
 namespace iris::detail {
@@ -30,6 +33,13 @@ struct run_length_sequence_comp;
 } // iris::detail
 
 namespace iris {
+
+template<class T, class IndexT>
+struct run_length_run_ref
+{
+    T const& value;
+    interval<IndexT> span;
+};
 
 // A compressed bidirectional container that holds only one instance of `T`
 // per each adjacent equivalent elements.
@@ -73,7 +83,8 @@ namespace iris {
 template<
     class T,
     class IndexT = unsigned,
-    class RunContainerT = std::vector<T, default_init_allocator<T>>
+    template<class, class> class IndexedValuePairTT = indexed_value,
+    class RunContainerT = std::vector<T>
 >
 class run_length_sequence
 {
@@ -106,17 +117,13 @@ private:
         using iterator_concept = std::bidirectional_iterator_tag;
         using iterator_category = std::input_iterator_tag; // Our reference type is proxy, so this can only be input
 
-        using value_type = indexed_value<
+        using value_type = IndexedValuePairTT<
             IndexT,
             std::iter_value_t<value_iterator>
         >;
-        using reference = indexed_value<
+        using reference = IndexedValuePairTT<
             IndexT,
             std::iter_reference_t<value_iterator>
-        >;
-        using rvalue_reference = indexed_value<
-            IndexT,
-            std::iter_rvalue_reference_t<value_iterator>
         >;
         using difference_type = run_length_sequence::difference_type;
 
@@ -184,15 +191,6 @@ private:
             return static_cast<difference_type>(a.index()) - static_cast<difference_type>(b.index());
         }
 
-        [[nodiscard]] friend constexpr auto iter_move(iterator_impl const& it)
-            noexcept(noexcept(std::ranges::iter_move(it.value_it_)))
-        {
-            return rvalue_reference{
-                it.index(),
-                std::ranges::iter_move(it.value_it_)
-            };
-        }
-
     private:
         [[nodiscard]] constexpr IndexT index() const noexcept
         {
@@ -214,9 +212,11 @@ public:
     using item_type = T;
     using index_type = IndexT;
     using run_container_type = RunContainerT;
+    using allocator_type = run_container_type::allocator_type;
+    using run_ref = run_length_run_ref<T, IndexT>;
 
-    using value_type = indexed_value<IndexT, T>;
-    using const_reference = indexed_value<IndexT, T const&>;
+    using value_type = IndexedValuePairTT<IndexT, T>;
+    using const_reference = IndexedValuePairTT<IndexT, T const&>;
     using reference = const_reference;
 
     using const_iterator = iterator_impl;
@@ -224,17 +224,33 @@ public:
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-
     constexpr run_length_sequence() = default;
 
-    template<ranges::container_compatible_range<T> R>
-    constexpr run_length_sequence(std::from_range_t, R&& r)
+    constexpr explicit run_length_sequence(allocator_type const& alloc) noexcept
+        : runs_(alloc)
+    {}
+
+    template<container::compatible_range<T> R>
+    constexpr run_length_sequence(std::from_range_t, R&& r, allocator_type const& alloc = allocator_type())
+        : runs_(alloc)
     {
         for (auto&& elem : r) {
             this->emplace_back(std::forward<decltype(elem)>(elem));
         }
     }
 
+    template<container::compatible_iterator<T> It, std::sentinel_for<It> Se>
+    constexpr run_length_sequence(It it, Se se, allocator_type const& alloc = allocator_type())
+        : runs_(alloc)
+    {
+        for (; it != se; ++it) {
+            this->emplace_back(*it);
+        }
+    }
+
+    constexpr run_length_sequence(std::initializer_list<T> il, allocator_type const& alloc = allocator_type())
+        : run_length_sequence(il.begin(), il.end(), alloc)
+    {}
 
     [[nodiscard]] constexpr const_iterator begin() const noexcept { check_range_concepts(); return const_iterator{std::ranges::begin(runs_), offsets_.begin()}; }
     [[nodiscard]] constexpr const_iterator cbegin() const noexcept { return begin(); }
@@ -273,12 +289,6 @@ public:
         return static_cast<size_type>(offsets_.back());
     }
 
-    [[nodiscard]] constexpr size_type run_count() const noexcept
-    {
-        static_assert(std::ranges::sized_range<RunContainerT>);
-        return static_cast<size_type>(std::ranges::size(runs_));
-    }
-
     constexpr void clear() noexcept
         requires requires(RunContainerT& runs) { runs.clear(); }
     {
@@ -291,12 +301,12 @@ public:
     [[nodiscard]] constexpr const_reference front() const noexcept IRIS_LIFETIMEBOUND
     {
         assert(!this->empty());
-        return {static_cast<IndexT>(0u), ranges::front(runs_)};
+        return {static_cast<IndexT>(0u), container::front(runs_)};
     }
     [[nodiscard]] constexpr const_reference back() const noexcept IRIS_LIFETIMEBOUND
     {
         assert(!this->empty());
-        return {static_cast<IndexT>(offsets_.back() - static_cast<IndexT>(1u)), ranges::back(runs_)};
+        return {static_cast<IndexT>(offsets_.back() - static_cast<IndexT>(1u)), container::back(runs_)};
     }
 
     template<class U>
@@ -317,15 +327,15 @@ public:
                 throwf<std::length_error>("run_length_sequence capacity exceeded");
             }
 
-            if (ranges::back(std::as_const(runs_)) == std::as_const(value)) {
+            if (container::back(std::as_const(runs_)) == std::as_const(value)) {
                 // Equivalent element already exists; no need to insert.
-                return {offsets_.back()++, ranges::back(runs_)};
+                return {offsets_.back()++, container::back(runs_)};
             }
             // Need to insert new element
             auto const new_pos = offsets_.back();
             offsets_.emplace_back(new_pos + static_cast<IndexT>(1u)); // new sentinel
             [[maybe_unused]] ofs_insertion_guard<false> ofs_insertion_guard{this};
-            auto& elem = ranges::emplace_back_ref(runs_, std::forward<U>(value));
+            auto& elem = container::append_return(runs_, std::forward<U>(value));
             ofs_insertion_guard.clear();
             return {new_pos, elem};
         }
@@ -348,8 +358,8 @@ public:
             if (offsets_.back() == max_size()) {
                 throwf<std::length_error>("run_length_sequence capacity exceeded");
             }
-            if constexpr (requires { ranges::weak_pop_back(runs_); }) {
-                auto& elem = ranges::emplace_back_ref(runs_, std::forward<Args>(args)...);
+            if constexpr (requires { container::erase_back(runs_); }) {
+                auto& elem = container::append_return(runs_, std::forward<Args>(args)...);
                 [[maybe_unused]] elem_insertion_guard elem_insertion_guard{this};
 
                 auto const prev_it = std::ranges::prev(std::ranges::end(runs_), 2);
@@ -357,8 +367,8 @@ public:
                 if (std::as_const(*prev_it) == std::as_const(elem)) {
                     // Equivalent element already exists; no need to insert.
                     elem_insertion_guard.clear();
-                    ranges::weak_pop_back(runs_);
-                    return {offsets_.back()++, ranges::back(runs_)};
+                    container::erase_back(runs_);
+                    return {offsets_.back()++, container::back(runs_)};
                 }
 
                 // Need to insert new element
@@ -369,20 +379,126 @@ public:
 
             } else {
                 T temp(std::forward<Args>(args)...);
-                if (ranges::back(std::as_const(runs_)) == std::as_const(temp)) {
+                if (container::back(std::as_const(runs_)) == std::as_const(temp)) {
                     // Equivalent element already exists; no need to insert.
-                    return {offsets_.back()++, ranges::back(runs_)};
+                    return {offsets_.back()++, container::back(runs_)};
                 }
                 // Need to insert new element
                 auto const new_pos = offsets_.back();
                 offsets_.emplace_back(new_pos + static_cast<IndexT>(1u)); // new sentinel
                 [[maybe_unused]] ofs_insertion_guard<false> ofs_insertion_guard{this};
-                auto& elem = ranges::emplace_back_ref(runs_, std::move(temp));
+                auto& elem = container::append_return(runs_, std::move(temp));
                 ofs_insertion_guard.clear();
                 return {new_pos, elem};
             }
         }
     }
+
+    // Offers heterogeneous comparison benefit
+    template<class U>
+        requires
+            (!std::same_as<std::remove_cvref_t<U>, T>) &&
+            std::constructible_from<T, U>
+    constexpr const_reference push_back(U&& value_like) IRIS_LIFETIMEBOUND
+    {
+        return this->emplace_back(std::forward<U>(value_like));
+    }
+    constexpr const_reference push_back(T const& value) IRIS_LIFETIMEBOUND
+    {
+        return this->emplace_back(value);
+    }
+    constexpr const_reference push_back(T&& value) IRIS_LIFETIMEBOUND
+    {
+        return this->emplace_back(std::move(value));
+    }
+
+    constexpr void pop_back()
+        noexcept(noexcept(container::erase_back(runs_)))
+        requires requires(RunContainerT& runs) { container::erase_back(runs); }
+    {
+        static_assert(req::Cpp17Destructible<T>);
+        IRIS_ZZ_RUN_LENGTH_SEQUENCE_INVARIANT_GUARD
+        assert(!this->empty());
+        assert(offsets_.size() >= 2);
+
+        auto const n = offsets_.size();
+        if (offsets_[n - 1] - offsets_[n - 2] == static_cast<IndexT>(1u)) {
+            container::erase_back(runs_);
+            offsets_.pop_back();
+            if (offsets_.size() == 1) {
+                offsets_.clear(); // remove sentinel
+            }
+
+        } else {
+            --offsets_.back();
+        }
+    }
+
+    constexpr void shrink_to_fit()
+    {
+        if constexpr (container::has_shrink_to_fit<RunContainerT>) {
+            runs_.shrink_to_fit();
+        }
+        offsets_.shrink_to_fit();
+    }
+
+    template<container::compatible_range<T> R>
+    constexpr void append_range(R&& r)
+    {
+        for (auto it = std::ranges::begin(r); it != std::ranges::end(r); ++it) {
+            this->emplace_back(*it);
+        }
+    }
+
+    // ---------------------------------------------------------------------
+
+    [[nodiscard]] constexpr RunContainerT const& runs() const noexcept
+    {
+        return runs_;
+    }
+
+    [[nodiscard]] constexpr size_type run_count() const noexcept
+    {
+        static_assert(std::ranges::sized_range<RunContainerT>);
+        return static_cast<size_type>(std::ranges::size(runs_));
+    }
+
+    [[nodiscard]] constexpr auto run_view() const noexcept
+    {
+        check_range_concepts();
+        return std::views::zip_transform(
+            [](T const& value, auto const& bounds) noexcept -> run_ref {
+                return {value, interval<IndexT>{std::get<0>(bounds), std::get<1>(bounds)}};
+            },
+            runs_, offsets_ | std::views::pairwise
+        );
+    }
+
+    // ---------------------------------------------------------------------
+
+    // Returns an iterator to the element at logical position `pos`, or `end()`
+    // when `pos >= size()`.
+    //
+    // Complexity: O(log run_count()) for locating the run, plus the cost of
+    // advancing an iterator of `RunContainerT` by the run index (O(1) when
+    // `RunContainerT` is random access).
+    [[nodiscard]] constexpr const_iterator nth(IndexT pos) const noexcept
+    {
+        check_range_concepts();
+        if (pos >= this->size()) return this->end();
+
+        auto const ofs_next = std::ranges::upper_bound(offsets_, pos);
+        assert(ofs_next != offsets_.begin());
+        assert(ofs_next != offsets_.end());
+        auto const ofs_it = std::ranges::prev(ofs_next);
+
+        auto const run_index = ofs_it - offsets_.begin();
+        auto const value_it = std::ranges::next(std::ranges::begin(runs_), run_index);
+
+        return const_iterator{value_it, ofs_it, static_cast<IndexT>(pos - *ofs_it)};
+    }
+
+    // ---------------------------------------------------------------------
 
     constexpr void swap(run_length_sequence& other)
         noexcept(std::is_nothrow_swappable_v<RunContainerT> && std::is_nothrow_swappable_v<offsets_type>)
@@ -400,9 +516,13 @@ private:
         static_assert(std::same_as<std::ranges::range_reference_t<RunContainerT>, T&>);
         static_assert(std::same_as<std::ranges::range_reference_t<RunContainerT const>, T const&>);
 
+        static_assert(container::back_pushable<RunContainerT, T>);
+        static_assert(container::back_accessible<RunContainerT>);
+        static_assert(container::front_accessible<RunContainerT>);
+
         static_assert(requires (RunContainerT& runs) {
-            { runs.back() } -> std::same_as<T&>;
-            { runs.front() } -> std::same_as<T&>;
+            { container::back(runs) } -> std::same_as<T&>;
+            { container::front(runs) } -> std::same_as<T&>;
         });
     }
 
@@ -413,7 +533,7 @@ private:
         [[maybe_unused]] ofs_insertion_guard<true> ofs_insertion_guard{this};
         offsets_.emplace_back(static_cast<IndexT>(0u));
         offsets_.emplace_back(static_cast<IndexT>(1u)); // sentinel
-        auto& elem = ranges::emplace_back_ref(runs_, std::forward<Args>(args)...);
+        auto& elem = container::append_return(runs_, std::forward<Args>(args)...);
         ofs_insertion_guard.clear();
         return {static_cast<IndexT>(0u), elem};
     }
@@ -460,7 +580,7 @@ private:
         constexpr ~elem_insertion_guard() noexcept
         {
             if (!self_) return;
-            ranges::weak_pop_back(self_->runs_);
+            container::erase_back(self_->runs_);
         }
 
     private:
@@ -511,8 +631,11 @@ private:
 #undef IRIS_ZZ_RUN_LENGTH_SEQUENCE_INVARIANT_GUARD
 };
 
-template<class T, class IndexT, class RunContainerT>
-constexpr void swap(run_length_sequence<T, IndexT, RunContainerT>& a, run_length_sequence<T, IndexT, RunContainerT>& b)
+template<class T, class IndexT, template<class, class> class IndexedValuePairTT, class RunContainerT>
+constexpr void swap(
+    run_length_sequence<T, IndexT, IndexedValuePairTT, RunContainerT>& a,
+    run_length_sequence<T, IndexT, IndexedValuePairTT, RunContainerT>& b
+)
     noexcept(noexcept(a.swap(b)))
 {
     a.swap(b);
@@ -523,8 +646,12 @@ namespace detail {
 
 struct run_length_sequence_comp
 {
-    template<class T, class IndexT, class RunContainerT>
-    [[nodiscard]] static constexpr bool equals(run_length_sequence<T, IndexT, RunContainerT> const& a, run_length_sequence<T, IndexT, RunContainerT> const& b)
+    template<class T, class IndexT, template<class, class> class IndexedValuePairTT, class RunContainerT>
+    [[nodiscard]] static constexpr bool
+    equals(
+        run_length_sequence<T, IndexT, IndexedValuePairTT, RunContainerT> const& a,
+        run_length_sequence<T, IndexT, IndexedValuePairTT, RunContainerT> const& b
+    )
         noexcept(noexcept(std::declval<T const&>() == std::declval<T const&>()))
     {
         static_assert(std::equality_comparable<T>);
@@ -537,8 +664,12 @@ struct run_length_sequence_comp
 
 } // detail
 
-template<class T, class IndexT, class RunContainerT>
-[[nodiscard]] constexpr bool operator==(run_length_sequence<T, IndexT, RunContainerT> const& a, run_length_sequence<T, IndexT, RunContainerT> const& b)
+template<class T, class IndexT, template<class, class> class IndexedValuePairTT, class RunContainerT>
+[[nodiscard]] constexpr bool
+operator==(
+    run_length_sequence<T, IndexT, IndexedValuePairTT, RunContainerT> const& a,
+    run_length_sequence<T, IndexT, IndexedValuePairTT, RunContainerT> const& b
+)
     noexcept(noexcept(detail::run_length_sequence_comp::equals(a, b)))
 {
     return detail::run_length_sequence_comp::equals(a, b);

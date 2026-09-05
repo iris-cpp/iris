@@ -5,8 +5,10 @@
 
 #include <iris/config.hpp> // IWYU pragma: keep
 
+#include <iris/iterator.hpp> // IWYU pragma: keep
 #include <iris/utility.hpp>
 
+#include <iterator> // IWYU pragma: keep
 #include <ranges> // IWYU pragma: export
 #include <concepts>
 #include <type_traits>
@@ -36,14 +38,6 @@ concept key_value_range =
     gettable<0, std::ranges::range_reference_t<R>> &&
     gettable<1, std::ranges::range_reference_t<R>>;
 
-template<class K, class V>
-struct dummy_key_value_range
-{
-    std::pair<K, V> const* begin() const;
-    std::pair<K, V> const* end() const;
-    ~dummy_key_value_range() = delete;
-};
-
 template<key_value_range R>
 using range_key_t    = std::remove_cvref_t<std::tuple_element_t<0, detail::kv_element_t<R>>>;
 
@@ -63,16 +57,6 @@ concept mapping_range =
     } &&
     std::same_as<range_key_t<R>,    typename std::remove_cvref_t<R>::key_type> &&
     std::same_as<range_mapped_t<R>, typename std::remove_cvref_t<R>::mapped_type>;
-
-template<class K, class V>
-struct dummy_mapping_range
-{
-    using key_type = K;
-    using mapped_type = V;
-    std::pair<K, V> const* begin() const;
-    std::pair<K, V> const* end() const;
-    ~dummy_mapping_range() = delete;
-};
 
 
 // Thin view that adds the map-specific trait to the underlying range.
@@ -130,280 +114,26 @@ inline constexpr bool std::ranges::enable_borrowed_range<iris::ranges::as_map_vi
     = std::ranges::enable_borrowed_range<V>;
 
 
-namespace iris::ranges {
-
-template<class C>
-concept mapping_container =
-    mapping_range<C> &&
-    std::default_initializable<std::remove_cvref_t<C>> &&
-    requires(
-        std::remove_cvref_t<C>& c,
-        typename std::remove_cvref_t<C>::key_type k,
-        typename std::remove_cvref_t<C>::mapped_type v
-    ) {
-        c.emplace(std::move(k), std::move(v));
-    };
+namespace iris::ranges::dummy {
 
 template<class K, class V>
-struct dummy_mapping_container
+struct key_value_range
+{
+    std::pair<K, V> const* begin() const;
+    std::pair<K, V> const* end() const;
+    ~key_value_range() = delete;
+};
+
+template<class K, class V>
+struct mapping_range
 {
     using key_type = K;
     using mapped_type = V;
     std::pair<K, V> const* begin() const;
     std::pair<K, V> const* end() const;
-
-    dummy_mapping_container() = default;
-    dummy_mapping_container(dummy_mapping_container const&) = delete;
-    dummy_mapping_container(dummy_mapping_container&&) = delete;
-    dummy_mapping_container& operator=(dummy_mapping_container const&) = delete;
-    dummy_mapping_container& operator=(dummy_mapping_container&&) = delete;
-
-    void emplace(K&&, V&&);
+    ~mapping_range() = delete;
 };
 
-template<class C>
-concept unique_mapping_container =
-    mapping_container<C> &&
-    requires(
-        std::remove_cvref_t<C>& c,
-        typename std::remove_cvref_t<C>::key_type k,
-        typename std::remove_cvref_t<C>::mapped_type v
-    ) {
-        { c.try_emplace(std::move(k), std::move(v)).second } -> std::convertible_to<bool>;
-        { c.insert_or_assign(std::move(k), std::move(v)).second } -> std::convertible_to<bool>;
-    };
-
-template<class K, class V>
-struct dummy_unique_mapping_container : dummy_mapping_container<K, V>
-{
-    using key_type = K;
-    using mapped_type = V;
-    std::pair<K, V> const* begin() const;
-    std::pair<K, V> const* end() const;
-
-    using dummy_mapping_container<K, V>::dummy_mapping_container;
-
-    std::pair<std::pair<K, V> const*, bool> try_emplace(K&&, V&&);
-    std::pair<std::pair<K, V> const*, bool> insert_or_assign(K&&, V&&);
-};
-
-
-template<class T>
-concept default_back_emplaceable = requires(T c) {
-    std::forward<T>(c).emplace_back();
-};
-
-template<class T>
-concept back_emplaceable =
-    requires(T c, std::ranges::range_value_t<std::remove_cvref_t<T>> v) {
-        std::forward<T>(c).emplace_back(std::move(v));
-    } &&
-    (
-        !std::default_initializable<std::ranges::range_value_t<std::remove_cvref_t<T>>> ||
-        default_back_emplaceable<T>
-    );
-
-template<class T>
-concept default_front_emplaceable = requires(T c) {
-    std::forward<T>(c).emplace_front();
-};
-
-template<class T>
-concept front_emplaceable =
-    requires(T c, std::ranges::range_value_t<std::remove_cvref_t<T>> v) {
-        std::forward<T>(c).emplace_front(std::move(v));
-    } &&
-    (
-        !std::default_initializable<std::ranges::range_value_t<std::remove_cvref_t<T>>> ||
-        default_front_emplaceable<T>
-    );
-
-namespace detail {
-
-struct front_fn
-{
-    template<class R>
-    static constexpr bool has_front = requires(R&& r) { std::forward<R>(r).front(); };
-
-    template<std::ranges::range R>
-        requires has_front<R>
-    [[nodiscard]] static constexpr auto&& operator()(R&& r) noexcept
-    {
-        return std::forward<R>(r).front();
-    }
-
-    template<std::ranges::input_range R>
-        requires (!has_front<R>)
-    [[nodiscard]] static constexpr auto&& operator()(R&& r) noexcept
-    {
-        return *std::ranges::begin(std::forward<R>(r));
-    }
-};
-
-struct back_fn
-{
-    template<class R>
-    static constexpr bool has_back = requires(R&& r) { std::forward<R>(r).back(); };
-
-    template<std::ranges::range R>
-        requires has_back<R>
-    [[nodiscard]] static constexpr auto&& operator()(R&& r) noexcept
-    {
-        return std::forward<R>(r).back();
-    }
-
-    template<std::ranges::bidirectional_range R>
-        requires (!has_back<R>)
-    [[nodiscard]] static constexpr auto&& operator()(R&& r) noexcept
-    {
-        return *std::ranges::prev(std::ranges::end(std::forward<R>(r)));
-    }
-};
-
-} // detail
-
-[[maybe_unused]] inline constexpr detail::front_fn front{};
-[[maybe_unused]] inline constexpr detail::back_fn back{};
-
-namespace detail {
-
-struct emplace_front_ref_fn
-{
-    template<front_emplaceable ContainerT, class... Args>
-    [[nodiscard]] static constexpr auto& operator()(ContainerT& cont, Args&&... args)
-        noexcept(noexcept(cont.emplace_front(std::forward<Args>(args)...)))
-    {
-        if constexpr (std::is_void_v<decltype(cont.emplace_front(std::forward<Args>(args)...))>) {
-            cont.emplace_front(std::forward<Args>(args)...);
-            return front(cont);
-        } else {
-            return cont.emplace_front(std::forward<Args>(args)...);
-        }
-    }
-};
-
-struct emplace_back_ref_fn
-{
-    template<back_emplaceable ContainerT, class... Args>
-    [[nodiscard]] static constexpr auto& operator()(ContainerT& cont, Args&&... args)
-        noexcept(noexcept(cont.emplace_back(std::forward<Args>(args)...)))
-    {
-        if constexpr (std::is_void_v<decltype(cont.emplace_back(std::forward<Args>(args)...))>) {
-            cont.emplace_back(std::forward<Args>(args)...);
-            return back(cont);
-        } else {
-            return cont.emplace_back(std::forward<Args>(args)...);
-        }
-    }
-};
-
-} // detail
-
-[[maybe_unused]] inline constexpr detail::emplace_front_ref_fn emplace_front_ref{};
-[[maybe_unused]] inline constexpr detail::emplace_back_ref_fn emplace_back_ref{};
-
-
-namespace detail {
-
-struct weak_pop_front_fn
-{
-    template<class ContainerT>
-    static constexpr bool has_pop_front = requires (ContainerT& cont) {
-        cont.pop_front();
-    };
-
-    template<class ContainerT>
-        requires has_pop_front<ContainerT>
-    static constexpr void operator()(ContainerT& cont)
-        noexcept(noexcept(cont.pop_front()))
-    {
-        cont.pop_front();
-    }
-
-    template<std::ranges::range ContainerT>
-        requires (!has_pop_front<ContainerT>)
-    static constexpr void operator()(ContainerT& cont)
-        noexcept(noexcept(cont.erase(std::ranges::begin(cont))))
-    {
-        cont.erase(std::ranges::begin(cont));
-    }
-};
-
-struct weak_pop_back_fn
-{
-    template<class ContainerT>
-    static constexpr bool has_pop_back = requires (ContainerT& cont) {
-        cont.pop_back();
-    };
-
-    template<class ContainerT>
-        requires has_pop_back<ContainerT>
-    static constexpr void operator()(ContainerT& cont)
-        noexcept(noexcept(cont.pop_back()))
-    {
-        cont.pop_back();
-    }
-
-    template<std::ranges::bidirectional_range ContainerT>
-        requires (!has_pop_back<ContainerT>)
-    static constexpr void operator()(ContainerT& cont)
-        noexcept(noexcept(cont.erase(std::ranges::prev(std::ranges::end(cont)))))
-    {
-        cont.erase(std::ranges::prev(std::ranges::end(cont)));
-    }
-};
-
-} // detail
-
-[[maybe_unused]] inline constexpr detail::weak_pop_front_fn weak_pop_front{};
-[[maybe_unused]] inline constexpr detail::weak_pop_back_fn weak_pop_back{};
-
-
-template<class T>
-concept default_emplaceable = requires(T c) {
-    std::forward<T>(c).emplace();
-};
-
-template<class T>
-concept emplaceable =
-    requires(T c, std::ranges::range_value_t<std::remove_cvref_t<T>> v) {
-        std::forward<T>(c).emplace(std::move(v));
-    } &&
-    (
-        !std::default_initializable<std::ranges::range_value_t<std::remove_cvref_t<T>>> ||
-        default_emplaceable<T>
-    );
-
-template<class T>
-concept growable_array_writable = back_emplaceable<T> || emplaceable<T>;
-
-template<class T>
-struct dummy_growable_array
-{
-    T const* begin() const;
-    T const* end() const;
-    void emplace_back(T&&);
-    void emplace_back() requires std::default_initializable<T>;
-};
-
-template<class T>
-concept fixed_array_writable =
-    !growable_array_writable<T> &&
-    std::ranges::forward_range<T> &&
-    std::ranges::sized_range<T> &&
-    std::is_lvalue_reference_v<std::ranges::range_reference_t<T>> &&
-    !std::is_const_v<std::remove_reference_t<std::ranges::range_reference_t<T>>> &&
-    std::is_move_assignable_v<std::remove_cvref_t<std::ranges::range_value_t<T>>>;
-
-template<class T>
-using dummy_fixed_array = T[1];
-
-
-template<class R, class ElemT>
-concept container_compatible_range =
-    std::ranges::input_range<R> &&
-    std::convertible_to<std::ranges::range_reference_t<R>, ElemT>;
-
-} // iris::ranges
+} // iris::ranges::dummy
 
 #endif

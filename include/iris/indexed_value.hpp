@@ -237,9 +237,7 @@ template<class IndexT, class T, class IndexU, class U>
 template<class IndexT, class T, class U>
     requires
         (!is_ttp_specialization_of_v<U, indexed_value>) &&
-        requires {
-            requires std::tuple_size<std::remove_cvref_t<U>>::value == 2;
-        } &&
+        (std::tuple_size<std::remove_cvref_t<U>>::value == 2) &&
         req::half_equality_comparable<IndexT, std::tuple_element_t<0, std::remove_cvref_t<U>>> &&
         req::half_equality_comparable<T, std::tuple_element_t<1, std::remove_cvref_t<U>>>
 [[nodiscard]] constexpr bool operator==(indexed_value<IndexT, T> const& a, U const& b)

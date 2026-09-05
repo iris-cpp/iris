@@ -5,6 +5,9 @@
 
 #include <iris/config.hpp> // IWYU pragma: keep
 
+#include <iris/ranges.hpp>
+#include <iris/container_traits.hpp>
+
 #include <iris/marshal/serialize_traits.hpp>
 #include <iris/marshal/detail/field.hpp>
 
@@ -207,7 +210,7 @@ struct basic_load_fn
     }
 
     template<deserializable_array<format> R>
-        requires ranges::growable_array_writable<R&>
+        requires container::growable_array<R&>
     static constexpr void operator()(ReaderT& rd, R& arr)
     {
         R tmp{};
@@ -216,8 +219,8 @@ struct basic_load_fn
             std::ranges::range_value_t<R> elem{};
             basic_load_fn{}(elem_rd, elem);
 
-            if constexpr (ranges::back_emplaceable<R>) {
-                tmp.emplace_back(std::move(elem));
+            if constexpr (container::back_pushable<R>) {
+                container::append(tmp, std::move(elem));
             } else {
                 tmp.emplace(std::move(elem));
             }
@@ -231,7 +234,7 @@ struct basic_load_fn
     }
 
     template<deserializable_array<format> R>
-        requires ranges::fixed_array_writable<R&>
+        requires container::fixed_array<R&>
     static constexpr void operator()(ReaderT& rd, R& arr)
     {
         auto it = std::ranges::begin(arr);
@@ -274,7 +277,7 @@ struct basic_load_fn
             mapped_type v{};
             basic_load_fn{}(member_rd, v);
 
-            if constexpr (ranges::unique_mapping_container<MapT>) {
+            if constexpr (container::unique_mapping_container<MapT>) {
                 if (!tmp.try_emplace(std::move(k), std::move(v)).second) {
                     throw load_error{"object: duplicate key"};
                 }

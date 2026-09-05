@@ -183,6 +183,7 @@ if(PROJECT_IS_TOP_LEVEL)
             core
             type_traits
             ranges
+            container_traits
             stdint
             enum
             indirect
