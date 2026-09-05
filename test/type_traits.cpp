@@ -4,14 +4,13 @@
 
 #include <iris/type_traits.hpp>
 
-namespace {
+#include <cstdint>
 
 template<class... Ts>
 struct tuple;
 
 template<class... Ts>
 struct type_list;
-
 
 template<int... Ns>
 struct n_tuple;
@@ -41,8 +40,24 @@ struct member_ptr_test
 {
 };
 
-} // anonymous
+TEST_CASE("type traits")
+{
+    STATIC_CHECK(iris::signed_numeric_integral<std::int8_t>);
+    STATIC_CHECK(iris::signed_numeric_integral<std::int16_t>);
+    STATIC_CHECK(iris::signed_numeric_integral<std::int32_t>);
+    STATIC_CHECK(iris::signed_numeric_integral<std::int64_t>);
+    STATIC_CHECK(!iris::signed_numeric_integral<bool>);
+    STATIC_CHECK(!iris::signed_numeric_integral<char>);
+    STATIC_CHECK(!iris::signed_numeric_integral<wchar_t>);
 
+    STATIC_CHECK(iris::unsigned_numeric_integral<std::uint8_t>);
+    STATIC_CHECK(iris::unsigned_numeric_integral<std::uint16_t>);
+    STATIC_CHECK(iris::unsigned_numeric_integral<std::uint32_t>);
+    STATIC_CHECK(iris::unsigned_numeric_integral<std::uint64_t>);
+    STATIC_CHECK(!iris::unsigned_numeric_integral<bool>);
+    STATIC_CHECK(!iris::unsigned_numeric_integral<char>);
+    STATIC_CHECK(!iris::unsigned_numeric_integral<wchar_t>);
+}
 
 TEST_CASE("is_convertible_without_narrowing: same type identity")
 {

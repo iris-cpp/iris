@@ -19,6 +19,25 @@
 namespace iris {
 
 template<class T>
+concept signed_numeric_integral =
+    std::signed_integral<T> &&
+    !std::same_as<std::remove_cv_t<T>, char> &&
+    !std::same_as<std::remove_cv_t<T>, wchar_t>;
+
+template<class T>
+concept unsigned_numeric_integral =
+    std::unsigned_integral<T> &&
+    !std::same_as<std::remove_cv_t<T>, bool> &&
+    !std::same_as<std::remove_cv_t<T>, char> &&
+    !std::same_as<std::remove_cv_t<T>, wchar_t> &&
+    !std::same_as<std::remove_cv_t<T>, char8_t> &&
+    !std::same_as<std::remove_cv_t<T>, char16_t> &&
+    !std::same_as<std::remove_cv_t<T>, char32_t>;
+
+template<class T>
+concept numeric_integral = signed_numeric_integral<T> || unsigned_numeric_integral<T>;
+
+template<class T>
 struct remove_cv
 {
     using type = T;
