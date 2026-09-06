@@ -15,6 +15,7 @@
 #include <iris/requirements.hpp>
 #include <iris/type_traits.hpp>
 
+#include <functional>
 #include <algorithm>
 #include <vector>
 #include <ranges>
@@ -143,6 +144,23 @@ private:
         [[nodiscard]] constexpr reference operator*() const noexcept
         {
             return {index(), *value_it_};
+        }
+
+        [[nodiscard]] constexpr T const& run_value() const noexcept
+        {
+            return *value_it_;
+        }
+
+        constexpr void advance_run() noexcept
+        {
+            ++ofs_it_;
+            ++value_it_;
+            rel_pos_ = static_cast<IndexT>(0u);
+        }
+        [[nodiscard]] friend constexpr iterator_impl next_run(iterator_impl it) noexcept
+        {
+            it.advance_run();
+            return it;
         }
 
         constexpr iterator_impl& operator++() noexcept
@@ -467,6 +485,88 @@ public:
             },
             runs_, offsets_ | std::views::pairwise
         );
+    }
+
+    template<class Pred>
+        requires std::predicate<Pred&, T const&>
+    [[nodiscard]] constexpr const_iterator find_run_if(const_iterator from, Pred&& pred) const
+        noexcept(std::is_nothrow_invocable_v<Pred&, T const&>)
+    {
+        auto const last = this->end();
+        for (; from != last; from.advance_run()) {
+            if (std::invoke(pred, from.run_value())) {
+                return from;
+            }
+        }
+        return last;
+    }
+
+    template<class Pred>
+        requires std::predicate<Pred&, T const&>
+    [[nodiscard]] constexpr const_iterator find_run_if_not(const_iterator from, Pred&& pred) const
+        noexcept(std::is_nothrow_invocable_v<Pred&, T const&>)
+    {
+        auto const last = this->end();
+        for (; from != last; from.advance_run()) {
+            if (!std::invoke(pred, from.run_value())) {
+                return from;
+            }
+        }
+        return last;
+    }
+
+    template<class U>
+        requires req::half_equality_comparable<T, U>
+    [[nodiscard]] constexpr const_iterator find_run(const_iterator from, U const& value) const
+        noexcept(noexcept(std::declval<T const&>() == value))
+    {
+        return this->find_run_if(std::move(from), [&](T const& e) noexcept(noexcept(e == value)) {
+            return e == value;
+        });
+    }
+
+    template<class U>
+        requires req::half_equality_comparable<T, U>
+    [[nodiscard]] constexpr const_iterator find_run_not(const_iterator from, U const& value) const
+        noexcept(noexcept(std::declval<T const&>() != value))
+    {
+        return this->find_run_if(std::move(from), [&](T const& e) noexcept(noexcept(e != value)) {
+            return e != value;
+        });
+    }
+
+    // ---------------------------------------------------------------------
+
+    template<class Pred>
+        requires std::predicate<Pred&, T const&>
+    [[nodiscard]] constexpr const_iterator find_run_if(Pred&& pred) const
+        noexcept(noexcept(this->find_run_if(begin(), std::forward<Pred>(pred))))
+    {
+        return this->find_run_if(begin(), std::forward<Pred>(pred));
+    }
+
+    template<class Pred>
+        requires std::predicate<Pred&, T const&>
+    [[nodiscard]] constexpr const_iterator find_run_if_not(Pred&& pred) const
+        noexcept(noexcept(this->find_run_if_not(begin(), std::forward<Pred>(pred))))
+    {
+        return this->find_run_if_not(begin(), std::forward<Pred>(pred));
+    }
+
+    template<class U>
+        requires req::half_equality_comparable<T, U>
+    [[nodiscard]] constexpr const_iterator find_run(U const& value) const
+        noexcept(noexcept(this->find_run(begin(), value)))
+    {
+        return this->find_run(begin(), value);
+    }
+
+    template<class U>
+        requires req::half_equality_comparable<T, U>
+    [[nodiscard]] constexpr const_iterator find_run_not(U const& value) const
+        noexcept(noexcept(this->find_run_not(begin(), value)))
+    {
+        return this->find_run_not(begin(), value);
     }
 
     // ---------------------------------------------------------------------

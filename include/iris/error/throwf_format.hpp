@@ -33,7 +33,7 @@ template<class E, class... Args>
 IRIS_CONFIG_THROW_NORETURN void throwf(std::format_string<Args...> fmt, Args&&... args)
 {
     static_assert(std::is_base_of_v<std::exception, E>);
-    IRIS_CONFIG_THROW_IMPL(E{std::format(std::move(fmt), std::forward<Args>(args)...)});
+    IRIS_CONFIG_THROW_IMPL(E(std::format(std::move(fmt), std::forward<Args>(args)...)));
 }
 
 template<class E, NotStringLike Arg0, class... Args>
@@ -41,7 +41,7 @@ template<class E, NotStringLike Arg0, class... Args>
 IRIS_CONFIG_THROW_NORETURN void throwf(Arg0&& arg0, std::format_string<Args...> fmt, Args&&... args)
 {
     static_assert(std::is_base_of_v<std::exception, E>);
-    IRIS_CONFIG_THROW_IMPL(E{std::forward<Arg0>(arg0), std::format(std::move(fmt), std::forward<Args>(args)...)});
+    IRIS_CONFIG_THROW_IMPL(E(std::forward<Arg0>(arg0), std::format(std::move(fmt), std::forward<Args>(args)...)));
 }
 
 template<class E, NotStringLike Arg0, NotStringLike Arg1, class... Args>
@@ -50,10 +50,10 @@ IRIS_CONFIG_THROW_NORETURN void throwf(Arg0&& arg0, Arg1&& arg1, std::format_str
 {
     static_assert(std::is_base_of_v<std::exception, E>);
     IRIS_CONFIG_THROW_IMPL(
-        E{
+        E(
             std::forward<Arg0>(arg0), std::forward<Arg1>(arg1),
             std::format(std::move(fmt), std::forward<Args>(args)...)
-        }
+        )
     );
 }
 
