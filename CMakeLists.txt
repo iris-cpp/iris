@@ -285,14 +285,16 @@ set_target_properties(
         # EXCLUDE_FROM_DEFAULT_BUILD true
 )
 
-if(NOT NLOHMANN_JSON_FOUND)
+target_link_libraries(iris_marshal INTERFACE Iris::Iris)
+
+if(NOT NLOHMANN_JSON_FOUND AND EXISTS ${PROJECT_SOURCE_DIR}/modules/nlohmann_json/CMakeLists.txt)
     set(JSON_BuildTests OFF CACHE INTERNAL "")
     set(JSON_Install OFF CACHE INTERNAL "")
     set(JSON_ImplicitConversions OFF)
     add_subdirectory(modules/nlohmann_json EXCLUDE_FROM_ALL)
+    target_link_libraries(iris_marshal INTERFACE nlohmann_json::nlohmann_json)
 endif()
 
-target_link_libraries(iris_marshal INTERFACE nlohmann_json::nlohmann_json Iris::Iris)
 
 # -----------------------------------------------------------------
 # Test
