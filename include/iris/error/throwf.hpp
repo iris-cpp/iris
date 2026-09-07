@@ -24,11 +24,12 @@ inline namespace error_functions {
 // critical paths as some compilers fail to optimize the plain `throw` statement
 // even though the statement itself should imply `[[noreturn]]`.
 template<class E>
+    requires std::is_default_constructible_v<E>
 IRIS_CONFIG_THROW_NORETURN void throwf()
 {
     static_assert(std::is_base_of_v<std::exception, E>);
     static_assert(std::is_constructible_v<E>);
-    IRIS_CONFIG_THROW_IMPL(E{});
+    IRIS_CONFIG_THROW_IMPL(E());
 }
 
 // This function can be used to strongly assume optimization in some performance-
@@ -40,7 +41,7 @@ IRIS_CONFIG_THROW_NORETURN void throwf(Arg&& arg, Rest&&... rest)
 {
     static_assert(std::is_base_of_v<std::exception, E>);
     static_assert(!std::is_base_of_v<std::exception, std::remove_cvref_t<Arg>>, "don't copy/move construct exception types directly");
-    IRIS_CONFIG_THROW_IMPL(E{std::forward<Arg>(arg), std::forward<Rest>(rest)...});
+    IRIS_CONFIG_THROW_IMPL(E(std::forward<Arg>(arg), std::forward<Rest>(rest)...));
 }
 
 } // error_functions
