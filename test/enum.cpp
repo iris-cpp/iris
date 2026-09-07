@@ -2,37 +2,95 @@
 
 #include "iris_test.hpp"
 
-#include <iris/enum_bitops.hpp>
-#include <iris/enum_bitops_algorithm.hpp>
-#include <iris/enum_bitops_io.hpp>
+#include <iris/enum/enum.hpp>
+#include <iris/enum/io.hpp>
 
 #include <algorithm>
-#include <ranges>
 #include <string_view>
 #include <utility>
 #include <vector>
 
 #include <cstdint>
 
+enum PlainEnum {};
+enum struct PlainScopedEnum {};
+
+enum struct Enum_0_4 : unsigned {};
+enum struct Enum_2_4 : unsigned {};
+
+enum struct BitEnum_0_4 : unsigned {};
+enum struct BitEnum_2_4 : unsigned {};
+
+template<>
+struct iris::enum_traits<Enum_0_4>
+{
+    static constexpr Enum_0_4 max_element = Enum_0_4{0};
+};
+template<>
+struct iris::enum_traits<Enum_2_4>
+{
+    static constexpr Enum_2_4 min_element = Enum_2_4{2};
+    static constexpr Enum_2_4 max_element = Enum_2_4{4};
+};
+
+template<>
+struct iris::enum_traits<BitEnum_0_4>
+{
+    static constexpr int max_bit = 4;
+};
+template<>
+struct iris::enum_traits<BitEnum_2_4>
+{
+    static constexpr int min_bit = 2;
+    static constexpr int max_bit = 4;
+};
+
+TEST_CASE("enum")
+{
+    STATIC_CHECK(!iris::Enum<PlainEnum>);
+    STATIC_CHECK(!iris::Enum<PlainScopedEnum>);
+
+    STATIC_CHECK(iris::BitopsEnabledEnum<Enum_0_4>);
+    STATIC_CHECK(!iris::FiniteEnum<Enum_0_4>);
+
+    STATIC_CHECK(iris::BitopsEnabledEnum<Enum_2_4>);
+    STATIC_CHECK(iris::FiniteEnum<Enum_2_4>);
+    STATIC_CHECK(iris::enum_count_v<Enum_2_4> == 3);
+    STATIC_CHECK(iris::enum_values<Enum_2_4>() == std::array{Enum_2_4{2}, Enum_2_4{3}, Enum_2_4{4}});
+
+    STATIC_CHECK(iris::BitopsEnabledEnum<BitEnum_0_4>);
+    STATIC_CHECK(iris::FiniteEnum<BitEnum_0_4>);
+    STATIC_CHECK(iris::enum_count_v<BitEnum_0_4> == 5);
+    STATIC_CHECK(iris::enum_values<BitEnum_0_4>() == std::array{BitEnum_0_4{1u << 0}, BitEnum_0_4{1u << 1}, BitEnum_0_4{1u << 2}, BitEnum_0_4{1u << 3}, BitEnum_0_4{1u << 4}});
+
+    STATIC_CHECK(iris::BitopsEnabledEnum<BitEnum_2_4>);
+    STATIC_CHECK(iris::FiniteEnum<BitEnum_2_4>);
+    STATIC_CHECK(iris::enum_count_v<BitEnum_2_4> == 3);
+    STATIC_CHECK(iris::enum_values<BitEnum_2_4>() == std::array{BitEnum_2_4{1u << 2}, BitEnum_2_4{1u << 3}, BitEnum_2_4{1u << 4}});
+}
+
 enum class MyFlags : std::uint8_t
 {
-    FOO = 1 << 0,
-    BAR = 1 << 1,
-    BAZ = 1 << 2,
+    NO_FLAGS = 0u,
+    FOO = 1u << 0,
+    BAR = 1u << 1,
+    BAZ = 1u << 2,
 };
 
 enum class SpellType : std::uint8_t
 {
-    TYPE_ATTACK  = 1 << 0,
-    TYPE_DEFENSE = 1 << 1,
+    NO_SPELL_TYPE = 0u,
 
-    ATTR_FIRE    = 1 << 2,
-    ATTR_WATER   = 1 << 3,
-    ATTR_THUNDER = 1 << 4,
+    TYPE_ATTACK  = 1u << 0,
+    TYPE_DEFENSE = 1u << 1,
+
+    ATTR_FIRE    = 1u << 2,
+    ATTR_WATER   = 1u << 3,
+    ATTR_THUNDER = 1u << 4,
 };
 
 template<>
-struct iris::bitops_enabled<MyFlags> : std::true_type
+struct iris::enum_traits<MyFlags>
 {
     static MyFlags parse(std::string_view sv) noexcept
     {
@@ -45,17 +103,19 @@ struct iris::bitops_enabled<MyFlags> : std::true_type
 };
 
 template<>
-struct iris::bitops_enabled<SpellType> : std::true_type
+struct iris::enum_traits<SpellType>
 {
     static constexpr int min_bit = 2;
     static constexpr int max_bit = 4;
 };
 
-TEST_CASE("enum")
+TEST_CASE("enum: flags")
 {
-    using namespace iris::bitops_operators;
+    using namespace iris::enum_bitops_operators;
 
     using enum MyFlags;
+
+    static_assert(iris::Enum<MyFlags>);
 
     CHECK((~FOO == static_cast<MyFlags>(~std::to_underlying(FOO))));
 
@@ -95,6 +155,8 @@ TEST_CASE("enum")
     CHECK((iris::parse_flags<MyFlags>("foo|bar", "|") == (FOO | BAR)));
     CHECK((iris::parse_flags<MyFlags>("foo|yay", "|") == MyFlags{}));
     CHECK((iris::parse_flags<MyFlags>("foo,bar", "|") == MyFlags{}));
+
+    static_assert(iris::detail::enum_has_finite_minmax_bit<SpellType>);
 
     CHECK(std::ranges::equal(
         iris::each_bit(SpellType::TYPE_ATTACK | SpellType::ATTR_FIRE | SpellType::ATTR_THUNDER),

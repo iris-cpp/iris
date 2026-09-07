@@ -6,8 +6,7 @@
 #include <iris/config.hpp> // IWYU pragma: keep
 
 #include <iris/string.hpp>
-#include <iris/enum_bitops.hpp>
-#include <iris/enum_bitops_algorithm.hpp>
+#include <iris/enum/enum.hpp>
 #include <iris/fixed_string.hpp>
 
 #include <algorithm>
@@ -474,9 +473,12 @@ static constexpr std::uint8_t emphasis_to_value(emphasis em)
 } // ansi_colorize
 
 template<>
-struct bitops_enabled<ansi_colorize::detail::emphasis> : std::true_type {
+struct enum_traits<ansi_colorize::detail::emphasis>
+{
     static constexpr int max_bit = 7;
 };
+
+static_assert(Enum<ansi_colorize::detail::emphasis>);
 
 namespace ansi_colorize {
 
@@ -672,7 +674,7 @@ private:
             style.fg_color = color;
 
         } else if (auto emphasis = detail::name_to_emphasis(specifier); emphasis != detail::emphasis{}) {
-            using namespace bitops_operators;
+            using namespace enum_bitops_operators;
             style.emphasis |= emphasis;
 
         } else if (specifier.starts_with("fg:")) {

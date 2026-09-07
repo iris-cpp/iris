@@ -53,9 +53,8 @@
 #include <iris/cond_trivial_smf.hpp>
 #include <iris/config.hpp>
 #include <iris/default_init_allocator.hpp>
-#include <iris/enum_bitops.hpp>
-#include <iris/enum_bitops_algorithm.hpp>
-#include <iris/enum_bitops_io.hpp>
+#include <iris/enum/enum.hpp>
+#include <iris/enum/io.hpp>
 #include <iris/exception.hpp>
 #include <iris/fixed_string.hpp>
 #include <iris/format.hpp>
