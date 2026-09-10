@@ -29,10 +29,6 @@
 #include <cstddef> // IWYU pragma: keep
 #include <cassert>
 
-namespace iris::detail {
-struct run_length_sequence_comp;
-} // iris::detail
-
 namespace iris {
 
 template<class T, class IndexT>
@@ -146,9 +142,17 @@ private:
             return {index(), *value_it_};
         }
 
+        [[nodiscard]] constexpr run_length_run_ref<T, IndexT> run() const noexcept
+        {
+            return {*value_it_, this->run_span()};
+        }
         [[nodiscard]] constexpr T const& run_value() const noexcept
         {
             return *value_it_;
+        }
+        [[nodiscard]] constexpr interval<IndexT> run_span() const noexcept
+        {
+            return interval<IndexT>{*ofs_it_, *std::next(ofs_it_)};
         }
 
         constexpr void advance_run() noexcept
@@ -331,27 +335,26 @@ public:
         IRIS_ZZ_RUN_LENGTH_SEQUENCE_INVARIANT_GUARD
 
         if (offsets_.empty()) {
-            return this->emplace_back_on_empty(std::forward<U>(value));
-
-        } else {
-            assert(!std::ranges::empty(runs_));
-            assert(offsets_.size() >= 2);
-            if (offsets_.back() == max_size()) {
-                throwf<std::length_error>("run_length_sequence capacity exceeded");
-            }
-
-            if (container::back(std::as_const(runs_)) == std::as_const(value)) {
-                // Equivalent element already exists; no need to insert.
-                return {offsets_.back()++, container::back(runs_)};
-            }
-            // Need to insert new element
-            auto const new_pos = offsets_.back();
-            offsets_.emplace_back(new_pos + static_cast<IndexT>(1u)); // new sentinel
-            [[maybe_unused]] ofs_insertion_guard<false> ofs_insertion_guard{this};
-            auto& elem = container::append_return(runs_, std::forward<U>(value));
-            ofs_insertion_guard.clear();
-            return {new_pos, elem};
+            return this->emplace_run_on_empty(static_cast<IndexT>(1u), std::forward<U>(value));
         }
+
+        assert(!std::ranges::empty(runs_));
+        assert(offsets_.size() >= 2);
+        if (offsets_.back() == max_size()) {
+            throwf<std::length_error>("run_length_sequence capacity exceeded");
+        }
+
+        if (container::back(std::as_const(runs_)) == std::as_const(value)) {
+            // Equivalent element already exists; no need to insert.
+            return {offsets_.back()++, container::back(runs_)};
+        }
+        // Need to insert new element
+        auto const new_pos = offsets_.back();
+        offsets_.emplace_back(new_pos + static_cast<IndexT>(1u)); // new sentinel
+        [[maybe_unused]] ofs_insertion_guard<false> ofs_insertion_guard{this};
+        auto& elem = container::append_return(runs_, std::forward<U>(value));
+        ofs_insertion_guard.clear();
+        return {new_pos, elem};
     }
 
     template<class... Args>
@@ -363,47 +366,46 @@ public:
         IRIS_ZZ_RUN_LENGTH_SEQUENCE_INVARIANT_GUARD
 
         if (offsets_.empty()) {
-            return this->emplace_back_on_empty(std::forward<Args>(args)...);
+            return this->emplace_run_on_empty(static_cast<IndexT>(1u), std::forward<Args>(args)...);
+        }
+
+        assert(!std::ranges::empty(runs_));
+        assert(offsets_.size() >= 2);
+        if (offsets_.back() == max_size()) {
+            throwf<std::length_error>("run_length_sequence capacity exceeded");
+        }
+        if constexpr (requires { container::erase_back(runs_); }) {
+            auto& elem = container::append_return(runs_, std::forward<Args>(args)...);
+            [[maybe_unused]] elem_insertion_guard elem_insertion_guard{this};
+
+            auto const prev_it = std::ranges::prev(std::ranges::end(runs_), 2);
+
+            if (std::as_const(*prev_it) == std::as_const(elem)) {
+                // Equivalent element already exists; no need to insert.
+                elem_insertion_guard.clear();
+                container::erase_back(runs_);
+                return {offsets_.back()++, container::back(runs_)};
+            }
+
+            // Need to insert new element
+            auto const new_pos = offsets_.back();
+            offsets_.emplace_back(new_pos + static_cast<IndexT>(1u)); // new sentinel
+            elem_insertion_guard.clear();
+            return {new_pos, elem};
 
         } else {
-            assert(!std::ranges::empty(runs_));
-            assert(offsets_.size() >= 2);
-            if (offsets_.back() == max_size()) {
-                throwf<std::length_error>("run_length_sequence capacity exceeded");
+            T temp(std::forward<Args>(args)...);
+            if (container::back(std::as_const(runs_)) == std::as_const(temp)) {
+                // Equivalent element already exists; no need to insert.
+                return {offsets_.back()++, container::back(runs_)};
             }
-            if constexpr (requires { container::erase_back(runs_); }) {
-                auto& elem = container::append_return(runs_, std::forward<Args>(args)...);
-                [[maybe_unused]] elem_insertion_guard elem_insertion_guard{this};
-
-                auto const prev_it = std::ranges::prev(std::ranges::end(runs_), 2);
-
-                if (std::as_const(*prev_it) == std::as_const(elem)) {
-                    // Equivalent element already exists; no need to insert.
-                    elem_insertion_guard.clear();
-                    container::erase_back(runs_);
-                    return {offsets_.back()++, container::back(runs_)};
-                }
-
-                // Need to insert new element
-                auto const new_pos = offsets_.back();
-                offsets_.emplace_back(new_pos + static_cast<IndexT>(1u)); // new sentinel
-                elem_insertion_guard.clear();
-                return {new_pos, elem};
-
-            } else {
-                T temp(std::forward<Args>(args)...);
-                if (container::back(std::as_const(runs_)) == std::as_const(temp)) {
-                    // Equivalent element already exists; no need to insert.
-                    return {offsets_.back()++, container::back(runs_)};
-                }
-                // Need to insert new element
-                auto const new_pos = offsets_.back();
-                offsets_.emplace_back(new_pos + static_cast<IndexT>(1u)); // new sentinel
-                [[maybe_unused]] ofs_insertion_guard<false> ofs_insertion_guard{this};
-                auto& elem = container::append_return(runs_, std::move(temp));
-                ofs_insertion_guard.clear();
-                return {new_pos, elem};
-            }
+            // Need to insert new element
+            auto const new_pos = offsets_.back();
+            offsets_.emplace_back(new_pos + static_cast<IndexT>(1u)); // new sentinel
+            [[maybe_unused]] ofs_insertion_guard<false> ofs_insertion_guard{this};
+            auto& elem = container::append_return(runs_, std::move(temp));
+            ofs_insertion_guard.clear();
+            return {new_pos, elem};
         }
     }
 
@@ -423,6 +425,57 @@ public:
     constexpr const_reference push_back(T&& value) IRIS_LIFETIMEBOUND
     {
         return this->emplace_back(std::move(value));
+    }
+
+    // Appends `count` logical elements equivalent to `value` at once.
+    //
+    // The resulting state is the same as calling `emplace_back(value)` `count`
+    // times, but at most one comparison and one insertion into `RunContainerT`
+    // are performed regardless of `count`.
+    //
+    // If `count == 0`, this function is no-op.
+    //
+    // Throws `std::length_error` when `size() + count` would exceed `max_size()`;
+    // the sequence is left unchanged in that case.
+    template<class U>
+        requires std::constructible_from<T, U> && req::half_equality_comparable<T, U>
+    constexpr void append_run(size_type count, U&& value)
+    {
+        check_range_concepts();
+        static_assert(std::equality_comparable<T>);
+        IRIS_ZZ_RUN_LENGTH_SEQUENCE_INVARIANT_GUARD
+
+        if (count == 0) return;
+
+        if (offsets_.empty()) {
+            this->check_append_capacity(count);
+            this->emplace_run_on_empty(static_cast<IndexT>(count), std::forward<U>(value));
+            return;
+        }
+
+        assert(!std::ranges::empty(runs_));
+        assert(offsets_.size() >= 2);
+        this->check_append_capacity(count);
+
+        if (container::back(std::as_const(runs_)) == std::as_const(value)) {
+            // Equivalent run already exists; just extend it.
+            auto const pos = offsets_.back();
+            offsets_.back() = static_cast<IndexT>(pos + static_cast<IndexT>(count));
+            return;
+        }
+        // Need to insert new run
+        auto const new_pos = offsets_.back();
+        offsets_.emplace_back(static_cast<IndexT>(new_pos + static_cast<IndexT>(count))); // new sentinel
+        [[maybe_unused]] ofs_insertion_guard<false> ofs_insertion_guard{this};
+        container::append(runs_, std::forward<U>(value));
+        ofs_insertion_guard.clear();
+    }
+
+    template<class U>
+        requires std::constructible_from<T, U> && (!req::half_equality_comparable<T, U>)
+    constexpr void append_run(size_type count, U&& value)
+    {
+        this->append_run(count, T(std::forward<U>(value)));
     }
 
     constexpr void pop_back()
@@ -603,6 +656,16 @@ public:
         swap(offsets_, other.offsets_);
     }
 
+    [[nodiscard]] constexpr bool operator==(run_length_sequence const& other) const
+        noexcept(noexcept(std::declval<T const&>() == std::declval<T const&>()))
+    {
+        static_assert(std::equality_comparable<T>);
+        static_assert(std::equality_comparable<RunContainerT>);
+        // Adjacent runs never compare equal (class invariant), so the representation
+        // is canonical and representational equality is logical equality.
+        return offsets_ == other.offsets_ && runs_ == other.runs_;
+    }
+
 private:
     static constexpr void check_range_concepts() noexcept
     {
@@ -621,13 +684,23 @@ private:
         });
     }
 
+    constexpr void check_append_capacity(size_type count) const
+    {
+        auto const remaining = max_size() - this->size();
+        if (std::cmp_greater(count, remaining)) {
+            throwf<std::length_error>("run_length_sequence capacity exceeded");
+        }
+    }
+
     template<class... Args>
-    constexpr const_reference emplace_back_on_empty(Args&&... args) IRIS_LIFETIMEBOUND
+    constexpr const_reference emplace_run_on_empty(IndexT const count, Args&&... args) IRIS_LIFETIMEBOUND
     {
         assert(this->empty());
+        assert(count != 0);
+
         [[maybe_unused]] ofs_insertion_guard<true> ofs_insertion_guard{this};
         offsets_.emplace_back(static_cast<IndexT>(0u));
-        offsets_.emplace_back(static_cast<IndexT>(1u)); // sentinel
+        offsets_.emplace_back(count); // sentinel
         auto& elem = container::append_return(runs_, std::forward<Args>(args)...);
         ofs_insertion_guard.clear();
         return {static_cast<IndexT>(0u), elem};
@@ -718,8 +791,6 @@ private:
     friend struct check_invariant_guard;
 #endif
 
-    friend struct detail::run_length_sequence_comp;
-
     RunContainerT runs_;
     offsets_type offsets_;
 
@@ -734,40 +805,6 @@ constexpr void swap(
     noexcept(noexcept(a.swap(b)))
 {
     a.swap(b);
-}
-
-
-namespace detail {
-
-struct run_length_sequence_comp
-{
-    template<class T, class IndexT, template<class, class> class IndexedValuePairTT, class RunContainerT>
-    [[nodiscard]] static constexpr bool
-    equals(
-        run_length_sequence<T, IndexT, IndexedValuePairTT, RunContainerT> const& a,
-        run_length_sequence<T, IndexT, IndexedValuePairTT, RunContainerT> const& b
-    )
-        noexcept(noexcept(std::declval<T const&>() == std::declval<T const&>()))
-    {
-        static_assert(std::equality_comparable<T>);
-        static_assert(std::equality_comparable<RunContainerT>);
-        // Adjacent runs never compare equal (class invariant), so the representation
-        // is canonical and representational equality is logical equality.
-        return a.offsets_ == b.offsets_ && a.runs_ == b.runs_;
-    }
-};
-
-} // detail
-
-template<class T, class IndexT, template<class, class> class IndexedValuePairTT, class RunContainerT>
-[[nodiscard]] constexpr bool
-operator==(
-    run_length_sequence<T, IndexT, IndexedValuePairTT, RunContainerT> const& a,
-    run_length_sequence<T, IndexT, IndexedValuePairTT, RunContainerT> const& b
-)
-    noexcept(noexcept(detail::run_length_sequence_comp::equals(a, b)))
-{
-    return detail::run_length_sequence_comp::equals(a, b);
 }
 
 } // iris
