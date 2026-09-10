@@ -115,4 +115,14 @@ TEST_CASE("stdint")
         STATIC_CHECK(std::same_as<iris::make_integer_of_size_t<scoped_int16_t>, std::int16_t>);
         STATIC_CHECK(std::same_as<iris::make_integer_of_size_t<scoped_int16_t const>, std::int16_t const>);
     }
+
+    STATIC_CHECK(std::same_as<iris::signed_integer_of_size_t<1>, std::int8_t>);
+    STATIC_CHECK(std::same_as<iris::signed_integer_of_size_t<2>, std::int16_t>);
+    STATIC_CHECK(std::same_as<iris::signed_integer_of_size_t<4>, std::int32_t>);
+    STATIC_CHECK(std::same_as<iris::signed_integer_of_size_t<8>, std::int64_t>);
+
+    STATIC_CHECK(std::same_as<iris::unsigned_integer_of_size_t<1>, std::uint8_t>);
+    STATIC_CHECK(std::same_as<iris::unsigned_integer_of_size_t<2>, std::uint16_t>);
+    STATIC_CHECK(std::same_as<iris::unsigned_integer_of_size_t<4>, std::uint32_t>);
+    STATIC_CHECK(std::same_as<iris::unsigned_integer_of_size_t<8>, std::uint64_t>);
 }

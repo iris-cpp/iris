@@ -20,7 +20,7 @@ namespace iris {
 namespace detail {
 
 template<bool IsSigned, std::size_t Bytes>
-struct integer_of_size_impl;
+struct integer_of_size_impl; // undefined
 
 template<>
 struct integer_of_size_impl<true, 1>
@@ -124,6 +124,22 @@ struct make_integer_of_size
 
 template<class T>
 using make_integer_of_size_t = make_integer_of_size<T>::type;
+
+// -------------------------------------------
+
+template<std::size_t Bytes>
+struct signed_integer_of_size : detail::integer_of_size_impl<true, Bytes>
+{};
+
+template<std::size_t Bytes>
+using signed_integer_of_size_t = signed_integer_of_size<Bytes>::type;
+
+template<std::size_t Bytes>
+struct unsigned_integer_of_size : detail::integer_of_size_impl<false, Bytes>
+{};
+
+template<std::size_t Bytes>
+using unsigned_integer_of_size_t = unsigned_integer_of_size<Bytes>::type;
 
 } // iris
 

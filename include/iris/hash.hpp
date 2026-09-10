@@ -10,6 +10,7 @@
 
 #include <functional>
 #include <ranges>
+#include <utility>
 
 #include <cstddef>
 
@@ -123,16 +124,21 @@ template<class T>
     return std::hash<T>{}(var);
 }
 
-template<std::ranges::input_range R>
+template<class R>
+    requires std::ranges::input_range<R const>
 [[nodiscard]] constexpr std::size_t hash_value(R const& r)
     noexcept(
-        noexcept(++std::ranges::begin(r)) &&
+        noexcept(std::ranges::begin(r)) &&
         noexcept(std::ranges::end(r)) &&
-        std::is_nothrow_copy_assignable_v<std::ranges::iterator_t<R>>
+        noexcept(++std::declval<std::ranges::iterator_t<R const>&>()) &&
+        noexcept(std::declval<std::ranges::iterator_t<R const>&>() != std::declval<std::ranges::sentinel_t<R const>&>()) &&
+        noexcept(iris::hash_value(*std::declval<std::ranges::iterator_t<R const>&>()))
     )
 {
     std::size_t seed = 0;
-    for (auto it = std::ranges::begin(r), se = std::ranges::end(r); it != se; ++it) {
+    auto it = std::ranges::begin(r);
+    auto const se = std::ranges::end(r);
+    for (; it != se; ++it) {
         seed = iris::hash_combine(seed, iris::hash_value(*it));
     }
     return seed;
