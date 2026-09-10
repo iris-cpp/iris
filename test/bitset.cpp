@@ -35,6 +35,11 @@ struct bitset_test_cfg
     (bitset_test_cfg<37, std::uint16_t>), (bitset_test_cfg<64, std::uint8_t>), (bitset_test_cfg<64, std::uint64_t>), \
     (bitset_test_cfg<65, std::uint64_t>), (bitset_test_cfg<100, std::uint8_t>), (bitset_test_cfg<130, std::uint64_t>)
 
+#define IRIS_TEST_BITSET_POSITIONS_CFGS \
+    (bitset_test_cfg<0, std::uint8_t>), (bitset_test_cfg<1, std::uint8_t>), (bitset_test_cfg<8, std::uint8_t>), (bitset_test_cfg<37, std::uint16_t>), \
+    (bitset_test_cfg<64, std::uint8_t>), (bitset_test_cfg<65, std::uint64_t>), (bitset_test_cfg<130, std::uint8_t>)
+
+
 constexpr std::array<unsigned long long, 9> patterns{
     0ULL,
     1ULL,
@@ -645,3 +650,61 @@ TEST_CASE("usable in constant expressions", "[bitset]")
 }
 
 #undef IRIS_TEST_BITSET_CFGS
+
+// -----------------------------------------------------
+
+TEST_CASE("positions(): range properties", "[bitset]")
+{
+    using V = decltype(std::declval<iris::bitset<130, std::uint8_t> const&>().positions());
+    STATIC_REQUIRE(std::ranges::view<V>);
+    STATIC_REQUIRE(std::ranges::bidirectional_range<V>);
+    STATIC_REQUIRE(std::ranges::common_range<V>);
+    STATIC_REQUIRE(std::ranges::sized_range<V>);
+    STATIC_REQUIRE(!std::ranges::random_access_range<V>);
+
+    using B = iris::bitset<100, std::uint8_t>;
+    constexpr auto b = B::from_positions({0, 7, 8, 63, 64, 99});
+    STATIC_REQUIRE(std::ranges::equal(b.positions(), std::array<std::size_t, 6>{0, 7, 8, 63, 64, 99}));
+    STATIC_REQUIRE(std::ranges::equal(b.positions() | std::views::reverse, std::array<std::size_t, 6>{99, 64, 63, 8, 7, 0}));
+    STATIC_REQUIRE(b.positions().size() == 6);
+    STATIC_REQUIRE(B{}.positions().empty());
+}
+
+TEMPLATE_TEST_CASE("positions(): matches a naive scan in both directions", "[bitset]", IRIS_TEST_BITSET_POSITIONS_CFGS)
+{
+    constexpr std::size_t N = TestType::n;
+    using B = iris::bitset<N, typename TestType::word>;
+
+    std::vector<B> inputs{B{}, B{}.set()};
+    for (std::size_t offset = 0; offset < 3; ++offset) {
+        B b;
+        if constexpr (N > 0) {
+            for (std::size_t pos = offset; pos < N; pos += 3) {
+                b.set(pos);
+            }
+        }
+        inputs.push_back(b);
+    }
+
+    for (auto const& b : inputs) {
+        std::vector<std::size_t> expected;
+        if constexpr (N > 0) {
+            for (std::size_t pos = 0; pos < N; ++pos) {
+                if (b[pos]) expected.push_back(pos);
+            }
+        }
+
+        auto const pv = b.positions();
+        CHECK(std::ranges::equal(pv, expected));
+        CHECK(std::ranges::equal(pv | std::views::reverse, expected | std::views::reverse));
+        CHECK(pv.size() == expected.size());
+        CHECK(B::from_positions(pv) == b);
+
+        for (auto it = pv.begin(); it != pv.end(); ++it) {
+            auto j = std::next(it);
+            REQUIRE(std::prev(j) == it);
+        }
+    }
+}
+
+#undef IRIS_TEST_BITSET_POSITIONS_CFGS
