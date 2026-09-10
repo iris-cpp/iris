@@ -552,3 +552,138 @@ TEST_CASE("run_length_sequence: sequential insertion")
         REQUIRE(it == seq.end());
     }
 }
+
+TEST_CASE("run_length_sequence: append_run")
+{
+    using RLS = iris::run_length_sequence<std::string>;
+
+    {
+        RLS seq;
+        seq.append_run(3, "foo");
+        CHECK(seq.size() == 3);
+        CHECK(seq.run_count() == 1);
+        CHECK(seq.front().index == 0);
+        CHECK(seq.front().value == "foo");
+        CHECK(seq.back().index == 2);
+    }
+    {
+        RLS seq;
+        seq.append_run(3, "foo");
+        seq.append_run(2, "foo");
+        CHECK(seq.size() == 5);
+        CHECK(seq.run_count() == 1);
+        CHECK(seq.back().index == 4);
+        CHECK(seq.back().value == "foo");
+    }
+    {
+        RLS seq;
+        seq.append_run(3, "foo");
+        seq.append_run(2, "bar");
+        CHECK(seq.size() == 5);
+        CHECK(seq.run_count() == 2);
+        CHECK(seq.nth(3).run_span() == iris::interval<unsigned>{3, 5});
+        CHECK(seq.back().value == "bar");
+        CHECK(seq.runs() == std::vector<std::string>{"foo", "bar"});
+    }
+    {
+        RLS seq;
+        seq.append_run(1, "foo");
+        seq.append_run(4, "foo"sv);
+        CHECK(seq.size() == 5);
+        CHECK(seq.run_count() == 1);
+    }
+    {
+        RLS seq;
+        seq.append_run(0, "foo");
+        CHECK(seq.empty());
+        CHECK(seq.run_count() == 0);
+
+        seq.append_run(2, "foo");
+        seq.append_run(0, "bar");
+        CHECK(seq.size() == 2);
+        CHECK(seq.run_count() == 1);
+        CHECK(seq.runs() == std::vector<std::string>{"foo"});
+    }
+    {
+        constexpr auto values = std::array{"a"sv, "a"sv, "b"sv, "c"sv, "c"sv, "c"sv, "a"sv};
+        constexpr auto counts = std::array{2u, 3u, 1u, 4u, 1u, 2u, 5u};
+
+        RLS by_run;
+        RLS by_elem;
+        for (auto const [value, count] : std::views::zip(values, counts)) {
+            by_run.append_run(count, value);
+            for (auto i = 0u; i < count; ++i) {
+                by_elem.emplace_back(value);
+            }
+        }
+        CHECK(by_run == by_elem);
+        CHECK(by_run.size() == 18);
+        CHECK(by_run.run_count() == 4);
+        CHECK(by_run.runs() == std::vector<std::string>{"a", "b", "c", "a"});
+
+        auto const spans = by_run.run_view()
+            | std::views::transform([](auto const& r) { return r.span; })
+            | std::ranges::to<std::vector>();
+        using iv = iris::interval<unsigned>;
+        CHECK(spans == std::vector{iv{0, 5}, iv{5, 6}, iv{6, 13}, iv{13, 18}});
+    }
+    {
+        using RLS_int = iris::run_length_sequence<int>;
+        RLS_int seq;
+        seq.append_run(1, 7);
+        seq.append_run(RLS_int::max_size() - 1, 7);
+        CHECK(seq.size() == RLS_int::max_size());
+        CHECK(seq.run_count() == 1);
+
+        CHECK_THROWS_AS(seq.append_run(1, 7), std::length_error);
+        CHECK_THROWS_AS(seq.append_run(1, 8), std::length_error);
+        CHECK_THROWS_AS(seq.emplace_back(8), std::length_error);
+        CHECK(seq.size() == RLS_int::max_size());
+        CHECK(seq.run_count() == 1);
+    }
+    {
+        using RLS_int = iris::run_length_sequence<int>;
+        RLS_int seq;
+        CHECK_THROWS_AS(seq.append_run(RLS_int::max_size() + 1, 7), std::length_error);
+        CHECK(seq.empty());
+    }
+}
+
+TEST_CASE("run_length_sequence: run_span / run")
+{
+    using RLS = iris::run_length_sequence<int>;
+    using iv = iris::interval<unsigned>;
+
+    RLS seq;
+    seq.append_run(3, 10); // [0, 3)
+    seq.append_run(1, 20); // [3, 4)
+    seq.append_run(4, 30); // [4, 8)
+
+    for (auto pos = 0u; pos < 3; ++pos) {
+        auto const it = seq.nth(pos);
+        CHECK(it.run_span() == iv{0, 3});
+        CHECK(it.run().span == iv{0, 3});
+        CHECK(it.run().value == 10);
+    }
+    {
+        auto const it = seq.nth(3);
+        CHECK(it.run_span() == iv{3, 4});
+        CHECK(it.run().value == 20);
+    }
+    for (auto pos = 4u; pos < 8; ++pos) {
+        auto const it = seq.nth(pos);
+        CHECK(it.run_span() == iv{4, 8});
+        CHECK(it.run().value == 30);
+    }
+
+    {
+        auto it = seq.begin();
+        CHECK(it.run_span() == iv{0, 3});
+        it.advance_run();
+        CHECK(it.run_span() == iv{3, 4});
+        it.advance_run();
+        CHECK(it.run_span() == iv{4, 8});
+        it.advance_run();
+        CHECK(it == seq.end());
+    }
+}
