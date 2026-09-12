@@ -35,8 +35,10 @@ TEST_CASE("interval_set: type_traits")
     STATIC_CHECK(std::is_copy_assignable_v<IVS>);
     STATIC_CHECK(std::is_nothrow_swappable_v<IVS>);
 
-    STATIC_CHECK(!std::is_constructible_v<IVS, interval<int>>);
+    STATIC_CHECK(std::is_constructible_v<IVS, interval<int>>);
+    STATIC_CHECK(!std::is_convertible_v<interval<int>, IVS>);
     STATIC_CHECK(std::is_constructible_v<IVS, std::initializer_list<interval<int>>>);
+    STATIC_CHECK(std::is_convertible_v<std::initializer_list<interval<int>>, IVS>);
 }
 
 TEST_CASE("interval_set: construction")
