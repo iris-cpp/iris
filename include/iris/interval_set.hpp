@@ -88,7 +88,16 @@ public:
 
     constexpr interval_set() = default;
 
-    constexpr explicit interval_set(std::initializer_list<IntervalT> il)
+    // Unlike `std::vector` etc., we allow construction from a single `IntervalT`:
+    // an interval is not an element but a convex set of offsets.
+    constexpr explicit interval_set(IntervalT const& iv)
+    {
+        if (!iv.empty()) {
+            map_.emplace(iv.lower, iv.upper);
+        }
+    }
+
+    constexpr interval_set(std::initializer_list<IntervalT> il)
     {
         auto it = il.begin();
         if (it == il.end()) return;
