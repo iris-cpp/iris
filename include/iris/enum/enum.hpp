@@ -12,7 +12,6 @@
 #include <array>
 #include <concepts>
 #include <type_traits>
-#include <numbers>
 
 #ifndef NDEBUG
 #include <bit>
@@ -29,6 +28,8 @@ struct enum_traits_not_defined {};
 
 } // detail
 
+// May only be specialized for program-defined enumeration types;
+// otherwise, the program invokes UB when the type is formatted.
 template<class EnumT>
 struct enum_traits : detail::enum_traits_not_defined
 {};
@@ -231,6 +232,14 @@ struct each_bit_fn
     }
 };
 
+template<class T, class CharT>
+constexpr bool to_string_formattable = requires(T const& val) {
+    { to_string(val) } -> std::formattable<CharT>;
+};
+
+template<class T>
+using to_string_t = std::remove_cvref_t<decltype(to_string(std::declval<T const&>()))>;
+
 } // detail
 
 inline constexpr detail::each_bit_fn each_bit{};
@@ -238,32 +247,29 @@ inline constexpr detail::each_bit_fn each_bit{};
 } // iris
 
 template<iris::Enum EnumT, class CharT>
-    requires requires(EnumT const& val) {
-        { to_string(val) } -> std::formattable<CharT>;
+    requires iris::detail::to_string_formattable<EnumT, CharT>
+struct std::formatter<EnumT, CharT> : std::formatter<iris::detail::to_string_t<EnumT>, CharT>
+{
+    using base_formatter = std::formatter<iris::detail::to_string_t<EnumT>, CharT>;
+
+    template<class Context>
+    auto format(EnumT const& val, Context& ctx) const
+    {
+        return base_formatter::format(to_string(val), ctx);
     }
+};
+
+template<iris::Enum EnumT, class CharT>
+    requires (!iris::detail::to_string_formattable<EnumT, CharT>)
 struct std::formatter<EnumT, CharT> : std::formatter<std::underlying_type_t<EnumT>, CharT>
 {
     using base_formatter = std::formatter<std::underlying_type_t<EnumT>, CharT>;
 
     template<class Context>
-    constexpr auto parse(Context& ctx)
-    {
-        if (ctx.begin() == ctx.end()) return ctx.end();
-        has_format_spec_ = true;
-        return base_formatter::parse(ctx);
-    }
-
-    template<class Context>
     auto format(EnumT const& val, Context& ctx) const
     {
-        if (has_format_spec_) {
-            return base_formatter::format(std::to_underlying(val), ctx);
-        }
-        return format_to(ctx.out(), "{}", to_string(val));
+        return base_formatter::format(std::to_underlying(val), ctx);
     }
-
-private:
-    bool has_format_spec_ = false;
 };
 
 #endif
