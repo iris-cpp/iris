@@ -38,6 +38,9 @@ template<class T>
 concept numeric_integral = signed_numeric_integral<T> || unsigned_numeric_integral<T>;
 
 template<class T>
+concept numeric_arithmetic = numeric_integral<T> || std::floating_point<T>;
+
+template<class T>
 struct remove_cv
 {
     using type = T;
