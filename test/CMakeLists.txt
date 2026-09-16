@@ -208,6 +208,14 @@ if(PROJECT_IS_TOP_LEVEL)
         target_link_libraries(iris_marshal_test PRIVATE Iris::Marshal)
 
         set(
+            IRIS_TEST_UNITS_TESTS
+            quantity
+        )
+        foreach(test_name IN LISTS IRIS_TEST_UNITS_TESTS)
+            iris_define_internal_subdir_test(units ${test_name} ${test_name}.cpp)
+        endforeach()
+
+        set(
             IRIS_TEST_NGRAM_TESTS
             ngram
             search_2
