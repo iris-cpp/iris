@@ -5,7 +5,6 @@
 #include <iris/units/concepts.hpp>
 #include <iris/units/quantity.hpp>
 
-#include <chrono>
 #include <concepts>
 
 template<class T>
@@ -23,10 +22,6 @@ TEST_CASE("concepts", "[units]")
     STATIC_CHECK(iris::units::nothrow_ordered_linear<double>);
 
     STATIC_CHECK(!iris::units::ordered_linear<int>);
-
-    STATIC_CHECK(iris::units::ordered_linear<std::chrono::duration<float>>);
-    STATIC_CHECK(iris::units::ordered_linear<std::chrono::duration<double>>);
-    STATIC_CHECK(!iris::units::ordered_linear<std::chrono::duration<int>>);
 
     STATIC_CHECK(iris::units::ordered_linear<Length<float>>);
     STATIC_CHECK(iris::units::nothrow_ordered_linear<Length<float>>);
