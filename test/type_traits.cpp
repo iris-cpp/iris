@@ -4,6 +4,13 @@
 
 #include <iris/type_traits.hpp>
 
+#include <catch2/catch_template_test_macros.hpp>
+
+#include <type_traits>
+#include <concepts>
+#include <utility>
+#include <stdfloat>
+
 #include <cstdint>
 
 template<class... Ts>
@@ -58,6 +65,145 @@ TEST_CASE("type traits")
     STATIC_CHECK(!iris::unsigned_numeric_integral<char>);
     STATIC_CHECK(!iris::unsigned_numeric_integral<wchar_t>);
 }
+
+// https://en.cppreference.com/cpp/types/floating-point
+
+struct Float16 { explicit operator float() const noexcept { return 0.0f; } };
+struct BFloat16 { explicit operator float() const noexcept { return 0.0f; } };
+
+template<class T>
+concept StandardFloatingPoint =
+    std::same_as<T, float> || std::same_as<T, double> || std::same_as<T, long double>;
+
+// NOLINTBEGIN(bugprone-std-namespace-modification)
+template<StandardFloatingPoint F> struct std::common_type<Float16, F> { using type = F; };
+template<StandardFloatingPoint F> struct std::common_type<F, Float16> { using type = F; };
+template<std::integral I> struct std::common_type<Float16, I> { using type = Float16; };
+template<std::integral I> struct std::common_type<I, Float16> { using type = Float16; };
+
+template<StandardFloatingPoint F> struct std::common_type<BFloat16, F> { using type = F; };
+template<StandardFloatingPoint F> struct std::common_type<F, BFloat16> { using type = F; };
+template<std::integral I> struct std::common_type<BFloat16, I> { using type = BFloat16; };
+template<std::integral I> struct std::common_type<I, BFloat16> { using type = BFloat16; };
+// NOLINTEND(bugprone-std-namespace-modification)
+
+template<class... Ts>
+concept has_common_type = requires { typename std::common_type_t<Ts...>; };
+
+template<class... Ts>
+concept has_dominant_type = requires { typename iris::dominant_type_t<Ts...>; };
+
+template<class... Ts>
+concept has_symmetric_common_type = requires { typename iris::symmetric_common_type_t<Ts...>; };
+
+#if __STDCPP_FLOAT16_T__ && __STDCPP_BFLOAT16_T__
+#define IRIS_TEST_NARROW_FP_PAIRS \
+    (std::pair<Float16, BFloat16>), (std::pair<std::float16_t, std::bfloat16_t>)
+#else
+#define IRIS_TEST_NARROW_FP_PAIRS \
+    (std::pair<Float16, BFloat16>)
+#endif
+
+TEST_CASE("dominant_type: basic", "[type_traits]")
+{
+    STATIC_CHECK(!has_dominant_type<>);
+
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<short, short>, short>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<short, int>, int>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<int, short>, int>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<int, unsigned>, unsigned>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<int, double>, double>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<short, char, int>, int>);
+    STATIC_CHECK(!has_dominant_type<short, char>); // `std::common_type_t` is `int`
+    STATIC_CHECK(!has_dominant_type<signed char, unsigned char>);
+    STATIC_CHECK(!has_dominant_type<short, char, unsigned short>);
+}
+
+TEMPLATE_TEST_CASE("dominant_type", "[type_traits]", IRIS_TEST_NARROW_FP_PAIRS)
+{
+    using F16 = TestType::first_type;
+    using BF16 = TestType::second_type;
+
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<short, F16>, F16>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<F16, int>, F16>);
+    STATIC_CHECK(!has_dominant_type<int, F16, BF16>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<int, F16, BF16, float>, float>);
+
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<float>, float>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<F16>, F16>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<float, float>, float>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<F16, F16>, F16>);
+
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<float const>, float>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<float const&, F16>, float>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<F16&&, float const&>, float>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<F16 const&, F16>, F16>);
+
+    STATIC_CHECK(!has_common_type<F16, BF16>);
+    STATIC_CHECK(!has_dominant_type<F16, BF16>);
+    STATIC_CHECK(!has_dominant_type<BF16, F16>);
+
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<F16, float>, float>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<float, F16>, float>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<BF16, float>, float>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<float, BF16>, float>);
+
+    STATIC_CHECK(std::same_as<std::common_type_t<float, F16, BF16>, float>);
+    STATIC_CHECK(std::same_as<std::common_type_t<float, BF16, F16>, float>);
+    STATIC_CHECK(std::same_as<std::common_type_t<F16, float, BF16>, float>);
+    STATIC_CHECK(std::same_as<std::common_type_t<BF16, float, F16>, float>);
+    STATIC_CHECK(!has_common_type<F16, BF16, float>);
+    STATIC_CHECK(!has_common_type<BF16, F16, float>);
+
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<float, F16, BF16>, float>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<float, BF16, F16>, float>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<F16, float, BF16>, float>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<BF16, float, F16>, float>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<F16, BF16, float>, float>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<BF16, F16, float>, float>);
+
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<F16, BF16, float, double>, double>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<double, F16, BF16, float>, double>);
+    STATIC_CHECK(std::same_as<iris::dominant_type_t<F16, double, BF16, float>, double>);
+    STATIC_CHECK(!has_common_type<F16, BF16, float, double>);
+
+    STATIC_CHECK(!has_dominant_type<F16, BF16, F16>);
+    STATIC_CHECK(!has_dominant_type<F16, F16, BF16, BF16>);
+}
+
+TEST_CASE("symmetric_common_type: basic", "[type_traits]")
+{
+    STATIC_CHECK(!has_symmetric_common_type<>);
+    STATIC_CHECK(std::same_as<iris::symmetric_common_type_t<float>, float>);
+    STATIC_CHECK(std::same_as<iris::symmetric_common_type_t<float const&>, float>);
+
+    STATIC_CHECK(std::same_as<iris::symmetric_common_type_t<short, char, int>, int>);
+
+    STATIC_CHECK(!has_dominant_type<short, char>);
+    STATIC_CHECK(std::same_as<iris::symmetric_common_type_t<short, char>, int>);
+    STATIC_CHECK(std::same_as<iris::symmetric_common_type_t<char, short>, int>);
+    STATIC_CHECK(std::same_as<iris::symmetric_common_type_t<signed char, unsigned char>, int>);
+    STATIC_CHECK(std::same_as<iris::symmetric_common_type_t<short, char, unsigned short>, int>);
+    STATIC_CHECK(std::same_as<iris::symmetric_common_type_t<unsigned short, char, short>, int>);
+}
+
+TEMPLATE_TEST_CASE("symmetric_common_type", "[type_traits]", IRIS_TEST_NARROW_FP_PAIRS)
+{
+    using F16 = TestType::first_type;
+    using BF16 = TestType::second_type;
+
+    STATIC_CHECK(std::same_as<iris::symmetric_common_type_t<F16, float>, float>);
+    STATIC_CHECK(std::same_as<iris::symmetric_common_type_t<float, F16, BF16>, float>);
+    STATIC_CHECK(std::same_as<iris::symmetric_common_type_t<F16, BF16, float>, float>);
+    STATIC_CHECK(std::same_as<iris::symmetric_common_type_t<BF16, F16, float>, float>);
+    STATIC_CHECK(std::same_as<iris::symmetric_common_type_t<F16, BF16, float, double>, double>);
+
+    STATIC_CHECK(!has_symmetric_common_type<F16, BF16>);
+    STATIC_CHECK(!has_symmetric_common_type<BF16, F16>);
+    STATIC_CHECK(!has_symmetric_common_type<F16, BF16, F16>);
+}
+
+#undef IRIS_TEST_NARROW_FP_PAIRS
 
 TEST_CASE("is_convertible_without_narrowing: same type identity")
 {

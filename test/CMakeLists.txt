@@ -209,6 +209,7 @@ if(PROJECT_IS_TOP_LEVEL)
 
         set(
             IRIS_TEST_UNITS_TESTS
+            concepts
             quantity
         )
         foreach(test_name IN LISTS IRIS_TEST_UNITS_TESTS)

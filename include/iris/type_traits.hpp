@@ -76,6 +76,75 @@ struct remove_cv<T const volatile>
     using apply = F<T> const volatile;
 };
 
+// -----------------------------------------------------------
+
+namespace detail {
+
+template<class Cand, class T>
+concept dominant_type_candidate_dominates =
+    requires { typename std::common_type_t<T, std::decay_t<Cand>>; } &&
+    std::same_as<std::common_type_t<T, std::decay_t<Cand>>, std::decay_t<Cand>>;
+
+template<class Cand, class... Ts>
+struct dominant_type_candidate
+    : std::bool_constant<(dominant_type_candidate_dominates<Cand, Ts> && ...)>
+{
+    using type = std::decay_t<Cand>;
+};
+
+} // detail
+
+// The type among `Ts...` that dominates all the others, i.e., the `Cand` in `Ts...`
+// such that `std::common_type_t<T, Cand>` is `Cand` for every `T`.
+//
+// The result is always one of `Ts...` and does not depend on their order; no `type`
+// member if no such type exists (e.g. `short` and `char`, whose common type `int` is
+// not among them).
+template<class... Ts>
+struct dominant_type
+{
+    // No `::type`
+};
+template<class... Ts>
+using dominant_type_t = dominant_type<Ts...>::type;
+
+template<class... Ts>
+    requires std::disjunction<detail::dominant_type_candidate<Ts, Ts...>...>::value
+struct dominant_type<Ts...>
+    : std::disjunction<detail::dominant_type_candidate<Ts, Ts...>...>
+{};
+
+// `T` dominates every type in `Ts...`, i.e., `std::common_type_t<U, T>` is `T` for
+// every `U` in `Ts...`.
+//
+// Can be used to constrain the explicitness of conversion or assignment.
+template<class T, class... Ts>
+concept dominant = (detail::dominant_type_candidate_dominates<T, Ts> && ...);
+
+// Denotes `iris::dominant_type<Ts...>` if it exists, otherwise equivalent to `std::common_type`.
+//
+//   `std::common_type_t<float, std::float16_t, std::bfloat16_t>`
+//     -> `float`
+//   `std::common_type_t<std::float16_t, std::bfloat16_t, float>`
+//     -> ill-formed
+//   `iris::symmetric_common_type_t<std::float16_t, std::bfloat16_t, float>`
+//     -> `float` (in any order)
+//
+// Use `iris::dominant_type` instead when the result must be one of `Ts...`.
+template<class... Ts>
+struct symmetric_common_type : std::common_type<Ts...>
+{};
+template<class... Ts>
+using symmetric_common_type_t = symmetric_common_type<Ts...>::type;
+
+template<class... Ts>
+    requires requires {
+        typename dominant_type<Ts...>::type;
+    }
+struct symmetric_common_type<Ts...> : dominant_type<Ts...>
+{};
+
+// -----------------------------------------------------------
 
 template<class... Ts>
 struct type_list
