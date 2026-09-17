@@ -14,10 +14,10 @@
 
 namespace iris::units {
 
-template<class First, class... Rest>
+template<class... Ts>
 concept compatible_value_type =
     requires {
-        typename symmetric_common_type_t<First, Rest...>;
+        typename symmetric_common_type_t<Ts...>;
     };
 
 template<class Derived>
@@ -96,18 +96,19 @@ concept unit_family_with =
     detail::same_unit_class_impl<std::remove_cvref_t<DerivedA>, std::remove_cvref_t<DerivedB>> &&
     compatible_value_type<detail::value_type_t<DerivedA>, detail::value_type_t<DerivedB>>;
 
-// All of `First, Rest...` are specializations of the same unit class template, and
-// their value types are pairwise compatible with that of `First`.
-template<class First, class... Rest>
+// All of `Units...` are specializations of the same unit class template, and
+// their value types are pairwise compatible with that of the first type in `Units...`.
+template<class... Units>
 concept unit_family =
-    unit_class<First> &&
-    (unit_family_with<First, Rest> && ...);
+    sizeof...(Units) > 0 &&
+    (unit_class<Units> && ...) &&
+    (unit_family_with<IRIS_PACK_INDEXING(0, Units...), Units> && ...);
 
-// `unit_family<First, Rest...>` whose base unit class is `UnitTT`.
-template<template<class...> class UnitTT, class First, class... Rest>
+// `unit_family<Units...>` whose base unit class is `UnitTT`.
+template<template<class...> class UnitTT, class... Units>
 concept unit_family_of =
-    unit_family<First, Rest...> &&
-    unit_class_of<First, UnitTT>;
+    unit_family<Units...> &&
+    unit_class_of<IRIS_PACK_INDEXING(0, Units...), UnitTT>;
 
 } // iris::units
 
@@ -158,10 +159,18 @@ namespace iris::units {
 // The value type shared by the units in `Units...`, i.e., `symmetric_common_type_t`
 // of their value types.
 template<class... Units>
+struct common_value_type
+{};
+template<class... Units>
+using common_value_type_t = common_value_type<Units...>::type;
+
+template<class... Units>
     requires
         unit_family<Units...> &&
         compatible_value_type<detail::value_type_t<Units>...>
-using common_value_type_t = symmetric_common_type_t<detail::value_type_t<Units>...>;
+struct common_value_type<Units...>
+    : symmetric_common_type<detail::value_type_t<Units>...>
+{};
 
 // The unit type of `First` rebound to the common value type of `First, Rest...`.
 template<class First, class... Rest>
