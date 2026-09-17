@@ -9,7 +9,10 @@
 #include <type_traits>
 #include <concepts>
 #include <utility>
-#include <stdfloat>
+
+#if __has_include(<stdfloat>)
+# include <stdfloat>
+#endif
 
 #include <cstdint>
 
