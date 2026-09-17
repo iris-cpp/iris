@@ -30,6 +30,7 @@ class quantity;
 
 template<template<class...> class DerivedTT, numeric_arithmetic T, class... Rest>
     requires
+        requires { sizeof(DerivedTT<T, Rest...>); } &&
         std::derived_from<DerivedTT<T, Rest...>, quantity<T>> &&
         (!std::same_as<DerivedTT<T, Rest...>, quantity<T>>)
 struct unit_traits<DerivedTT<T, Rest...>>

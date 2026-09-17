@@ -31,6 +31,7 @@ class min_pref_max;
 
 template<template<class...> class DerivedTT, ordered_linear T, class... Rest>
     requires
+        requires { sizeof(DerivedTT<T, Rest...>); } &&
         std::derived_from<DerivedTT<T, Rest...>, min_pref_max<T>> &&
         (!std::same_as<DerivedTT<T, Rest...>, min_pref_max<T>>)
 struct unit_traits<DerivedTT<T, Rest...>>
