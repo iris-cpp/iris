@@ -104,11 +104,7 @@ public:
 
     constexpr void set_min(T v) noexcept
     {
-    #if __cpp_lib_constexpr_cmath >= 202202L
         assert(!isnan(v));
-    #else
-        assert(v == v);
-    #endif
         min_ = v;
         pref_ = std::max(pref_, v);
         max_ = std::max(max_, v);
@@ -116,11 +112,7 @@ public:
     }
     constexpr void set_pref(T v) noexcept
     {
-    #if __cpp_lib_constexpr_cmath >= 202202L
         assert(!isnan(v));
-    #else
-        assert(v == v);
-    #endif
         min_ = std::min(min_, v);
         pref_ = v;
         max_ = std::max(max_, v);
@@ -128,11 +120,7 @@ public:
     }
     constexpr void set_max(T v) noexcept
     {
-    #if __cpp_lib_constexpr_cmath >= 202202L
         assert(!isnan(v));
-    #else
-        assert(v == v);
-    #endif
         min_ = std::min(min_, v);
         pref_ = std::min(pref_, v);
         max_ = v;

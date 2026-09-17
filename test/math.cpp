@@ -12,16 +12,7 @@
 #include <cstdint>
 #include <cmath>
 
-namespace {
-
-template<std::size_t N> struct uint_of_size;
-template<> struct uint_of_size<2> { using type = std::uint16_t; };
-template<> struct uint_of_size<4> { using type = std::uint32_t; };
-template<> struct uint_of_size<8> { using type = std::uint64_t; };
-
 #define IRIS_TEST_ISNAN_TYPES float, double, long double
-
-} // anonymous
 
 TEMPLATE_TEST_CASE("isnan vs std::isnan", "[math]", IRIS_TEST_ISNAN_TYPES)
 {
@@ -48,7 +39,7 @@ TEMPLATE_TEST_CASE("isnan vs std::isnan", "[math]", IRIS_TEST_ISNAN_TYPES)
     }
 
     if constexpr (sizeof(T) <= 8) {
-        using uint = uint_of_size<sizeof(T)>::type;
+        using uint = iris::unsigned_integer_of_size_t<sizeof(T)>;
         constexpr int mantissa_bits = limits::digits - 1;
         constexpr uint mantissa_mask = (uint(1) << mantissa_bits) - 1;
         constexpr uint exponent_all_ones = ~mantissa_mask & (uint(-1) >> 1);
@@ -59,17 +50,14 @@ TEMPLATE_TEST_CASE("isnan vs std::isnan", "[math]", IRIS_TEST_ISNAN_TYPES)
             CHECK(iris::isnan(x) == std::isnan(x));
         };
 
-        // Infinity and NaNs with small payloads, both signs
         for (uint payload = 0; payload < 256; ++payload) {
             check_bits(exponent_all_ones | payload);
             check_bits(sign | exponent_all_ones | payload);
         }
-        // Largest finite values, both signs
         for (uint payload = 0; payload < 256; ++payload) {
             check_bits((exponent_all_ones - (uint(1) << mantissa_bits)) | (mantissa_mask - payload));
             check_bits(sign | (exponent_all_ones - (uint(1) << mantissa_bits)) | (mantissa_mask - payload));
         }
-        // NaN with only the top mantissa bit set (quiet NaN on most platforms) and only the lowest bit set
         check_bits(exponent_all_ones | (uint(1) << (mantissa_bits - 1)));
         check_bits(exponent_all_ones | uint(1));
     }

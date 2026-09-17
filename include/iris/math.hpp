@@ -27,6 +27,9 @@ concept bit_inspectable_floating_point =
 template<std::floating_point T>
 [[nodiscard]] constexpr bool isnan(T const x) noexcept
 {
+#if __cpp_lib_constexpr_cmath >= 202202L
+    return std::isnan(x);
+#else
     if constexpr (detail::bit_inspectable_floating_point<T>) {
         using uint = unsigned_integer_of_size_t<sizeof(T)>;
         constexpr int mantissa_bits = std::numeric_limits<T>::digits - 1;
@@ -38,6 +41,7 @@ template<std::floating_point T>
     } else {
         return x != x;
     }
+#endif
 }
 
 template<std::integral T>
