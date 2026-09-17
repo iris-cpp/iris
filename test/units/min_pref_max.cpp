@@ -208,3 +208,44 @@ TEST_CASE("format", "[units][min_pref_max]")
     MPM_rel_d const rel{RelativeLength{0.0}, RelativeLength{0.5}, RelativeLength{1.0}};
     CHECK(std::format("{:.1f}", rel) == "0.0/0.5/1.0");
 }
+
+
+template<class A, class B>
+concept has_common_type = requires { typename std::common_type<A, B>::type; };
+
+template<class A, class B>
+concept has_symmetric_common_type = requires { typename iris::symmetric_common_type<A, B>::type; };
+
+template<std::floating_point T>
+struct AbsoluteLength final : iris::units::quantity<T>
+{
+    using iris::units::quantity<T>::quantity;
+};
+IRIS_QUANTITY_DEDUCTION_GUIDE(AbsoluteLength);
+
+// TODO: remove this
+TEST_CASE("clang check")
+{
+    using RL = RelativeLength<double>;
+    using AL = AbsoluteLength<double>;
+    namespace detail = iris::units::detail;
+
+    // 1
+    STATIC_CHECK(std::same_as<detail::rebind_t<RL, double>, RL>);
+    STATIC_CHECK(!std::same_as<detail::rebind_t<AL, double>, RL>);
+    STATIC_CHECK(!detail::same_unit_class_impl<RL, AL>);
+
+    // 2
+    STATIC_CHECK(!has_common_type<RL, AL>);
+    STATIC_CHECK(!has_common_type<double, RL>);
+    STATIC_CHECK(!iris::dominant<double, RL>);
+    STATIC_CHECK(!iris::dominant<RL, double>);
+    STATIC_CHECK(!has_symmetric_common_type<double, RL>);
+    STATIC_CHECK(!iris::units::compatible_value_type<double, RL>);
+
+    // 3
+    STATIC_CHECK(!iris::units::unit_family_with<RL, AL>);
+    STATIC_CHECK(!iris::units::unit_family<RL, AL>);
+}
+
+

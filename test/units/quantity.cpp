@@ -57,7 +57,6 @@ template<class A>
 concept has_increment = requires(A& a) { ++a; a++; --a; a--; };
 
 template<class A, class B>
-// ReSharper disable once CppUseTypeTraitAlias
 concept has_common_type = requires { typename std::common_type<A, B>::type; };
 
 template<class A, class B>
