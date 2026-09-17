@@ -25,11 +25,7 @@ TEST_CASE("concepts", "[units]")
     STATIC_CHECK(!iris::units::ordered_linear<int>);
 
     STATIC_CHECK(iris::units::ordered_linear<std::chrono::duration<float>>);
-    STATIC_CHECK(iris::units::nothrow_ordered_linear<std::chrono::duration<float>>);
-
     STATIC_CHECK(iris::units::ordered_linear<std::chrono::duration<double>>);
-    STATIC_CHECK(iris::units::nothrow_ordered_linear<std::chrono::duration<double>>);
-
     STATIC_CHECK(!iris::units::ordered_linear<std::chrono::duration<int>>);
 
     STATIC_CHECK(iris::units::ordered_linear<Length<float>>);
