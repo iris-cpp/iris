@@ -102,13 +102,13 @@ template<class... Units>
 concept unit_family =
     sizeof...(Units) > 0 &&
     (unit_class<Units> && ...) &&
-    (unit_family_with<pack_indexing_t<0, Units...>, Units> && ...);
+    (unit_family_with<IRIS_PACK_INDEXING(0, Units...), Units> && ...);
 
 // `unit_family<Units...>` whose base unit class is `UnitTT`.
 template<template<class...> class UnitTT, class... Units>
 concept unit_family_of =
     unit_family<Units...> &&
-    unit_class_of<pack_indexing_t<0, Units...>, UnitTT>;
+    unit_class_of<IRIS_PACK_INDEXING(0, Units...), UnitTT>;
 
 } // iris::units
 
