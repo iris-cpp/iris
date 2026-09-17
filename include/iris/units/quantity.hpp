@@ -8,6 +8,7 @@
 #include <iris/units/traits.hpp>
 
 #include <iris/type_traits.hpp>
+#include <iris/math.hpp>
 
 #include <format>
 #include <numeric>
@@ -394,6 +395,16 @@ public:
 };
 
 namespace iris::units {
+
+using iris::isnan;
+
+template<quantity_class Q>
+[[nodiscard]] constexpr bool isnan(Q const& q) noexcept
+{
+    return iris::isnan(q.value);
+}
+
+// --------------------------------------------------
 
 template<quantity_class Q>
     requires std::floating_point<detail::value_type_t<Q>>

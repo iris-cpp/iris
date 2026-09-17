@@ -21,7 +21,8 @@ concept compatible_value_type =
     };
 
 template<class Derived>
-struct unit_traits;
+struct unit_traits
+{};
 
 namespace detail {
 
