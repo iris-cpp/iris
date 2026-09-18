@@ -5,7 +5,10 @@
 
 #include <iris/config.hpp> // IWYU pragma: keep
 
+#include <iris/units/traits.hpp>
+
 #include <iris/type_traits.hpp>
+#include <iris/math.hpp>
 
 #include <format>
 #include <numeric>
@@ -25,43 +28,29 @@ namespace iris::units {
 template<class T>
 class quantity;
 
-template<class Derived>
-struct quantity_traits;
-
 template<template<class...> class DerivedTT, numeric_arithmetic T, class... Rest>
     requires
+        requires { sizeof(DerivedTT<T, Rest...>); } &&
         std::derived_from<DerivedTT<T, Rest...>, quantity<T>> &&
         (!std::same_as<DerivedTT<T, Rest...>, quantity<T>>)
-struct quantity_traits<DerivedTT<T, Rest...>>
+struct unit_traits<DerivedTT<T, Rest...>>
 {
     using value_type = T;
+
+    template<class U>
+    using base_rebind = quantity<U>;
 
     template<class U>
     using rebind = DerivedTT<U, Rest...>;
 };
 
 template<class Q>
-concept quantity_like =
-    requires { typename quantity_traits<Q>::value_type; } &&
-    std::derived_from<Q, quantity<typename quantity_traits<Q>::value_type>>;
+concept quantity_class = unit_class_of<Q, quantity>;
 
-namespace detail {
+template<class... Qs>
+concept quantity_family = unit_family_of<quantity, Qs...>;
 
-template<class First, class... Rest>
-concept same_quantity_family =
-    quantity_like<First> &&
-    (std::same_as<
-        typename quantity_traits<First>::template rebind<typename quantity_traits<Rest>::value_type>,
-        Rest
-    > && ...);
-
-template<class A, class B>
-using common_quantity_value_t = std::common_type_t<
-    typename quantity_traits<A>::value_type,
-    typename quantity_traits<B>::value_type
->;
-
-} // detail
+// -------------------------------------------------
 
 // Declares the deduction guide for a quantity family, so that `DerivedClass{value}`
 // deduces `DerivedClass<decltype(value)>`.
@@ -124,77 +113,80 @@ public:
     }
 
     template<class Self, class Target>
-        requires detail::same_quantity_family<Self, Target> && (!std::same_as<Self, Target>)
+        requires (!std::same_as<Self, Target>) && quantity_family<Self, Target>
     [[nodiscard]] constexpr
-    explicit(!std::same_as<
-        detail::common_quantity_value_t<Self, Target>,
-        typename quantity_traits<Target>::value_type
-    >)
+    explicit(!dominant_unit<Target, Self>)
     operator Target(this Self const& self) noexcept
     {
-        return Target{static_cast<quantity_traits<Target>::value_type>(self.value)};
+        return Target{static_cast<detail::value_type_t<Target>>(self.value)};
     }
 
     // ----------------------------------------------------
 
     template<class Self, class Other>
-        requires detail::same_quantity_family<Self, Other>
+        requires quantity_family<Self, Other>
     [[nodiscard]] constexpr bool
     operator==(this Self const& self, Other const& other) noexcept
     {
-        using common = detail::common_quantity_value_t<Self, Other>;
+        using common = common_value_type_t<Self, Other>;
         return static_cast<common>(self.value) == static_cast<common>(other.value);
     }
 
     template<class Self, class Other>
-        requires detail::same_quantity_family<Self, Other>
+        requires quantity_family<Self, Other>
     [[nodiscard]] constexpr auto
     operator<=>(this Self const& self, Other const& other) noexcept
     {
-        using common = detail::common_quantity_value_t<Self, Other>;
+        using common = common_value_type_t<Self, Other>;
         return static_cast<common>(self.value) <=> static_cast<common>(other.value);
     }
 
     // ----------------------------------------------------
 
     template<class Self>
-    [[nodiscard]] constexpr Self operator+(this Self const& self) noexcept
+    [[nodiscard]] constexpr Self
+    operator+(this Self const& self) noexcept
     {
         return self;
     }
 
     template<class Self>
-    [[nodiscard]] constexpr Self operator-(this Self const& self) noexcept
+    [[nodiscard]] constexpr Self
+    operator-(this Self const& self) noexcept
     {
-        return Self{static_cast<quantity_traits<Self>::value_type>(-self.value)};
+        return Self{static_cast<detail::value_type_t<Self>>(-self.value)};
     }
 
     template<class Self>
-        requires std::integral<typename quantity_traits<Self>::value_type>
-    constexpr Self& operator++(this Self& self) noexcept
+        requires std::integral<detail::value_type_t<Self>>
+    constexpr Self&
+    operator++(this Self& self) noexcept
     {
         ++self.value;
         return self;
     }
 
     template<class Self>
-        requires std::integral<typename quantity_traits<Self>::value_type>
-    constexpr Self operator++(this Self& self, int) noexcept
+        requires std::integral<detail::value_type_t<Self>>
+    constexpr Self
+    operator++(this Self& self, int) noexcept
     {
         return Self{self.value++};
     }
 
     template<class Self>
-        requires std::integral<typename quantity_traits<Self>::value_type>
-    constexpr Self& operator--(this Self& self) noexcept
+        requires std::integral<detail::value_type_t<Self>>
+    constexpr Self&
+    operator--(this Self& self) noexcept
     {
         --self.value;
         return self;
     }
 
     template<class Self>
-        requires std::integral<typename quantity_traits<Self>::value_type>
-    constexpr Self operator--(this Self& self, int) noexcept
+        requires std::integral<detail::value_type_t<Self>>
+    constexpr Self
+    operator--(this Self& self, int) noexcept
     {
         return Self{self.value--};
     }
@@ -202,36 +194,36 @@ public:
     // ----------------------------------------------------
 
     template<class Self, class Other>
-        requires detail::same_quantity_family<Self, Other>
+        requires quantity_family<Self, Other>
     [[nodiscard]] constexpr std::common_type_t<Self, Other>
     operator+(this Self const& self, Other const& other) noexcept
     {
         using result = std::common_type_t<Self, Other>;
-        return result{static_cast<quantity_traits<result>::value_type>(self.value + other.value)};
+        return result{static_cast<detail::value_type_t<result>>(self.value + other.value)};
     }
 
     template<class Self, class Other>
-        requires detail::same_quantity_family<Self, Other> &&
-                 std::same_as<detail::common_quantity_value_t<Self, Other>, typename quantity_traits<Self>::value_type>
-    constexpr Self& operator+=(this Self& self, Other const& other) noexcept
+        requires dominant_unit<Self, Other>
+    constexpr Self&
+    operator+=(this Self& self, Other const& other) noexcept
     {
         self.value += other.value;
         return self;
     }
 
     template<class Self, class Other>
-        requires detail::same_quantity_family<Self, Other>
+        requires quantity_family<Self, Other>
     [[nodiscard]] constexpr std::common_type_t<Self, Other>
     operator-(this Self const& self, Other const& other) noexcept
     {
         using result = std::common_type_t<Self, Other>;
-        return result{static_cast<quantity_traits<result>::value_type>(self.value - other.value)};
+        return result{static_cast<detail::value_type_t<result>>(self.value - other.value)};
     }
 
     template<class Self, class Other>
-        requires detail::same_quantity_family<Self, Other> &&
-                 std::same_as<detail::common_quantity_value_t<Self, Other>, typename quantity_traits<Self>::value_type>
-    constexpr Self& operator-=(this Self& self, Other const& other) noexcept
+        requires dominant_unit<Self, Other>
+    constexpr Self&
+    operator-=(this Self& self, Other const& other) noexcept
     {
         self.value -= other.value;
         return self;
@@ -240,16 +232,18 @@ public:
     // ----------------------------------------------------
 
     template<class Self, numeric_arithmetic U>
-        requires std::same_as<std::common_type_t<typename quantity_traits<Self>::value_type, U>, typename quantity_traits<Self>::value_type>
-    constexpr Self& operator*=(this Self& self, U scalar) noexcept
+        requires dominant<detail::value_type_t<Self>, U>
+    constexpr Self&
+    operator*=(this Self& self, U scalar) noexcept
     {
         self.value *= scalar;
         return self;
     }
 
     template<class Self, numeric_arithmetic U>
-        requires std::same_as<std::common_type_t<typename quantity_traits<Self>::value_type, U>, typename quantity_traits<Self>::value_type>
-    constexpr Self& operator/=(this Self& self, U scalar) noexcept
+        requires dominant<detail::value_type_t<Self>, U>
+    constexpr Self&
+    operator/=(this Self& self, U scalar) noexcept
     {
         self.value /= scalar;
         return self;
@@ -258,55 +252,60 @@ public:
     // ----------------------------------------------------
 
     template<class Self, numeric_arithmetic U>
-    [[nodiscard]] constexpr auto operator*(this Self const& self, U scalar) noexcept
-        -> quantity_traits<Self>::template rebind<std::common_type_t<typename quantity_traits<Self>::value_type, U>>
+    [[nodiscard]] constexpr auto
+    operator*(this Self const& self, U scalar) noexcept
+        -> detail::rebind_t<Self, std::common_type_t<detail::value_type_t<Self>, U>>
     {
-        using common = std::common_type_t<typename quantity_traits<Self>::value_type, U>;
-        return typename quantity_traits<Self>::template rebind<common>{static_cast<common>(self.value * scalar)};
+        using common = std::common_type_t<detail::value_type_t<Self>, U>;
+        return detail::rebind_t<Self, common>{static_cast<common>(self.value * scalar)};
     }
 
     // Scalar on the left (cannot use explicit object parameter)
-    template<numeric_arithmetic U, class Q>
-        requires std::derived_from<Q, quantity>
-    [[nodiscard]] friend constexpr auto operator*(U scalar, Q const& q) noexcept
-        -> quantity_traits<Q>::template rebind<std::common_type_t<typename quantity_traits<Q>::value_type, U>>
+    template<numeric_arithmetic U, quantity_class Q>
+        requires std::derived_from<Q, quantity> // depend on self type to avoid ODR
+    [[nodiscard]] friend constexpr auto
+    operator*(U scalar, Q const& q) noexcept
+        -> detail::rebind_t<Q, std::common_type_t<detail::value_type_t<Q>, U>>
     {
-        using common = std::common_type_t<typename quantity_traits<Q>::value_type, U>;
-        return typename quantity_traits<Q>::template rebind<common>{static_cast<common>(scalar * q.value)};
+        using common = std::common_type_t<detail::value_type_t<Q>, U>;
+        return detail::rebind_t<Q, common>{static_cast<common>(scalar * q.value)};
     }
 
-    template<class Self, quantity_like Other>
+    template<class Self, quantity_class Other>
     void operator*(this Self const&, Other const&) = delete;
 
     // ----------------------------------------------------
 
     template<class Self, numeric_arithmetic U>
-    [[nodiscard]] constexpr auto operator/(this Self const& self, U scalar) noexcept
-        -> quantity_traits<Self>::template rebind<std::common_type_t<typename quantity_traits<Self>::value_type, U>>
+    [[nodiscard]] constexpr auto
+    operator/(this Self const& self, U scalar) noexcept
+        -> detail::rebind_t<Self, std::common_type_t<detail::value_type_t<Self>, U>>
     {
-        using common = std::common_type_t<typename quantity_traits<Self>::value_type, U>;
-        return typename quantity_traits<Self>::template rebind<common>{static_cast<common>(self.value / scalar)};
+        using common = std::common_type_t<detail::value_type_t<Self>, U>;
+        return detail::rebind_t<Self, common>{static_cast<common>(self.value / scalar)};
     }
 
     template<class Self, class Other>
-        requires detail::same_quantity_family<Self, Other>
-    [[nodiscard]] constexpr detail::common_quantity_value_t<Self, Other>
+        requires quantity_family<Self, Other>
+    [[nodiscard]] constexpr common_value_type_t<Self, Other>
     operator/(this Self const& self, Other const& other) noexcept
     {
-        return static_cast<detail::common_quantity_value_t<Self, Other>>(self.value / other.value);
+        return static_cast<common_value_type_t<Self, Other>>(self.value / other.value);
     }
 
-    template<numeric_arithmetic U, class Q>
-        requires std::derived_from<Q, quantity>
+    template<numeric_arithmetic U, quantity_class Q>
+        requires std::derived_from<Q, quantity> // depend on self type to avoid ODR
     friend void operator/(U, Q const&) = delete;
 
     // ----------------------------------------------------
 
     template<class Self, numeric_arithmetic U>
         requires
-            std::integral<typename quantity_traits<Self>::value_type> && std::integral<U> &&
-            std::same_as<std::common_type_t<typename quantity_traits<Self>::value_type, U>, typename quantity_traits<Self>::value_type>
-    constexpr Self& operator%=(this Self& self, U scalar) noexcept
+            std::integral<detail::value_type_t<Self>> &&
+            std::integral<U> &&
+            dominant<detail::value_type_t<Self>, U>
+    constexpr Self&
+    operator%=(this Self& self, U scalar) noexcept
     {
         self.value %= scalar;
         return self;
@@ -314,80 +313,47 @@ public:
 
     template<class Self, class Other>
         requires
-            detail::same_quantity_family<Self, Other> &&
-            std::integral<typename quantity_traits<Self>::value_type> &&
-            std::integral<typename quantity_traits<Other>::value_type> &&
-            std::same_as<detail::common_quantity_value_t<Self, Other>, typename quantity_traits<Self>::value_type>
-    constexpr Self& operator%=(this Self& self, Other const& other) noexcept
+            std::integral<detail::value_type_t<Self>> &&
+            std::integral<detail::value_type_t<Other>> &&
+            dominant_unit<Self, Other>
+    constexpr Self&
+    operator%=(this Self& self, Other const& other) noexcept
     {
         self.value %= other.value;
         return self;
     }
 
     template<class Self, numeric_arithmetic U>
-        requires std::integral<typename quantity_traits<Self>::value_type> && std::integral<U>
-    [[nodiscard]] constexpr auto operator%(this Self const& self, U scalar) noexcept
-        -> quantity_traits<Self>::template rebind<std::common_type_t<typename quantity_traits<Self>::value_type, U>>
+        requires std::integral<detail::value_type_t<Self>> && std::integral<U>
+    [[nodiscard]] constexpr auto
+    operator%(this Self const& self, U scalar) noexcept
+        -> detail::rebind_t<Self, std::common_type_t<detail::value_type_t<Self>, U>>
     {
-        using common = std::common_type_t<typename quantity_traits<Self>::value_type, U>;
-        return typename quantity_traits<Self>::template rebind<common>{static_cast<common>(self.value % scalar)};
+        using common = std::common_type_t<detail::value_type_t<Self>, U>;
+        return detail::rebind_t<Self, common>{static_cast<common>(self.value % scalar)};
     }
 
     template<class Self, class Other>
         requires
-            detail::same_quantity_family<Self, Other> &&
-            std::integral<typename quantity_traits<Self>::value_type> &&
-            std::integral<typename quantity_traits<Other>::value_type>
+            std::integral<detail::value_type_t<Self>> &&
+            std::integral<detail::value_type_t<Other>> &&
+            quantity_family<Self, Other>
     [[nodiscard]] constexpr std::common_type_t<Self, Other>
     operator%(this Self const& self, Other const& other) noexcept
     {
         using result = std::common_type_t<Self, Other>;
-        return result{static_cast<quantity_traits<result>::value_type>(self.value % other.value)};
+        return result{static_cast<detail::value_type_t<result>>(self.value % other.value)};
     }
 
-    template<numeric_arithmetic U, class Q>
-        requires std::derived_from<Q, quantity>
+    template<numeric_arithmetic U, quantity_class Q>
+        requires std::derived_from<Q, quantity> // depend on self type to avoid ODR
     friend void operator%(U, Q const&) = delete;
 };
 
 } // iris::units
 
-template<
-    template<class...> class DerivedTT,
-    iris::numeric_arithmetic T, iris::numeric_arithmetic U, class... Rest
->
-    requires
-        iris::units::quantity_like<DerivedTT<T, Rest...>> &&
-        iris::units::quantity_like<DerivedTT<U, Rest...>>
-struct std::common_type<DerivedTT<T, Rest...>, DerivedTT<U, Rest...>>
-{
-    using type = DerivedTT<std::common_type_t<T, U>, Rest...>;
-};
-
-// A plain quantity and a derived quantity have no common type
-template<class T, class Derived>
-    requires
-        iris::units::quantity_like<Derived> &&
-        std::derived_from<Derived, iris::units::quantity<T>> &&
-        (!std::same_as<Derived, iris::units::quantity<T>>)
-struct std::common_type<iris::units::quantity<T>, Derived>
-{
-    // No `::type`
-};
-
-// A plain quantity and a derived quantity have no common type
-template<class T, class Derived>
-    requires
-        iris::units::quantity_like<Derived> &&
-        std::derived_from<Derived, iris::units::quantity<T>> &&
-        (!std::same_as<Derived, iris::units::quantity<T>>)
-struct std::common_type<Derived, iris::units::quantity<T>>
-{
-    // No `::type`
-};
-
 template<template<class...> class DerivedTT, iris::numeric_arithmetic T, class... Rest>
-    requires iris::units::quantity_like<DerivedTT<T, Rest...>>
+    requires iris::units::quantity_class<DerivedTT<T, Rest...>>
 class std::numeric_limits<DerivedTT<T, Rest...>> : public std::numeric_limits<T>
 {
 public:
@@ -431,69 +397,79 @@ public:
 
 namespace iris::units {
 
-template<quantity_like Q>
-    requires std::floating_point<typename quantity_traits<Q>::value_type>
+using iris::isnan;
+
+template<quantity_class Q>
+[[nodiscard]] constexpr bool isnan(Q const& q) noexcept
+{
+    return iris::isnan(q.value);
+}
+
+// --------------------------------------------------
+
+template<quantity_class Q>
+    requires std::floating_point<detail::value_type_t<Q>>
 [[nodiscard]] constexpr Q trunc(Q const& q) noexcept
 {
     return Q{std::trunc(q.value)};
 }
 
-template<quantity_like Q>
-    requires std::integral<typename quantity_traits<Q>::value_type>
+template<quantity_class Q>
+    requires std::integral<detail::value_type_t<Q>>
 [[nodiscard]] constexpr Q trunc(Q const& q) noexcept
 {
     return q;
 }
 
-template<quantity_like Q>
-    requires std::floating_point<typename quantity_traits<Q>::value_type>
+template<quantity_class Q>
+    requires std::floating_point<detail::value_type_t<Q>>
 [[nodiscard]] constexpr Q floor(Q const& q) noexcept
 {
     return Q{std::floor(q.value)};
 }
 
-template<quantity_like Q>
-    requires std::integral<typename quantity_traits<Q>::value_type>
+template<quantity_class Q>
+    requires std::integral<detail::value_type_t<Q>>
 [[nodiscard]] constexpr Q floor(Q const& q) noexcept
 {
     return q;
 }
 
-template<quantity_like Q>
-    requires std::floating_point<typename quantity_traits<Q>::value_type>
+template<quantity_class Q>
+    requires std::floating_point<detail::value_type_t<Q>>
 [[nodiscard]] constexpr Q ceil(Q const& q) noexcept
 {
     return Q{std::ceil(q.value)};
 }
 
-template<quantity_like Q>
-    requires std::integral<typename quantity_traits<Q>::value_type>
+template<quantity_class Q>
+    requires std::integral<detail::value_type_t<Q>>
 [[nodiscard]] constexpr Q ceil(Q const& q) noexcept
 {
     return q;
 }
 
-template<quantity_like Q>
-    requires std::floating_point<typename quantity_traits<Q>::value_type>
+template<quantity_class Q>
+    requires std::floating_point<detail::value_type_t<Q>>
 [[nodiscard]] constexpr Q round(Q const& q) noexcept
 {
     return Q{std::round(q.value)};
 }
 
-template<quantity_like Q>
-    requires std::integral<typename quantity_traits<Q>::value_type>
+template<quantity_class Q>
+    requires std::integral<detail::value_type_t<Q>>
 [[nodiscard]] constexpr Q round(Q const& q) noexcept
 {
     return q;
 }
 
-template<quantity_like Q>
+template<quantity_class Q>
 [[nodiscard]] constexpr Q abs(Q const& q) noexcept
 {
-    if constexpr (std::unsigned_integral<typename quantity_traits<Q>::value_type>) {
+    if constexpr (std::unsigned_integral<detail::value_type_t<Q>>) {
         return q;
     } else {
-        return Q{static_cast<quantity_traits<Q>::value_type>(std::abs(q.value))};
+        return Q{static_cast<detail::value_type_t<Q>>(std::abs(q.value))};
     }
 }
 
@@ -502,8 +478,8 @@ template<quantity_like Q>
 // Returns by value, unlike `std::min`, since the result is in the common
 // representation and may not be any of the arguments. `std::min` remains
 // available when a reference is wanted, but only for a single representation.
-template<quantity_like A, quantity_like B>
-    requires detail::same_quantity_family<A, B>
+template<quantity_class A, quantity_class B>
+    requires quantity_family<A, B>
 [[nodiscard]] constexpr std::common_type_t<A, B>
 (min)(A const& a, B const& b) noexcept
 {
@@ -514,9 +490,9 @@ template<quantity_like A, quantity_like B>
 // Returns by value, unlike `std::min`, since the result is in the common
 // representation and may not be any of the arguments. `std::min` remains
 // available when a reference is wanted, but only for a single representation.
-template<quantity_like A, quantity_like B, class Comp>
+template<quantity_class A, quantity_class B, class Comp>
     requires
-        detail::same_quantity_family<A, B> &&
+        quantity_family<A, B> &&
         std::strict_weak_order<Comp&, std::common_type_t<A, B> const&, std::common_type_t<A, B> const&>
 [[nodiscard]] constexpr std::common_type_t<A, B>
 (min)(A const& a, B const& b, Comp&& comp)
@@ -529,8 +505,8 @@ template<quantity_like A, quantity_like B, class Comp>
 // Returns by value, unlike `std::max`, since the result is in the common
 // representation and may not be any of the arguments. `std::max` remains
 // available when a reference is wanted, but only for a single representation.
-template<quantity_like A, quantity_like B>
-    requires detail::same_quantity_family<A, B>
+template<quantity_class A, quantity_class B>
+    requires quantity_family<A, B>
 [[nodiscard]] constexpr std::common_type_t<A, B>
 (max)(A const& a, B const& b) noexcept
 {
@@ -541,9 +517,9 @@ template<quantity_like A, quantity_like B>
 // Returns by value, unlike `std::max`, since the result is in the common
 // representation and may not be any of the arguments. `std::max` remains
 // available when a reference is wanted, but only for a single representation.
-template<quantity_like A, quantity_like B, class Comp>
+template<quantity_class A, quantity_class B, class Comp>
     requires
-        detail::same_quantity_family<A, B> &&
+        quantity_family<A, B> &&
         std::strict_weak_order<Comp&, std::common_type_t<A, B> const&, std::common_type_t<A, B> const&>
 [[nodiscard]] constexpr std::common_type_t<A, B>
 (max)(A const& a, B const& b, Comp&& comp)
@@ -556,71 +532,71 @@ template<quantity_like A, quantity_like B, class Comp>
 // Returns by value, unlike `std::clamp`, since the result is in the common
 // representation and may not be any of the arguments. `std::clamp` remains
 // available when a reference is wanted, but only for a single representation.
-template<quantity_like Q, quantity_like Lo, quantity_like Hi>
-    requires detail::same_quantity_family<Q, Lo, Hi>
-[[nodiscard]] constexpr std::common_type_t<Q, Lo, Hi>
-clamp(Q const& v, Lo const& lo, Hi const& hi)
+template<quantity_class Q, quantity_class Lo, quantity_class Hi>
+    requires quantity_family<Q, Lo, Hi>
+[[nodiscard]] constexpr common_unit_t<Q, Lo, Hi>
+clamp(Q const& v, Lo const& lo, Hi const& hi) noexcept
 {
-    using result = std::common_type_t<Q, Lo, Hi>;
+    using result = common_unit_t<Q, Lo, Hi>;
     return std::clamp(static_cast<result>(v), static_cast<result>(lo), static_cast<result>(hi));
 }
 
 // Returns by value, unlike `std::clamp`, since the result is in the common
 // representation and may not be any of the arguments. `std::clamp` remains
 // available when a reference is wanted, but only for a single representation.
-template<quantity_like Q, quantity_like Lo, quantity_like Hi, class Comp>
+template<quantity_class Q, quantity_class Lo, quantity_class Hi, class Comp>
     requires
-        detail::same_quantity_family<Q, Lo, Hi> &&
-        std::strict_weak_order<Comp&, std::common_type_t<Q, Lo, Hi> const&, std::common_type_t<Q, Lo, Hi> const&>
-[[nodiscard]] constexpr std::common_type_t<Q, Lo, Hi>
+        quantity_family<Q, Lo, Hi> &&
+        std::strict_weak_order<Comp&, common_unit_t<Q, Lo, Hi> const&, common_unit_t<Q, Lo, Hi> const&>
+[[nodiscard]] constexpr common_unit_t<Q, Lo, Hi>
 clamp(Q const& v, Lo const& lo, Hi const& hi, Comp&& comp)
-    noexcept(std::is_nothrow_invocable_v<Comp&, std::common_type_t<Q, Lo, Hi> const&, std::common_type_t<Q, Lo, Hi> const&>)
+    noexcept(std::is_nothrow_invocable_v<Comp&, common_unit_t<Q, Lo, Hi> const&, common_unit_t<Q, Lo, Hi> const&>)
 {
-    using result = std::common_type_t<Q, Lo, Hi>;
+    using result = common_unit_t<Q, Lo, Hi>;
     return std::clamp(static_cast<result>(v), static_cast<result>(lo), static_cast<result>(hi), std::forward<Comp>(comp));
 }
 
 // ---------------------------------------------------
 
-template<quantity_like A, quantity_like B>
-    requires detail::same_quantity_family<A, B>
+template<quantity_class A, quantity_class B>
+    requires quantity_family<A, B>
 [[nodiscard]] constexpr std::common_type_t<A, B>
 midpoint(A a, B b) noexcept
 {
     using result = std::common_type_t<A, B>;
-    using common = quantity_traits<result>::value_type;
+    using common = detail::value_type_t<result>;
     return result{std::midpoint(static_cast<common>(a.value), static_cast<common>(b.value))};
 }
 
-template<quantity_like A, quantity_like B, numeric_arithmetic T>
+template<quantity_class A, quantity_class B, numeric_arithmetic T>
     requires
-        detail::same_quantity_family<A, B> &&
-        std::floating_point<typename quantity_traits<std::common_type_t<A, B>>::value_type>
+        quantity_family<A, B> &&
+        std::floating_point<detail::value_type_t<std::common_type_t<A, B>>>
 [[nodiscard]] constexpr std::common_type_t<A, B>
 lerp(A a, B b, T t) noexcept
 {
     using result = std::common_type_t<A, B>;
-    using common = quantity_traits<result>::value_type;
+    using common = detail::value_type_t<result>;
     return result{std::lerp(static_cast<common>(a.value), static_cast<common>(b.value), static_cast<common>(t))};
 }
 
 } // iris::units
 
-template<iris::units::quantity_like Q>
+template<iris::units::quantity_class Q>
 struct std::hash<Q>
 {
     [[nodiscard]] static std::size_t operator()(Q const& q) noexcept
     {
-        return std::hash<typename iris::units::quantity_traits<Q>::value_type>{}(q.value);
+        return std::hash<iris::units::detail::value_type_t<Q>>{}(q.value);
     }
 };
 
-template<iris::units::quantity_like Q, class CharT>
-struct std::formatter<Q, CharT> : std::formatter<typename iris::units::quantity_traits<Q>::value_type, CharT>
+template<iris::units::quantity_class Q, class CharT>
+struct std::formatter<Q, CharT> : std::formatter<iris::units::detail::value_type_t<Q>, CharT>
 {
     auto format(Q const& q, auto& ctx) const
     {
-        return std::formatter<typename iris::units::quantity_traits<Q>::value_type, CharT>::format(q.value, ctx);
+        return std::formatter<iris::units::detail::value_type_t<Q>, CharT>::format(q.value, ctx);
     }
 };
 

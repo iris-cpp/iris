@@ -76,6 +76,75 @@ struct remove_cv<T const volatile>
     using apply = F<T> const volatile;
 };
 
+// -----------------------------------------------------------
+
+namespace detail {
+
+template<class Cand, class T>
+concept dominant_type_candidate_dominates =
+    requires { typename std::common_type_t<T, std::decay_t<Cand>>; } &&
+    std::same_as<std::common_type_t<T, std::decay_t<Cand>>, std::decay_t<Cand>>;
+
+template<class Cand, class... Ts>
+struct dominant_type_candidate
+    : std::bool_constant<(dominant_type_candidate_dominates<Cand, Ts> && ...)>
+{
+    using type = std::decay_t<Cand>;
+};
+
+} // detail
+
+// The type among `Ts...` that dominates all the others, i.e., the `Cand` in `Ts...`
+// such that `std::common_type_t<T, Cand>` is `Cand` for every `T`.
+//
+// The result is always one of `Ts...` and does not depend on their order; no `type`
+// member if no such type exists (e.g. `short` and `char`, whose common type `int` is
+// not among them).
+template<class... Ts>
+struct dominant_type
+{
+    // No `::type`
+};
+template<class... Ts>
+using dominant_type_t = dominant_type<Ts...>::type;
+
+template<class... Ts>
+    requires std::disjunction<detail::dominant_type_candidate<Ts, Ts...>...>::value
+struct dominant_type<Ts...>
+    : std::disjunction<detail::dominant_type_candidate<Ts, Ts...>...>
+{};
+
+// `T` dominates every type in `Ts...`, i.e., `std::common_type_t<U, T>` is `T` for
+// every `U` in `Ts...`.
+//
+// Can be used to constrain the explicitness of conversion or assignment.
+template<class T, class... Ts>
+concept dominant = (detail::dominant_type_candidate_dominates<T, Ts> && ...);
+
+// Denotes `iris::dominant_type<Ts...>` if it exists, otherwise equivalent to `std::common_type`.
+//
+//   `std::common_type_t<float, std::float16_t, std::bfloat16_t>`
+//     -> `float`
+//   `std::common_type_t<std::float16_t, std::bfloat16_t, float>`
+//     -> ill-formed
+//   `iris::symmetric_common_type_t<std::float16_t, std::bfloat16_t, float>`
+//     -> `float` (in any order)
+//
+// Use `iris::dominant_type` instead when the result must be one of `Ts...`.
+template<class... Ts>
+struct symmetric_common_type : std::common_type<Ts...>
+{};
+template<class... Ts>
+using symmetric_common_type_t = symmetric_common_type<Ts...>::type;
+
+template<class... Ts>
+    requires requires {
+        typename dominant_type<Ts...>::type;
+    }
+struct symmetric_common_type<Ts...> : dominant_type<Ts...>
+{};
+
+// -----------------------------------------------------------
 
 template<class... Ts>
 struct type_list
@@ -89,8 +158,6 @@ struct constant_list
     static constexpr std::size_t size = sizeof...(Vals);
 };
 
-template<auto...> using cvoid_t = void;
-
 namespace detail {
 
 template<class Voids>
@@ -100,7 +167,11 @@ template<std::size_t... Voids>
 struct do_pack_indexing<std::index_sequence<Voids...>>
 {
     template<class T>
-    static T select(cvoid_t<Voids>*..., std::type_identity<T>*, ...);
+    static std::type_identity<T> select(
+        decltype(void(Voids), static_cast<void*>(nullptr))...,
+        std::type_identity<T>*,
+        ...
+    );
 };
 
 template<class Voids>
@@ -110,7 +181,11 @@ template<std::size_t... Voids>
 struct do_cpack_indexing<std::index_sequence<Voids...>>
 {
     template<class T, T N>
-    static std::integral_constant<T, N> select(cvoid_t<Voids>*..., std::integral_constant<T, N>*, ...);
+    static std::integral_constant<T, N> select(
+        decltype(void(Voids), static_cast<void*>(nullptr))...,
+        std::integral_constant<T, N>*,
+        ...
+    );
 };
 
 } // detail
@@ -124,7 +199,9 @@ using at_c_t = at_c<I, T>::type;
 
 // Has native pack indexing?
 // Note: GCC 15 emits "sorry, unimplemented: mangling type pack index"
-#if !(defined(__GNUC__) && !defined(__clang__) && __GNUC__ <= 15) && __cpp_pack_indexing >= 202311L
+#if __cpp_pack_indexing >= 202311L && \
+    !(defined(__GNUC__) && !defined(__clang__) && __GNUC__ <= 15) && \
+    !defined(__clang__)
 
 # define IRIS_PACK_INDEXING(I, Ts_ellipsis) Ts_ellipsis[I]
 
@@ -147,7 +224,7 @@ struct pack_indexing
     static_assert(I < sizeof...(Ts));
     using type = decltype(detail::do_pack_indexing<std::make_index_sequence<I>>::select(
         static_cast<std::type_identity<Ts>*>(nullptr)...
-    ));
+    ))::type;
 };
 
 template<std::size_t I, class... Ts>
@@ -175,7 +252,7 @@ struct at_c<I, TT<Ts...>>
     static_assert(I < sizeof...(Ts));
     using type = decltype(detail::do_pack_indexing<std::make_index_sequence<I>>::select(
         static_cast<std::type_identity<Ts>*>(nullptr)...
-    ));
+    ))::type;
 };
 #endif
 

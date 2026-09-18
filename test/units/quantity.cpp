@@ -14,8 +14,8 @@
 #include <type_traits>
 
 //using iris::units::quantity;
-using iris::units::quantity_like;
-using iris::units::quantity_traits;
+using iris::units::quantity_class;
+using iris::units::unit_traits;
 
 template<class A, class B>
 concept has_plus = requires(A a, B b) { a + b; };
@@ -57,7 +57,6 @@ template<class A>
 concept has_increment = requires(A& a) { ++a; a++; --a; a--; };
 
 template<class A, class B>
-// ReSharper disable once CppUseTypeTraitAlias
 concept has_common_type = requires { typename std::common_type<A, B>::type; };
 
 template<class A, class B>
@@ -89,22 +88,22 @@ IRIS_QUANTITY_DEDUCTION_GUIDE(my_quantity);
 
 // ---------------------------------------------------
 
-TEST_CASE("basic type traits")
+TEST_CASE("basic type traits", "[units]")
 {
     STATIC_CHECK(!std::is_constructible_v<iris::units::quantity<int>>); // must be derived
 
-    STATIC_CHECK(quantity_like<my_quantity<int>>);
-    STATIC_CHECK(quantity_like<my_quantity<double>>);
-    STATIC_CHECK(std::same_as<quantity_traits<my_quantity<float>>::value_type, float>);
-    STATIC_CHECK(std::same_as<quantity_traits<my_quantity<float>>::rebind<double>, my_quantity<double>>);
+    STATIC_CHECK(quantity_class<my_quantity<int>>);
+    STATIC_CHECK(quantity_class<my_quantity<double>>);
+    STATIC_CHECK(std::same_as<unit_traits<my_quantity<float>>::value_type, float>);
+    STATIC_CHECK(std::same_as<unit_traits<my_quantity<float>>::rebind<double>, my_quantity<double>>);
 
-    STATIC_CHECK(!quantity_like<int>);
-    STATIC_CHECK(!quantity_like<double>);
-    STATIC_CHECK(!quantity_like<my_quantity<int>*>);
-    STATIC_CHECK(!quantity_like<my_quantity<int> const>);
-    STATIC_CHECK(!quantity_like<my_quantity<int>&>);
+    STATIC_CHECK(!quantity_class<int>);
+    STATIC_CHECK(!quantity_class<double>);
+    STATIC_CHECK(!quantity_class<my_quantity<int>*>);
+    STATIC_CHECK(quantity_class<my_quantity<int> const>);
+    STATIC_CHECK(quantity_class<my_quantity<int>&>);
 
-    STATIC_CHECK(!quantity_like<std::numeric_limits<int>>);
+    STATIC_CHECK(!quantity_class<std::numeric_limits<int>>);
 
     // -------------------------------------------------
 
@@ -537,9 +536,9 @@ IRIS_QUANTITY_DEDUCTION_GUIDE(Count);
 
 TEST_CASE("derived: type traits", "[units][quantity]")
 {
-    STATIC_CHECK(quantity_like<RelativeLength<double>>);
-    STATIC_CHECK(quantity_like<Count<int>>);
-    STATIC_CHECK(std::same_as<quantity_traits<RelativeLength<float>>::rebind<double>, RelativeLength<double>>);
+    STATIC_CHECK(quantity_class<RelativeLength<double>>);
+    STATIC_CHECK(quantity_class<Count<int>>);
+    STATIC_CHECK(std::same_as<unit_traits<RelativeLength<float>>::rebind<double>, RelativeLength<double>>);
     STATIC_CHECK(std::same_as<std::common_type_t<RelativeLength<float>, RelativeLength<double>>, RelativeLength<double>>);
     STATIC_CHECK(std::same_as<std::common_type_t<RelativeLength<double>, RelativeLength<double>>, RelativeLength<double>>);
     STATIC_CHECK(std::same_as<decltype(std::numeric_limits<RelativeLength<double>>::max()), RelativeLength<double>>);

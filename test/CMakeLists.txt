@@ -200,6 +200,7 @@ if(PROJECT_IS_TOP_LEVEL)
             indexed_value
             run_length_sequence
             bitset
+            math
         )
         foreach(test_name IN LISTS IRIS_TEST_IRIS_TESTS)
             iris_define_internal_test(${test_name} ${test_name}.cpp)
@@ -209,7 +210,9 @@ if(PROJECT_IS_TOP_LEVEL)
 
         set(
             IRIS_TEST_UNITS_TESTS
+            concepts
             quantity
+            min_pref_max
         )
         foreach(test_name IN LISTS IRIS_TEST_UNITS_TESTS)
             iris_define_internal_subdir_test(units ${test_name} ${test_name}.cpp)

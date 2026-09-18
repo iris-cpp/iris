@@ -20,7 +20,8 @@ namespace iris {
 namespace detail {
 
 template<bool IsSigned, std::size_t Bytes>
-struct integer_of_size_impl; // undefined
+struct integer_of_size_impl
+{};
 
 template<>
 struct integer_of_size_impl<true, 1>
