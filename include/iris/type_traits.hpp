@@ -158,8 +158,6 @@ struct constant_list
     static constexpr std::size_t size = sizeof...(Vals);
 };
 
-template<auto...> using cvoid_t = void;
-
 namespace detail {
 
 template<class Voids>
@@ -169,7 +167,11 @@ template<std::size_t... Voids>
 struct do_pack_indexing<std::index_sequence<Voids...>>
 {
     template<class T>
-    static T select(cvoid_t<Voids>*..., std::type_identity<T>*, ...);
+    static std::type_identity<T> select(
+        decltype(void(Voids), static_cast<void*>(nullptr))...,
+        std::type_identity<T>*,
+        ...
+    );
 };
 
 template<class Voids>
@@ -179,7 +181,11 @@ template<std::size_t... Voids>
 struct do_cpack_indexing<std::index_sequence<Voids...>>
 {
     template<class T, T N>
-    static std::integral_constant<T, N> select(cvoid_t<Voids>*..., std::integral_constant<T, N>*, ...);
+    static std::integral_constant<T, N> select(
+        decltype(void(Voids), static_cast<void*>(nullptr))...,
+        std::integral_constant<T, N>*,
+        ...
+    );
 };
 
 } // detail
@@ -218,7 +224,7 @@ struct pack_indexing
     static_assert(I < sizeof...(Ts));
     using type = decltype(detail::do_pack_indexing<std::make_index_sequence<I>>::select(
         static_cast<std::type_identity<Ts>*>(nullptr)...
-    ));
+    ))::type;
 };
 
 template<std::size_t I, class... Ts>
@@ -246,7 +252,7 @@ struct at_c<I, TT<Ts...>>
     static_assert(I < sizeof...(Ts));
     using type = decltype(detail::do_pack_indexing<std::make_index_sequence<I>>::select(
         static_cast<std::type_identity<Ts>*>(nullptr)...
-    ));
+    ))::type;
 };
 #endif
 
