@@ -20,6 +20,49 @@
 
 namespace unit_test {
 
+TEST_CASE("EBO")
+{
+    // https://learn.microsoft.com/en-us/cpp/cpp/empty-bases
+
+    struct Empty1 {};
+    STATIC_CHECK(sizeof(Empty1) == 1);
+
+    struct Struct1 { char c; };
+    STATIC_CHECK(sizeof(Struct1) == 1);
+
+    struct Derived1 : Empty1 { char c; };
+    STATIC_CHECK(sizeof(Derived1) == 1);
+
+    struct Empty2 : Empty1 {};
+    struct Derived2 : Empty2 { char c; };
+    STATIC_CHECK(sizeof(Derived2) == 1);
+
+    struct Empty3 {};
+    struct Derived3 : Empty2, Empty3 { char c; };
+    struct Derived4 : Empty2, Empty3 { std::int32_t i; };
+    struct Struct2 : Struct1, Empty1 {};
+    STATIC_CHECK(sizeof(Struct2) == 1);
+
+#if !IRIS_COMPILER_STRICTLY_MSVC
+    STATIC_CHECK(sizeof(Derived3) == 1);
+    STATIC_CHECK(sizeof(Derived4) == 4);
+#endif
+
+    struct IRIS_EBO Derived3_fixed : Empty2, Empty3 { char c; };
+    STATIC_CHECK(sizeof(Derived3_fixed) == 1);
+
+    struct IRIS_EBO Derived4_fixed : Empty2, Empty3 { std::int32_t i; };
+    STATIC_CHECK(sizeof(Derived4_fixed) == 4);
+
+    struct IRIS_EBO Derived5 : Derived4 {};
+#if !IRIS_COMPILER_STRICTLY_MSVC
+    STATIC_CHECK(sizeof(Derived5) == 4);
+#endif
+
+    struct Derived5_fixed : Derived4_fixed {};
+    STATIC_CHECK(sizeof(Derived5_fixed) == 4);
+}
+
 TEST_CASE("pack_indexing")
 {
     STATIC_REQUIRE(std::is_same_v<iris::pack_indexing_t<0, int>, int>);
