@@ -50,7 +50,7 @@ struct char_type_for_impl<CharT>
 } // detail
 
 template<class T>
-using char_type_for = detail::char_type_for_impl<T>::type;
+using char_type_for = detail::char_type_for_impl<std::remove_cvref_t<T>>::type;
 
 } // iris
 
