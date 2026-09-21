@@ -364,21 +364,10 @@ struct is_trivially_swappable : std::conjunction<
 template<> struct is_trivially_swappable<std::byte> : std::true_type {};
 
 template<class T>
-constexpr bool is_trivially_swappable_v = is_trivially_swappable<T>::value;
+inline constexpr bool is_trivially_swappable_v = is_trivially_swappable<T>::value;
 
 
 namespace detail {
-
-// Workaround for MSVC 2026's Intellisense
-template<class To, class From>
-inline constexpr bool reference_converts_from_temporary_workaround_v =
-#if defined(__cpp_lib_reference_from_temporary)
-    std::reference_converts_from_temporary_v<To, From>;
-#elif defined(__has_builtin) && __has_builtin(__reference_converts_from_temporary)
-    __reference_converts_from_temporary(To, From);
-#else
-    true;
-#endif
 
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2026/p0870r8.html
 
@@ -424,7 +413,7 @@ template<class From, class To>
     requires
         std::is_reference_v<To> &&
         (!is_never_narrowing_family<From, To>::value) &&
-        (!reference_converts_from_temporary_workaround_v<To, From>)
+        (!std::reference_converts_from_temporary_v<To, From>)
 struct is_convertible_without_narrowing_dispatch<From, To>
     : std::true_type
 {};
@@ -433,7 +422,7 @@ template<class From, class To>
     requires
         std::is_reference_v<To> &&
         (!is_never_narrowing_family<From, To>::value) &&
-        reference_converts_from_temporary_workaround_v<To, From>
+        std::reference_converts_from_temporary_v<To, From>
 struct is_convertible_without_narrowing_dispatch<From, To>
     : is_convertible_without_narrowing_array_check<
         From,
@@ -536,6 +525,103 @@ struct no_narrowing_resolution<
 // legitimate infinite recursion errors on recursive types.
 template<class T, class... Ts>
 struct no_narrowing_resolution : detail::no_narrowing_resolution<void, T, Ts...> {};
+
+// ----------------------------------------------
+
+template<class T>
+// ReSharper disable once CppFunctionDoesntReturnValue
+[[nodiscard]] T declval_exact() noexcept
+{
+    // ReSharper disable once CppStaticAssertFailure
+    static_assert(false, "declval_exact() must not be odr-used");
+}
+
+template<class T>
+// ReSharper disable once CppFunctionDoesntReturnValue
+[[nodiscard]] T copy_initialize(T) noexcept
+{
+    // ReSharper disable once CppStaticAssertFailure
+    static_assert(false, "copy_initialize() must not be odr-used");
+}
+
+// ----------------------------------------------
+
+namespace detail {
+
+// The conversion part of INVOKE<R>: `To` is cv void, or VAL<From> can be
+// implicitly converted to `To` without binding a reference to a temporary.
+template<class From, class To>
+concept invoke_convertible =
+    std::is_void_v<To> ||
+    requires {
+        iris::copy_initialize<To>(iris::declval_exact<From>());
+        requires !std::reference_converts_from_temporary_v<To, From>;
+    };
+
+} // detail
+
+template<class F, class... Args>
+concept directly_invocable = requires(F&& f, Args&&... args) {
+    typename std::void_t<decltype(static_cast<F&&>(f)(static_cast<Args&&>(args)...))>;
+};
+
+template<class F, class... Args>
+struct directly_invoke_result {};
+
+template<class F, class... Args>
+    requires directly_invocable<F, Args...>
+struct directly_invoke_result<F, Args...>
+{
+    using type = decltype(std::declval<F>()(std::declval<Args>()...));
+};
+template<class F, class... Args>
+using directly_invoke_result_t = directly_invoke_result<F, Args...>::type;
+
+template<class R, class F, class... Args>
+concept directly_invocable_r =
+    directly_invocable<F, Args...> &&
+    detail::invoke_convertible<decltype(std::declval<F>()(std::declval<Args>()...)), R>;
+
+template<class F, class... Args>
+struct is_directly_invocable : std::bool_constant<directly_invocable<F, Args...>> {};
+template<class F, class... Args>
+inline constexpr bool is_directly_invocable_v = is_directly_invocable<F, Args...>::value;
+
+template<class R, class F, class... Args>
+struct is_directly_invocable_r : std::bool_constant<directly_invocable_r<R, F, Args...>> {};
+template<class R, class F, class... Args>
+inline constexpr bool is_directly_invocable_r_v = is_directly_invocable_r<R, F, Args...>::value;
+
+template<class F, class... Args>
+struct is_nothrow_directly_invocable
+    : std::bool_constant<requires(F&& f, Args&&... args) {
+        { static_cast<F&&>(f)(static_cast<Args&&>(args)...) } noexcept;
+    }>
+{};
+template<class F, class... Args>
+inline constexpr bool is_nothrow_directly_invocable_v = is_nothrow_directly_invocable<F, Args...>::value;
+
+template<class R, class F, class... Args>
+struct is_nothrow_directly_invocable_r : std::false_type {};
+
+template<class R, class F, class... Args>
+    requires std::is_void_v<R>
+struct is_nothrow_directly_invocable_r<R, F, Args...>
+    : is_nothrow_directly_invocable<F, Args...>
+{};
+
+template<class R, class F, class... Args>
+    requires
+        (!std::is_void_v<R>) && directly_invocable_r<R, F, Args...> &&
+        requires(F&& f, Args&&... args) {
+            { iris::copy_initialize<R>(static_cast<F&&>(f)(static_cast<Args&&>(args)...)) } noexcept;
+        }
+struct is_nothrow_directly_invocable_r<R, F, Args...>
+    : std::true_type
+{};
+
+template<class R, class F, class... Args>
+inline constexpr bool is_nothrow_directly_invocable_r_v = is_nothrow_directly_invocable_r<R, F, Args...>::value;
 
 } // iris
 

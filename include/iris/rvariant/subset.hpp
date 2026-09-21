@@ -49,7 +49,7 @@ struct is_subset_of<rvariant<Us...>, rvariant<Ts...>>
     : std::conjunction<
         std::disjunction<
             is_in<Us, Ts...>,
-            is_in<Us, unwrap_recursive_type<Ts>...>
+            is_in<Us, unwrap_recursive_t<Ts>...>
         >...
     >
 {};

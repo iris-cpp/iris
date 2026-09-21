@@ -1616,6 +1616,35 @@ TEST_CASE("unwrap_recursive") // not [recursive]
     STATIC_REQUIRE(std::is_same_v<decltype(iris::unwrap_recursive(std::declval<iris::recursive_wrapper<int>&&>())), int&&>);
     STATIC_REQUIRE(std::is_same_v<decltype(iris::unwrap_recursive(std::declval<iris::recursive_wrapper<int> const&>())), int const&>);
     STATIC_REQUIRE(std::is_same_v<decltype(iris::unwrap_recursive(std::declval<iris::recursive_wrapper<int> const&&>())), int const&&>);
+
+    struct Node
+    {
+        int value;
+    };
+    using Wrapped = iris::recursive_wrapper<Node>;
+
+    STATIC_CHECK(std::is_same_v<iris::unwrap_recursive_t<Wrapped>, Node>);
+    STATIC_CHECK(std::is_same_v<iris::unwrap_recursive_t<int>, int>);
+    STATIC_CHECK(std::is_same_v<iris::unwrap_recursive_t<Wrapped>&, Node&>);
+    STATIC_CHECK(std::is_same_v<iris::unwrap_recursive_t<Wrapped> const&, Node const&>);
+    STATIC_CHECK(std::is_same_v<iris::unwrap_recursive_t<Wrapped> const, Node const>);
+
+    STATIC_CHECK(std::is_same_v<iris::unwrap_recursive_t<Wrapped const>, Node const>);
+    STATIC_CHECK(std::is_same_v<iris::unwrap_recursive_t<Wrapped&>, Node&>);
+    STATIC_CHECK(std::is_same_v<iris::unwrap_recursive_t<Wrapped const&>, Node const&>);
+    STATIC_CHECK(std::is_same_v<iris::unwrap_recursive_t<Wrapped&&>, Node&&>);
+    STATIC_CHECK(std::is_same_v<iris::unwrap_recursive_t<Wrapped const&&>, Node const&&>);
+    STATIC_CHECK(std::is_same_v<iris::unwrap_recursive_t<int const&>, int const&>);
+    STATIC_CHECK(std::is_same_v<iris::unwrap_recursive_t<iris::recursive_wrapper<Node const>&>, Node const&>);
+
+    STATIC_CHECK(std::is_same_v<iris::unwrap_recursive_t<Wrapped&>, decltype(iris::unwrap_recursive(std::declval<Wrapped&>()))>);
+    STATIC_CHECK(std::is_same_v<iris::unwrap_recursive_t<Wrapped const&>, decltype(iris::unwrap_recursive(std::declval<Wrapped const&>()))>);
+    STATIC_CHECK(std::is_same_v<iris::unwrap_recursive_t<Wrapped&&>, decltype(iris::unwrap_recursive(std::declval<Wrapped&&>()))>);
+    STATIC_CHECK(std::is_same_v<iris::unwrap_recursive_t<Wrapped const&&>, decltype(iris::unwrap_recursive(std::declval<Wrapped const&&>()))>);
+    STATIC_CHECK(std::is_same_v<iris::unwrap_recursive_t<int&>, decltype(iris::unwrap_recursive(std::declval<int&>()))>);
+    STATIC_CHECK(std::is_same_v<iris::unwrap_recursive_t<int&&>, decltype(iris::unwrap_recursive(std::declval<int&&>()))>);
+
+    STATIC_CHECK(std::is_same_v<iris::unwrap_recursive_t<Wrapped>&&, decltype(iris::unwrap_recursive(std::declval<Wrapped>()))>);
 }
 
 TEST_CASE("maybe_wrapped") // not [recursive]

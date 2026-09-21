@@ -48,7 +48,7 @@ template<class... Ts>
         // Required to work around MSVC bug where it instantiates this function
         // for completely irrelevant call, e.g. `std::cout << "foo"sv << 'c' << std::endl;`
         (sizeof...(Ts) > 0) &&
-        std::conjunction_v<req::ADL_ostreamable<unwrap_recursive_type<Ts>>...>
+        std::conjunction_v<req::ADL_ostreamable<unwrap_recursive_t<Ts>>...>
 std::ostream& operator<<(std::ostream& os, rvariant<Ts...> const& v)
 {
     std::ostream::sentry sentry(os);
@@ -152,7 +152,7 @@ variant_format(Fmts&&... fmts) noexcept
 }
 
 template<class Variant, class... Fmts, class charT = select_char_t<Fmts...>>
-[[nodiscard]] IRIS_CONSTEXPR_UP typename detail::variant_format_for_impl<charT, std::remove_cvref_t<Variant>>::spec_type
+[[nodiscard]] IRIS_CONSTEXPR_UP detail::variant_format_for_impl<charT, std::remove_cvref_t<Variant>>::spec_type
 variant_format_for(Fmts&&... fmts) noexcept
 {
     static_assert(is_ttp_specialization_of_v<std::remove_cvref_t<Variant>, rvariant>);
@@ -183,7 +183,7 @@ struct variant_alts_formattable : std::false_type
 
 template<class charT, class... Ts>
 struct variant_alts_formattable<charT, rvariant<Ts...>>
-    : std::bool_constant<(std::formattable<unwrap_recursive_type<Ts>, charT> && ...)>
+    : std::bool_constant<(std::formattable<unwrap_recursive_t<Ts>, charT> && ...)>
 {};
 
 } // detail
@@ -194,10 +194,10 @@ struct variant_alts_formattable<charT, rvariant<Ts...>>
 namespace std {
 
 template<class... Ts, class charT>
-    requires (std::formattable<::iris::unwrap_recursive_type<Ts>, charT> && ...)
+    requires (std::formattable<::iris::unwrap_recursive_t<Ts>, charT> && ...)
 struct formatter<::iris::rvariant<Ts...>, charT>  // NOLINT(cert-dcl58-cpp)
 {
-    static constexpr typename std::basic_format_parse_context<charT>::const_iterator
+    static constexpr std::basic_format_parse_context<charT>::const_iterator
     parse(std::basic_format_parse_context<charT>& ctx)
     {
         if (ctx.begin() == ctx.end()) return ctx.begin();
@@ -221,7 +221,7 @@ struct formatter<::iris::rvariant<Ts...>, charT>  // NOLINT(cert-dcl58-cpp)
                 } else {
                     return std::format_to(
                         ctx.out(),
-                        ::iris::format_traits<charT>::template brace_full<::iris::unwrap_recursive_type<VT> const&>,
+                        ::iris::format_traits<charT>::template brace_full<::iris::unwrap_recursive_t<VT> const&>,
                         ::iris::unwrap_recursive(alt)
                     );
                 }
@@ -237,7 +237,7 @@ template<class VFormat, class Variant, class charT>
         ::iris::detail::variant_alts_formattable<charT, std::remove_cvref_t<Variant>>::value
 struct formatter<::iris::detail::variant_format_proxy<VFormat, Variant>, charT>  // NOLINT(cert-dcl58-cpp)
 {
-    static constexpr typename std::basic_format_parse_context<charT>::const_iterator
+    static constexpr std::basic_format_parse_context<charT>::const_iterator
     parse(std::basic_format_parse_context<charT>& ctx)
     {
         if (ctx.begin() == ctx.end()) return ctx.begin();
@@ -259,12 +259,12 @@ struct formatter<::iris::detail::variant_format_proxy<VFormat, Variant>, charT> 
                     ::iris::detail::throw_bad_variant_access();
                 } else {
                     static_assert(
-                        std::is_invocable_v<VFormat, std::in_place_type_t<::iris::unwrap_recursive_type<VT>>>,
+                        std::is_invocable_v<VFormat, std::in_place_type_t<::iris::unwrap_recursive_t<VT>>>,
                         "`VFormat` must provide format string for all alternative types."
                     );
                     return std::format_to(
                         ctx.out(),
-                        std::invoke(proxy.v_fmt, std::in_place_type<::iris::unwrap_recursive_type<VT>>),
+                        std::invoke(proxy.v_fmt, std::in_place_type<::iris::unwrap_recursive_t<VT>>),
                         ::iris::unwrap_recursive(alt)
                     );
                 }

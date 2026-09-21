@@ -77,21 +77,39 @@ constexpr bool is_recursive_wrapper_like_v =
     is_ttp_specialization_of_v<T, recursive_wrapper_alloca>;
 
 template<class T>
-struct unwrap_recursive_type_impl
+struct unwrap_recursive_impl
 {
     using type = T;
 };
 
 template<class T>
-struct unwrap_recursive_type_impl<recursive_wrapper<T>>
+struct unwrap_recursive_impl<recursive_wrapper<T>>
 {
     using type = T;
 };
 
 template<class T, class Allocator>
-struct unwrap_recursive_type_impl<recursive_wrapper_alloca<T, Allocator>>
+struct unwrap_recursive_impl<recursive_wrapper_alloca<T, Allocator>>
 {
     using type = T;
+};
+
+template<class T>
+struct unwrap_recursive_impl<T const>
+{
+    using type = unwrap_recursive_impl<T>::type const;
+};
+
+template<class T>
+struct unwrap_recursive_impl<T&>
+{
+    using type = unwrap_recursive_impl<T>::type&;
+};
+
+template<class T>
+struct unwrap_recursive_impl<T&&>
+{
+    using type = unwrap_recursive_impl<T>::type&&;
 };
 
 struct unwrap_recursive_fn
@@ -108,10 +126,10 @@ struct unwrap_recursive_fn
     }
 };
 
-}  // detail
+} // detail
 
 template<class T>
-using unwrap_recursive_type = detail::unwrap_recursive_type_impl<T>::type;
+using unwrap_recursive_t = detail::unwrap_recursive_impl<T>::type;
 
 inline constexpr detail::unwrap_recursive_fn unwrap_recursive{};
 
@@ -126,7 +144,7 @@ template<std::size_t I, class Variant>
 struct variant_alternative<I, Variant const> : std::add_const<variant_alternative_t<I, Variant>> {};
 
 template<std::size_t I, class... Ts>
-struct variant_alternative<I, rvariant<Ts...>> : pack_indexing<I, unwrap_recursive_type<Ts>...>
+struct variant_alternative<I, rvariant<Ts...>> : pack_indexing<I, unwrap_recursive_t<Ts>...>
 {
     static_assert(I < sizeof...(Ts));
 };

@@ -10,11 +10,10 @@
 #include <iris/rvariant/detail/rvariant_fwd.hpp>
 #include <iris/rvariant/variant_helper.hpp>
 
-#include <functional>
 #include <type_traits>
 #include <utility>
 
-#include <cassert>
+#include <cstddef> // IWYU pragma: keep
 
 #if defined(_MSC_VER)
 # define IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN \
@@ -298,15 +297,15 @@ template<std::size_t I, class Storage>
     else if constexpr (I == 29) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
     else if constexpr (I == 30) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
     else if constexpr (I == 31) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I < 64)  return raw_get<I - 32>(
+    else if constexpr (I < 64)  return detail::raw_get<I - 32>(
                                        std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest);
-    else                        return raw_get<I - 64>(
+    else                        return detail::raw_get<I - 64>(
                                        std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest
                                                                      .rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest);
 }
 
 template<std::size_t I, class Storage>
-using raw_get_t = decltype(raw_get<I>(std::declval<Storage>()));
+using raw_get_t = decltype(detail::raw_get<I>(std::declval<Storage>()));
 
 // --------------------------------------------------
 // --------------------------------------------------
