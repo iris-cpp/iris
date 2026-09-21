@@ -230,9 +230,6 @@ endif()
 option(IRIS_CI "Enables intensive testing for CI" OFF)
 if(IRIS_CI)
     target_compile_definitions(iris INTERFACE IRIS_CI=1)
-    if(MSVC)
-        target_compile_options(iris INTERFACE /analyze /analyze:external-)
-    endif()
 endif()
 
 file(
