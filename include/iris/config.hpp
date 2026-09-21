@@ -106,4 +106,10 @@
 # endif
 #endif
 
+// ------------------------------------------------------
+
+#if defined(__RESHARPER__) && !defined(__cpp_lib_reference_from_temporary)
+#define __cpp_lib_reference_from_temporary 202202L
+#endif
+
 #endif

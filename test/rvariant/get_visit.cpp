@@ -796,4 +796,132 @@ TEST_CASE("visit", "[wrapper]")
     }
 }
 
+struct Node
+{
+    int value;
+};
+using Wrapped = iris::recursive_wrapper<Node>;
+using RecursiveVariant = iris::rvariant<Wrapped, int>;
+using MaybeValuelessVariant = iris::rvariant<int, std::string>;
+
+struct NothrowVisitor
+{
+    int operator()(Node const&) const noexcept { return 0; }
+    int operator()(int const&) const noexcept { return 1; }
+};
+
+struct ThrowingVisitor
+{
+    int operator()(Node const&) const { return 0; }
+    int operator()(int const&) const noexcept { return 1; }
+};
+
+struct UnwrapSensitiveVisitor
+{
+    template<class T>
+    int operator()(T const&) const noexcept(std::is_same_v<T, Node> || std::is_same_v<T, int>) { return 0; }
+};
+
+struct BinaryNothrowVisitor
+{
+    template<class T, class U>
+    int operator()(T const&, U const&) const noexcept { return 0; }
+};
+
+struct NonMovable
+{
+    explicit NonMovable(int value) noexcept : value(value) {}
+    NonMovable(NonMovable const&) = delete;
+    NonMovable(NonMovable&&) = delete;
+
+    int value;
+};
+
+struct NonMovableVisitor
+{
+    template<class T>
+    NonMovable operator()(T const&) const noexcept { return NonMovable{42}; }
+};
+
+struct ByValueVisitor
+{
+    template<class T>
+    int operator()(T const&) const noexcept { return 42; }
+};
+
+struct ByReferenceVisitor
+{
+    template<class T>
+    int const& operator()(T const&) const noexcept
+    {
+        static constexpr int value = 42;
+        return value;
+    }
+};
+
+struct ThrowingEq
+{
+    friend bool operator==(ThrowingEq const&, ThrowingEq const&) { return true; }
+    friend std::strong_ordering operator<=>(ThrowingEq const&, ThrowingEq const&) { return std::strong_ordering::equal; }
+};
+
+TEST_CASE("visit (noexcept)")
+{
+    STATIC_CHECK(noexcept(iris::visit(NothrowVisitor{}, std::declval<RecursiveVariant&>())));
+    STATIC_CHECK(noexcept(iris::visit(NothrowVisitor{}, std::declval<RecursiveVariant const&>())));
+    STATIC_CHECK(noexcept(iris::visit(NothrowVisitor{}, std::declval<RecursiveVariant>())));
+    STATIC_CHECK(noexcept(iris::visit(NothrowVisitor{}, std::declval<RecursiveVariant const>())));
+    STATIC_CHECK(noexcept(iris::visit(UnwrapSensitiveVisitor{}, std::declval<RecursiveVariant&>())));
+    STATIC_CHECK(noexcept(iris::visit(UnwrapSensitiveVisitor{}, std::declval<RecursiveVariant>())));
+    STATIC_CHECK(!noexcept(iris::visit(ThrowingVisitor{}, std::declval<RecursiveVariant&>())));
+
+    STATIC_CHECK(noexcept(iris::visit<int>(NothrowVisitor{}, std::declval<RecursiveVariant&>())));
+    STATIC_CHECK(noexcept(iris::visit<void>(NothrowVisitor{}, std::declval<RecursiveVariant&>())));
+    STATIC_CHECK(!noexcept(iris::visit<int>(ThrowingVisitor{}, std::declval<RecursiveVariant&>())));
+
+    STATIC_CHECK(noexcept(std::declval<RecursiveVariant&>().visit(NothrowVisitor{})));
+    STATIC_CHECK(!noexcept(std::declval<RecursiveVariant&>().visit(ThrowingVisitor{})));
+
+    STATIC_CHECK(noexcept(iris::visit(BinaryNothrowVisitor{}, std::declval<RecursiveVariant&>(), std::declval<RecursiveVariant>())));
+
+    STATIC_CHECK(!noexcept(iris::visit(ByValueVisitor{}, std::declval<MaybeValuelessVariant&>())));
+}
+
+TEST_CASE("visit: return type conversion")
+{
+    RecursiveVariant const v{Node{1}};
+
+    STATIC_CHECK(std::is_void_v<decltype(iris::visit<void>(ByValueVisitor{}, v))>);
+    STATIC_CHECK(std::is_void_v<decltype(iris::visit<void const>(ByValueVisitor{}, v))>);
+    iris::visit<void>(ByValueVisitor{}, v);
+    v.visit<void>(ByValueVisitor{});
+
+    NonMovable const by_visit = iris::visit(NonMovableVisitor{}, v);
+    CHECK(by_visit.value == 42);
+    NonMovable const by_visit_r = iris::visit<NonMovable>(NonMovableVisitor{}, v);
+    CHECK(by_visit_r.value == 42);
+
+    CHECK(iris::visit<long>(ByValueVisitor{}, v) == 42L);
+    CHECK(iris::visit<int const&>(ByReferenceVisitor{}, v) == 42);
+}
+
+TEST_CASE("relops noexcept")
+{
+    using Nothrow = iris::rvariant<int, double>;
+    using Throwing = iris::rvariant<int, ThrowingEq>;
+
+    STATIC_CHECK(noexcept(std::declval<Nothrow const&>() == std::declval<Nothrow const&>()));
+    STATIC_CHECK(noexcept(std::declval<Nothrow const&>() != std::declval<Nothrow const&>()));
+    STATIC_CHECK(noexcept(std::declval<Nothrow const&>() < std::declval<Nothrow const&>()));
+    STATIC_CHECK(noexcept(std::declval<Nothrow const&>() <=> std::declval<Nothrow const&>()));
+
+    STATIC_CHECK(!noexcept(std::declval<Throwing const&>() == std::declval<Throwing const&>()));
+    STATIC_CHECK(!noexcept(std::declval<Throwing const&>() <=> std::declval<Throwing const&>()));
+
+    CHECK(Nothrow{1} == Nothrow{1});
+    CHECK(Nothrow{1} != Nothrow{2.0});
+    CHECK(Nothrow{1} < Nothrow{2});
+    CHECK(((Nothrow{1} <=> Nothrow{1}) == 0));
+}
+
 } // unit_test

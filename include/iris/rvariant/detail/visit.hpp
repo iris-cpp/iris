@@ -20,7 +20,7 @@
 #include <type_traits>
 
 #include <cstddef>
-
+#include <cassert>
 
 namespace iris {
 
@@ -71,11 +71,10 @@ using raw_visit_result_t = decltype(std::declval<Visitor>()(
 template<std::size_t I, class Visitor, class Storage>
 struct raw_visit_noexcept
 {
-    template<class Storage_>
     struct lazy_invoke
     {
-        static constexpr std::size_t RealI = detail::valueless_unbias<Storage_>(I);
-        using type = std::is_nothrow_invocable<
+        static constexpr std::size_t RealI = detail::valueless_unbias<Storage>(I);
+        using type = is_nothrow_directly_invocable<
             Visitor,
             std::in_place_index_t<RealI>,
             raw_get_t<RealI, Storage>
@@ -84,12 +83,12 @@ struct raw_visit_noexcept
 
     static constexpr bool value = std::conditional_t<
         !std::remove_cvref_t<Storage>::never_valueless && I == 0,
-        std::type_identity<std::is_nothrow_invocable<
+        std::type_identity<is_nothrow_directly_invocable<
             Visitor,
             std::in_place_index_t<std::variant_npos>,
-            decltype(std::forward_like<Storage>(std::declval<valueless_t>()))
+            Storage
         >>,
-        lazy_invoke<Storage>
+        lazy_invoke
     >::type::value;
 };
 
@@ -109,11 +108,11 @@ do_raw_visit(Visitor&& vis, Storage&& storage)  // NOLINT(cppcoreguidelines-rval
     noexcept(raw_visit_noexcept<I, Visitor, Storage>::value)
 {
     if constexpr (!std::remove_cvref_t<Storage>::never_valueless && I == 0) {
-        return std::invoke(std::forward<Visitor>(vis), std::in_place_index<std::variant_npos>, std::forward<Storage>(storage));
+        return std::forward<Visitor>(vis)(std::in_place_index<std::variant_npos>, std::forward<Storage>(storage));
 
     } else {
         constexpr std::size_t RealI = valueless_unbias<Storage>(I);
-        return std::invoke(std::forward<Visitor>(vis), std::in_place_index<RealI>, raw_get<RealI>(std::forward<Storage>(storage)));
+        return std::forward<Visitor>(vis)(std::in_place_index<RealI>, raw_get<RealI>(std::forward<Storage>(storage)));
     }
 }
 
@@ -171,7 +170,7 @@ struct raw_visit_dispatch<NeverValueless, -1>
     {
         constexpr auto const& table = raw_visit_table<Visitor, Storage>::table;
         auto const& f = table[i];
-        return std::invoke(f, std::forward<Visitor>(vis), std::forward<Storage>(storage));
+        return f(std::forward<Visitor>(vis), std::forward<Storage>(storage));
     }
 };
 
@@ -238,7 +237,9 @@ raw_visit(Variant&& v, Visitor&& vis)  // NOLINT(cppcoreguidelines-missing-std-f
     noexcept(raw_visit_noexcept_all<Visitor, forward_storage_t<Variant>>)
 {
     constexpr std::size_t N = detail::valueless_bias<Variant>(iris::variant_size_v<std::remove_reference_t<Variant>>);
-    return raw_visit_dispatch<std::remove_cvref_t<Variant>::never_valueless, visit_strategy<N>>::template apply<N>(
+    return raw_visit_dispatch<std::remove_cvref_t<Variant>::never_valueless, visit_strategy<N>>::template apply<
+        N, Visitor, forward_storage_t<Variant>
+    >(
         detail::valueless_bias<Variant>(v.index_),
         std::forward<Visitor>(vis),
         detail::forward_storage<Variant>(v)
@@ -251,7 +252,9 @@ raw_visit_i(std::size_t const biased_i, Variant&& v, Visitor&& vis)  // NOLINT(c
     noexcept(raw_visit_noexcept_all<Visitor, forward_storage_t<Variant>>)
 {
     constexpr std::size_t N = detail::valueless_bias<Variant>(iris::variant_size_v<std::remove_reference_t<Variant>>);
-    return raw_visit_dispatch<std::remove_cvref_t<Variant>::never_valueless, visit_strategy<N>>::template apply<N>(
+    return raw_visit_dispatch<std::remove_cvref_t<Variant>::never_valueless, visit_strategy<N>>::template apply<
+        N, Visitor, forward_storage_t<Variant>
+    >(
         biased_i,
         std::forward<Visitor>(vis),
         detail::forward_storage<Variant>(v)
@@ -261,20 +264,11 @@ raw_visit_i(std::size_t const biased_i, Variant&& v, Visitor&& vis)  // NOLINT(c
 
 // --------------------------------------------------
 
-// `std::invoke_result_t` MUST NOT be used here due to its side effects:
-// <https://eel.is/c++draft/meta.trans.other#tab:meta.trans.other-row-11-column-2-note-2>
-// In the case of `variant`, this is not a theoretical concern:
-// it has observable consequences where `visit(...)` may be incorrectly
-// instantiated during the invocation of `visit<R>(...)`.
-// This likely explains why [variant.visit](https://eel.is/c++draft/variant.visit#6)
-// explicitly requires using `decltype(e(m))` instead of `std::invoke_result_t`.
-// Also, we can't wrap this into a `struct` as it becomes not SFINAE-friendly.
-
 template<class Visitor, class... Variants>
-using visit_result_t = decltype(std::invoke( // If you see an error here, your `T0` is not eligible for the `Visitor`.
-    std::declval<Visitor>(),
-    unwrap_recursive(detail::raw_get<0>(forward_storage<Variants>(std::declval<Variants>())))...
-));
+using visit_result_t = std::invoke_result_t< // If you see an error here, your `T0` is not eligible for the `Visitor`.
+    Visitor,
+    decltype(unwrap_recursive(detail::raw_get<0>(detail::forward_storage<Variants>(std::declval<Variants>()))))...
+>;
 
 template<class T0R, class Visitor, class ArgsList, class... Variants>
 struct visit_check_impl;
@@ -284,19 +278,13 @@ struct visit_check_impl<T0R, Visitor, type_list<Args...>>
 {
     static constexpr bool accepts_all_alternatives = std::is_invocable_v<Visitor, Args...>;
 
-    template<class Visitor_, class... Args_>
-    struct lazy_invoke
-    {
-        using type = decltype(std::invoke(std::declval<Visitor_>(), std::declval<Args_>()...));
-    };
-
     // In case of `accepts_all_alternatives == false`, this
     // intentionally reports false-positive `true` to avoid
     // two `static_assert` errors.
     static constexpr bool same_return_type = std::is_same_v<
         typename std::conditional_t<
             accepts_all_alternatives,
-            lazy_invoke<Visitor, Args...>,
+            std::invoke_result<Visitor, Args...>,
             std::type_identity<T0R>
         >::type,
         T0R
@@ -308,16 +296,16 @@ struct visit_check_impl<T0R, Visitor, type_list<Args...>>
 
 template<class T0R, class Visitor, class... Args, class... Ts, class... Rest>
 struct visit_check_impl<T0R, Visitor, type_list<Args...>, rvariant<Ts...>&, Rest...>
-    : std::conjunction<visit_check_impl<T0R, Visitor, type_list<Args..., unwrap_recursive_type<Ts>&>, Rest...>...> {};
+    : std::conjunction<visit_check_impl<T0R, Visitor, type_list<Args..., unwrap_recursive_t<Ts>&>, Rest...>...> {};
 template<class T0R, class Visitor, class... Args, class... Ts, class... Rest>
 struct visit_check_impl<T0R, Visitor, type_list<Args...>, rvariant<Ts...> const&, Rest...>
-    : std::conjunction<visit_check_impl<T0R, Visitor, type_list<Args..., unwrap_recursive_type<Ts> const&>, Rest...>...> {};
+    : std::conjunction<visit_check_impl<T0R, Visitor, type_list<Args..., unwrap_recursive_t<Ts> const&>, Rest...>...> {};
 template<class T0R, class Visitor, class... Args, class... Ts, class... Rest>
 struct visit_check_impl<T0R, Visitor, type_list<Args...>, rvariant<Ts...>&&, Rest...>
-    : std::conjunction<visit_check_impl<T0R, Visitor, type_list<Args..., unwrap_recursive_type<Ts>>, Rest...>...> {};
+    : std::conjunction<visit_check_impl<T0R, Visitor, type_list<Args..., unwrap_recursive_t<Ts>>, Rest...>...> {};
 template<class T0R, class Visitor, class... Args, class... Ts, class... Rest>
 struct visit_check_impl<T0R, Visitor, type_list<Args...>, rvariant<Ts...> const&&, Rest...>
-    : std::conjunction<visit_check_impl<T0R, Visitor, type_list<Args..., unwrap_recursive_type<Ts> const>, Rest...>...> {};
+    : std::conjunction<visit_check_impl<T0R, Visitor, type_list<Args..., unwrap_recursive_t<Ts> const>, Rest...>...> {};
 
 template<class T0R, class Visitor, class... Variants>
 using visit_check = visit_check_impl<T0R, Visitor, type_list<>, Variants...>;
@@ -334,20 +322,13 @@ struct visit_R_check_impl<R, Visitor, type_list<Args...>>
     // mutually exclusive in order to provide better errors.
     static constexpr bool accepts_all_alternatives = std::is_invocable_v<Visitor, Args...>;
 
-    template<class Visitor_, class... Args_>
-    struct lazy_invoke
-    {
-        // This is NOT `std::invoke_r`; we need the plain type for conversion check
-        using type = decltype(std::invoke(std::declval<Visitor_>(), std::declval<Args_>()...));
-    };
-
     // In case of `accepts_all_alternatives == false`, this
     // intentionally reports false-positive `true` to avoid
     // two `static_assert` errors.
-    static constexpr bool return_type_convertible_to_R = std::is_convertible_v<
+    static constexpr bool return_type_convertible_to_R = iris::detail::invoke_convertible<
         typename std::conditional_t<
             accepts_all_alternatives,
-            lazy_invoke<Visitor, Args...>,
+            std::invoke_result<Visitor, Args...>,
             std::type_identity<R>
         >::type,
         R
@@ -359,16 +340,16 @@ struct visit_R_check_impl<R, Visitor, type_list<Args...>>
 
 template<class R, class Visitor, class... Args, class... Ts, class... Rest>
 struct visit_R_check_impl<R, Visitor, type_list<Args...>, rvariant<Ts...>&, Rest...>
-    : std::conjunction<visit_R_check_impl<R, Visitor, type_list<Args..., unwrap_recursive_type<Ts>&>, Rest...>...> {};
+    : std::conjunction<visit_R_check_impl<R, Visitor, type_list<Args..., unwrap_recursive_t<Ts>&>, Rest...>...> {};
 template<class R, class Visitor, class... Args, class... Ts, class... Rest>
 struct visit_R_check_impl<R, Visitor, type_list<Args...>, rvariant<Ts...> const&, Rest...>
-    : std::conjunction<visit_R_check_impl<R, Visitor, type_list<Args..., unwrap_recursive_type<Ts> const&>, Rest...>...> {};
+    : std::conjunction<visit_R_check_impl<R, Visitor, type_list<Args..., unwrap_recursive_t<Ts> const&>, Rest...>...> {};
 template<class R, class Visitor, class... Args, class... Ts, class... Rest>
 struct visit_R_check_impl<R, Visitor, type_list<Args...>, rvariant<Ts...>&&, Rest...>
-    : std::conjunction<visit_R_check_impl<R, Visitor, type_list<Args..., unwrap_recursive_type<Ts>>, Rest...>...> {};
+    : std::conjunction<visit_R_check_impl<R, Visitor, type_list<Args..., unwrap_recursive_t<Ts>>, Rest...>...> {};
 template<class R, class Visitor, class... Args, class... Ts, class... Rest>
 struct visit_R_check_impl<R, Visitor, type_list<Args...>, rvariant<Ts...> const&&, Rest...>
-    : std::conjunction<visit_R_check_impl<R, Visitor, type_list<Args..., unwrap_recursive_type<Ts> const>, Rest...>...> {};
+    : std::conjunction<visit_R_check_impl<R, Visitor, type_list<Args..., unwrap_recursive_t<Ts> const>, Rest...>...> {};
 
 template<class R, class Visitor, class... Variants>
 using visit_R_check = visit_R_check_impl<R, Visitor, type_list<>, Variants...>;
@@ -383,14 +364,13 @@ template<class R, std::size_t... Is, class Visitor, class... Storage>
 struct multi_visit_noexcept<R, std::index_sequence<Is...>, Visitor, Storage...>
 {
 private:
-    template<class... Storage_>
     struct lazy_invoke
     {
         using type = std::is_nothrow_invocable_r<
             R,
             Visitor,
-            unwrap_recursive_type<
-                detail::raw_get_t<detail::valueless_unbias<Storage_>(Is), Storage_>
+            unwrap_recursive_t<
+                detail::raw_get_t<detail::valueless_unbias<Storage>(Is), Storage>
             >...
         >;
     };
@@ -404,7 +384,7 @@ public:
             >...
         >,
         std::type_identity<std::bool_constant<false>>, // throw std::bad_variant_access{};
-        lazy_invoke<Storage...>
+        lazy_invoke
     >::type::value;
 };
 
@@ -449,7 +429,8 @@ struct visit_table<
     Storage...
 >
 {
-    using function_type = R(*)(Visitor&&, Storage&&...);
+    using function_type = R(*)(Visitor&&, Storage&&...)
+        noexcept(multi_visit_noexcept<R, type_list<OverloadSeq...>, Visitor, Storage...>::value);
 
     static constexpr function_type table[] = {
         &multi_visitor<OverloadSeq>::template apply<R, Visitor, Storage...>...
@@ -468,7 +449,7 @@ struct visit_dispatch<-1>
     {
         constexpr auto const& table = visit_table<R, OverloadSeq, Visitor, Storage...>::table;
         auto const& f = table[flat_i];
-        return std::invoke_r<R>(f, std::forward<Visitor>(vis), std::forward<Storage>(storage)...);
+        return f(std::forward<Visitor>(vis), std::forward<Storage>(storage)...);
     }
 };
 
@@ -588,7 +569,9 @@ struct visit_impl<
             std::remove_cvref_t<as_variant_t<Variants>>::never_valueless...
         >::get(vars.index_...);
 
-        return visit_dispatch<visit_strategy<OverloadSeq::size>>::template apply<R, OverloadSeq>(
+        return visit_dispatch<visit_strategy<OverloadSeq::size>>::template apply<
+            R, OverloadSeq, Visitor, forward_storage_t<as_variant_t<Variants>>...
+        >(
             flat_i, std::forward<Visitor>(vis), forward_storage<as_variant_t<Variants>>(vars)...
         );
     }

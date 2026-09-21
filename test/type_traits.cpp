@@ -448,28 +448,24 @@ TEST_CASE("is_convertible_without_narrowing: class types with conversion")
         operator double();
     };
     STATIC_CHECK(!iris::is_convertible_without_narrowing<double, float>::value);
+    // ReSharper disable once CppStaticAssertFailure
     STATIC_CHECK(!iris::is_convertible_without_narrowing<convertible_to_double, float>::value);
 }
 
 
 TEST_CASE("is_convertible_without_narrowing: class types with conversion operator")
 {
-    // Implicit conversion operator
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<implicit_conversion_op, int>);
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<int, implicit_conversion_op>);
 
-    // Explicit conversion operator: is_convertible is false
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<explicit_conversion_op, int>);
 }
 
 TEST_CASE("is_convertible_without_narrowing: class types inheritance")
 {
-    // Derived to base (by value): implicitly convertible
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<derived, base>);
-    // Base to derived: not implicitly convertible
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<base, derived>);
 
-    // Derived& to base: implicitly convertible
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<derived&, base>);
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<derived const&, base>);
 }
@@ -593,7 +589,7 @@ TEST_CASE("is_convertible_without_narrowing: function pointers")
     // Function pointer to bool: narrowing
     STATIC_CHECK(!iris::is_convertible_without_narrowing_v<fp, bool>);
 
-    // Function pointer to void*: not allowe per standard, but MSVC accepts this conversion
+    // Function pointer to void*: not allowed as per standard, but MSVC accepts this conversion
     // STATIC_CHECK(!iris::is_convertible_without_narrowing_v<fp, void*>);
 }
 
@@ -616,7 +612,6 @@ TEST_CASE("is_convertible_without_narrowing: array and function types")
     STATIC_CHECK(iris::is_convertible_without_narrowing_v<fn, fnp>);
 }
 
-
 TEST_CASE("specialization_of")
 {
     STATIC_CHECK(iris::is_ttp_specialization_of_v<tuple<>, tuple>);
@@ -634,4 +629,294 @@ TEST_CASE("specialization_of")
     STATIC_CHECK(!iris::is_ctp_specialization_of_v<n_tuple<>, n_list>);
     STATIC_CHECK(!iris::is_ctp_specialization_of_v<n_tuple<0>, n_list>);
     STATIC_CHECK(!iris::is_ctp_specialization_of_v<n_tuple<0, 1>, n_list>);
+}
+
+
+struct Incomplete;
+
+struct NonMovable
+{
+    NonMovable(NonMovable const&) = delete;
+    NonMovable(NonMovable&&) = delete;
+};
+
+struct ThrowingMove
+{
+    ThrowingMove(ThrowingMove&&) noexcept(false);
+};
+
+struct ThrowingConv
+{
+    ThrowingConv(int);
+};
+
+struct NothrowConv
+{
+    NothrowConv(int) noexcept;
+};
+
+struct ExplicitConv
+{
+    explicit ExplicitConv(int);
+};
+
+struct ThrowingDtor
+{
+    ~ThrowingDtor() noexcept(false);
+};
+
+struct NoDtor
+{
+    ~NoDtor() = delete;
+};
+
+// Hard error when instantiated
+template<class T>
+struct Poison
+{
+    static_assert(sizeof(T) == 0, "Poison<T> must not be instantiated");
+    T value;
+};
+
+struct WithMembers
+{
+    [[maybe_unused]] int data;
+    [[maybe_unused]] int function() const;
+};
+
+struct NonConstCallable
+{
+    void operator()();
+};
+
+struct LvalueOnlyCallable
+{
+    void operator()() &;
+};
+
+struct RvalueOnlyCallable
+{
+    void operator()() &&;
+};
+
+struct GenericCallable
+{
+    template<class T>
+    T operator()(T const&) const noexcept;
+};
+
+template<class From, class To>
+concept copy_initializable_from_exact = requires {
+    iris::copy_initialize<To>(iris::declval_exact<From>());
+};
+
+template<class... Ts>
+concept has_directly_invoke_result = requires {
+    typename iris::directly_invoke_result<Ts...>::type;
+};
+
+template<class T>
+using declval_exact_t = decltype(iris::declval_exact<T>());
+
+TEST_CASE("declval_exact", "[type_traits]")
+{
+    STATIC_CHECK(std::same_as<decltype(iris::declval_exact<int&>()), int&>);
+    STATIC_CHECK(std::same_as<decltype(iris::declval_exact<int const&>()), int const&>);
+    STATIC_CHECK(std::same_as<decltype(iris::declval_exact<int&&>()), int&&>);
+    STATIC_CHECK(std::same_as<decltype(iris::declval_exact<void>()), void>);
+
+    STATIC_CHECK(std::same_as<decltype(iris::declval_exact<int>()), int>);
+    STATIC_CHECK(std::same_as<decltype(iris::declval_exact<NonMovable>()), NonMovable>);
+    STATIC_CHECK(std::same_as<declval_exact_t<Incomplete>, Incomplete>);
+    STATIC_CHECK(std::same_as<decltype(std::declval<int>()), int&&>);
+
+    STATIC_CHECK(noexcept(iris::declval_exact<ThrowingMove>()));
+    STATIC_CHECK(noexcept(iris::copy_initialize<int>(0)));
+
+    STATIC_CHECK(copy_initializable_from_exact<NonMovable, NonMovable>);
+    STATIC_CHECK(!copy_initializable_from_exact<NonMovable&&, NonMovable>);
+    STATIC_CHECK(!std::is_convertible_v<NonMovable, NonMovable>);
+
+    STATIC_CHECK(copy_initializable_from_exact<int, ThrowingConv>);
+    STATIC_CHECK(!copy_initializable_from_exact<int, ExplicitConv>);
+    STATIC_CHECK(!copy_initializable_from_exact<int, void>);
+    STATIC_CHECK(!copy_initializable_from_exact<void, int>);
+    STATIC_CHECK(!copy_initializable_from_exact<int, int[3]>);
+
+    STATIC_CHECK(noexcept(iris::copy_initialize<NothrowConv>(iris::declval_exact<int>())));
+    STATIC_CHECK(!noexcept(iris::copy_initialize<ThrowingConv>(iris::declval_exact<int>())));
+    STATIC_CHECK(noexcept(iris::copy_initialize<ThrowingMove>(iris::declval_exact<ThrowingMove>())));
+    // ReSharper disable once CppStaticAssertFailure
+    STATIC_CHECK(!noexcept(iris::copy_initialize<ThrowingMove>(iris::declval_exact<ThrowingMove&&>())));
+    // ReSharper disable once CppStaticAssertFailure
+    STATIC_CHECK(!noexcept(iris::copy_initialize<ThrowingDtor>(iris::declval_exact<ThrowingDtor>())));
+}
+
+TEST_CASE("invoke_convertible", "[type_traits]")
+{
+    STATIC_CHECK(iris::detail::invoke_convertible<int, void>);
+    STATIC_CHECK(iris::detail::invoke_convertible<int, void const>);
+    STATIC_CHECK(iris::detail::invoke_convertible<void, void>);
+    STATIC_CHECK(!iris::detail::invoke_convertible<void, int>);
+
+    STATIC_CHECK(iris::detail::invoke_convertible<Incomplete, void>);
+    STATIC_CHECK(iris::detail::invoke_convertible<Poison<int>, void>);
+    STATIC_CHECK(!iris::detail::invoke_convertible<Incomplete, int>);
+
+    STATIC_CHECK(iris::detail::invoke_convertible<NonMovable, NonMovable>);
+    STATIC_CHECK(!iris::detail::invoke_convertible<NonMovable&&, NonMovable>);
+    // ReSharper disable once CppStaticAssertFailure
+    STATIC_CHECK(!iris::detail::invoke_convertible<NoDtor, NoDtor>);
+
+    STATIC_CHECK(iris::detail::invoke_convertible<int, long>);
+    STATIC_CHECK(iris::detail::invoke_convertible<int, ThrowingConv>);
+    STATIC_CHECK(!iris::detail::invoke_convertible<int, ExplicitConv>);
+    STATIC_CHECK(!iris::detail::invoke_convertible<int, int*>);
+    STATIC_CHECK(iris::detail::invoke_convertible<void(&)(), void(*)()>);
+
+    STATIC_CHECK(!iris::detail::invoke_convertible<int, int const&>);
+    STATIC_CHECK(!iris::detail::invoke_convertible<int, int&&>);
+    STATIC_CHECK(!iris::detail::invoke_convertible<int&, long const&>);
+    STATIC_CHECK(iris::detail::invoke_convertible<int&, int const&>);
+    STATIC_CHECK(iris::detail::invoke_convertible<int&&, int&&>);
+    STATIC_CHECK(iris::detail::invoke_convertible<int&&, int const&>);
+    STATIC_CHECK(!iris::detail::invoke_convertible<int const&, int&>);
+}
+
+TEST_CASE("directly_invocable", "[type_traits]")
+{
+    STATIC_CHECK(iris::directly_invocable<int(*)()>);
+    STATIC_CHECK(iris::directly_invocable<int(&)()>);
+    STATIC_CHECK(iris::directly_invocable<int()>);
+    STATIC_CHECK(iris::directly_invocable<int(*)(int), int>);
+    STATIC_CHECK(!iris::directly_invocable<int(*)(int)>);
+    STATIC_CHECK(!iris::directly_invocable<int(*)(int), int, int>);
+    STATIC_CHECK(!iris::directly_invocable<int(*)(int), void>);
+    STATIC_CHECK(!iris::directly_invocable<int>);
+    STATIC_CHECK(!iris::directly_invocable<void>);
+    STATIC_CHECK(!iris::directly_invocable<int() const>);
+
+    STATIC_CHECK(iris::directly_invocable<NonConstCallable&>);
+    STATIC_CHECK(iris::directly_invocable<NonConstCallable>);
+    STATIC_CHECK(!iris::directly_invocable<NonConstCallable const&>);
+    STATIC_CHECK(iris::directly_invocable<LvalueOnlyCallable&>);
+    STATIC_CHECK(!iris::directly_invocable<LvalueOnlyCallable>);
+    STATIC_CHECK(!iris::directly_invocable<RvalueOnlyCallable&>);
+    STATIC_CHECK(iris::directly_invocable<RvalueOnlyCallable>);
+    STATIC_CHECK(iris::directly_invocable<RvalueOnlyCallable&&>);
+
+    STATIC_CHECK(iris::directly_invocable<void(*)(int&), int&>);
+    STATIC_CHECK(!iris::directly_invocable<void(*)(int&), int>);
+    STATIC_CHECK(!iris::directly_invocable<void(*)(int&), int const&>);
+    STATIC_CHECK(iris::directly_invocable<void(*)(int&&), int>);
+    STATIC_CHECK(iris::directly_invocable<void(*)(int&&), int&&>);
+    STATIC_CHECK(!iris::directly_invocable<void(*)(int&&), int&>);
+    STATIC_CHECK(iris::directly_invocable<void(*)(int const&), int>);
+    // ReSharper disable once CppStaticAssertFailure
+    STATIC_CHECK(!iris::directly_invocable<void(*)(NonMovable), NonMovable>);
+
+    STATIC_CHECK(std::invocable<int WithMembers::*, WithMembers&>);
+    STATIC_CHECK(!iris::directly_invocable<int WithMembers::*, WithMembers&>);
+    STATIC_CHECK(std::invocable<int (WithMembers::*)() const, WithMembers const&>);
+    STATIC_CHECK(!iris::directly_invocable<int (WithMembers::*)() const, WithMembers const&>);
+
+    STATIC_CHECK(iris::directly_invocable<Incomplete(*)()>);
+    STATIC_CHECK(iris::directly_invocable<NoDtor(*)()>);
+    STATIC_CHECK(iris::directly_invocable<Poison<int>(*)()>);
+
+    STATIC_CHECK(iris::is_directly_invocable_v<int(*)()>);
+    STATIC_CHECK(!iris::is_directly_invocable_v<int>);
+    STATIC_CHECK(iris::is_directly_invocable<GenericCallable const&, int>::value);
+
+    STATIC_CHECK(std::same_as<iris::directly_invoke_result_t<int(*)()>, int>);
+    STATIC_CHECK(std::same_as<iris::directly_invoke_result_t<int&(*)()>, int&>);
+    STATIC_CHECK(std::same_as<iris::directly_invoke_result_t<int&&(*)()>, int&&>);
+    STATIC_CHECK(std::same_as<iris::directly_invoke_result_t<void(*)()>, void>);
+    STATIC_CHECK(std::same_as<iris::directly_invoke_result_t<GenericCallable const&, long>, long>);
+    STATIC_CHECK(std::same_as<iris::directly_invoke_result_t<Incomplete(*)()>, Incomplete>);
+    STATIC_CHECK(std::same_as<iris::directly_invoke_result_t<Poison<int>(*)()>, Poison<int>>);
+
+    // SFINAE-friendly
+    STATIC_CHECK(has_directly_invoke_result<int(*)()>);
+    STATIC_CHECK(!has_directly_invoke_result<int>);
+    STATIC_CHECK(!has_directly_invoke_result<int(*)(), int>);
+    STATIC_CHECK(!has_directly_invoke_result<int WithMembers::*, WithMembers&>);
+}
+
+TEST_CASE("directly_invocable_r", "[type_traits]")
+{
+    STATIC_CHECK(iris::directly_invocable_r<void, int(*)()>);
+    STATIC_CHECK(iris::directly_invocable_r<void const, NonMovable(*)()>);
+    STATIC_CHECK(iris::directly_invocable_r<void, void(*)()>);
+    STATIC_CHECK(!iris::directly_invocable_r<int, void(*)()>);
+    STATIC_CHECK(!iris::directly_invocable_r<void, int>);
+    STATIC_CHECK(!iris::directly_invocable_r<void, int(*)(int)>);
+
+    STATIC_CHECK(iris::directly_invocable_r<NonMovable, NonMovable(*)()>);
+    STATIC_CHECK(!iris::directly_invocable_r<NonMovable, NonMovable&&(*)()>);
+
+    STATIC_CHECK(iris::directly_invocable_r<long, int(*)()>);
+    STATIC_CHECK(iris::directly_invocable_r<ThrowingConv, int(*)()>);
+    STATIC_CHECK(!iris::directly_invocable_r<ExplicitConv, int(*)()>);
+    STATIC_CHECK(!iris::directly_invocable_r<int[3], int(*)()>);
+
+    STATIC_CHECK(!iris::directly_invocable_r<int const&, int(*)()>);
+    STATIC_CHECK(!iris::directly_invocable_r<int&&, int(*)()>);
+    STATIC_CHECK(!iris::directly_invocable_r<long const&, int&(*)()>);
+    STATIC_CHECK(iris::directly_invocable_r<int const&, int&(*)()>);
+    STATIC_CHECK(iris::directly_invocable_r<int&&, int&&(*)()>);
+
+    STATIC_CHECK(iris::directly_invocable_r<void, Incomplete(*)()>);
+    STATIC_CHECK(iris::directly_invocable_r<void, NoDtor(*)()>);
+    STATIC_CHECK(iris::directly_invocable_r<void, Poison<int>(*)()>);
+    STATIC_CHECK(!iris::directly_invocable_r<int, Incomplete(*)()>);
+    // ReSharper disable once CppStaticAssertFailure
+    STATIC_CHECK(!iris::directly_invocable_r<NoDtor, NoDtor(*)()>);
+
+    STATIC_CHECK(iris::is_directly_invocable_r_v<long, int(*)()>);
+    STATIC_CHECK(!iris::is_directly_invocable_r_v<int*, int(*)()>);
+    STATIC_CHECK(iris::is_directly_invocable_r<void, int(*)()>::value);
+}
+
+TEST_CASE("is_nothrow_directly_invocable", "[type_traits]")
+{
+    STATIC_CHECK(iris::is_nothrow_directly_invocable_v<int(*)() noexcept>);
+    STATIC_CHECK(!iris::is_nothrow_directly_invocable_v<int(*)()>);
+    STATIC_CHECK(!iris::is_nothrow_directly_invocable_v<int>);
+    STATIC_CHECK(iris::is_nothrow_directly_invocable_v<GenericCallable const&, int>);
+    STATIC_CHECK(iris::is_nothrow_directly_invocable<void(*)(int) noexcept, int>::value);
+
+    STATIC_CHECK(!iris::is_nothrow_directly_invocable_v<void(*)(ThrowingConv) noexcept, int>);
+    STATIC_CHECK(iris::is_nothrow_directly_invocable_v<void(*)(NothrowConv) noexcept, int>);
+    // ReSharper disable once CppStaticAssertFailure
+    STATIC_CHECK(!iris::is_nothrow_directly_invocable_v<ThrowingDtor(*)() noexcept>);
+
+    // ReSharper disable once CppStaticAssertFailure
+    STATIC_CHECK(!iris::is_nothrow_directly_invocable_v<NoDtor(*)() noexcept>);
+
+    STATIC_CHECK(iris::is_nothrow_directly_invocable_r_v<void, int(*)() noexcept>);
+    STATIC_CHECK(!iris::is_nothrow_directly_invocable_r_v<void, int(*)()>);
+    STATIC_CHECK(!iris::is_nothrow_directly_invocable_r_v<void, int>);
+
+    STATIC_CHECK(iris::is_nothrow_directly_invocable_r_v<NonMovable, NonMovable(*)() noexcept>);
+    STATIC_CHECK(iris::is_nothrow_directly_invocable_r_v<ThrowingMove, ThrowingMove(*)() noexcept>);
+    // ReSharper disable once CppStaticAssertFailure
+    STATIC_CHECK(!iris::is_nothrow_directly_invocable_r_v<ThrowingMove, ThrowingMove&&(*)() noexcept>);
+
+    STATIC_CHECK(iris::is_nothrow_directly_invocable_r_v<NothrowConv, int(*)() noexcept>);
+    STATIC_CHECK(!iris::is_nothrow_directly_invocable_r_v<NothrowConv, int(*)()>);
+    STATIC_CHECK(iris::is_directly_invocable_r_v<ThrowingConv, int(*)() noexcept>);
+    STATIC_CHECK(!iris::is_nothrow_directly_invocable_r_v<ThrowingConv, int(*)() noexcept>);
+    // ReSharper disable once CppStaticAssertFailure
+    STATIC_CHECK(!iris::is_nothrow_directly_invocable_r_v<ThrowingDtor, ThrowingDtor(*)() noexcept>);
+
+    STATIC_CHECK(!iris::is_nothrow_directly_invocable_r_v<ExplicitConv, int(*)() noexcept>);
+    STATIC_CHECK(!iris::is_nothrow_directly_invocable_r_v<int const&, int(*)() noexcept>);
+    STATIC_CHECK(!iris::is_nothrow_directly_invocable_r_v<int, void(*)() noexcept>);
+
+    STATIC_CHECK(iris::is_nothrow_directly_invocable_r<bool, GenericCallable const&, bool>::value);
+    STATIC_CHECK(std::conjunction_v<
+        iris::is_nothrow_directly_invocable_r<int, GenericCallable const&, int>,
+        iris::is_nothrow_directly_invocable_r<long, GenericCallable const&, long>
+    >);
 }
