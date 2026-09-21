@@ -28,6 +28,8 @@ message(STATUS "IRIS_ROOT: ${IRIS_ROOT}")
 # Handle with care, keep these to the ones that can't be
 # accomplished by target-specific settings.
 
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -195,7 +197,7 @@ if(MSVC)
     target_compile_options(
         _iris_cxx_best_practices
         INTERFACE
-            /W4 /analyze /analyze:external-
+            /W4
             $<$<CONFIG:Release>:/Zi /Zo>
     )
     target_link_options(

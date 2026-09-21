@@ -168,7 +168,8 @@ struct do_pack_indexing<std::index_sequence<Voids...>>
 {
     template<class T>
     static std::type_identity<T> select(
-        decltype(void(Voids), static_cast<void*>(nullptr))...,
+        // ReSharper disable once CppCStyleCast
+        decltype((void*)Voids)...,
         std::type_identity<T>*,
         ...
     );
@@ -182,7 +183,8 @@ struct do_cpack_indexing<std::index_sequence<Voids...>>
 {
     template<class T, T N>
     static std::integral_constant<T, N> select(
-        decltype(void(Voids), static_cast<void*>(nullptr))...,
+        // ReSharper disable once CppCStyleCast
+        decltype((void*)Voids)...,
         std::integral_constant<T, N>*,
         ...
     );

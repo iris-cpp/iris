@@ -8,7 +8,8 @@
 // IWYU pragma: private, include <iris/rvariant.hpp>
 
 #include <iris/rvariant/detail/rvariant_fwd.hpp>
-#include <iris/rvariant/variant_helper.hpp>
+
+#include <iris/type_traits.hpp>
 
 #include <type_traits>
 #include <utility>
@@ -101,22 +102,41 @@ template<class Variant, class T>
 // Additional size limit
 inline constexpr std::size_t never_valueless_trivial_size_limit = 256;
 
+template<class T>
+concept is_never_valueless_impl =
+    is_ttp_specialization_of_v<T, recursive_wrapper> ||
+    (
+        sizeof(T) <= never_valueless_trivial_size_limit &&
+        std::is_trivially_destructible_v<T> &&
+        (
+            std::is_trivially_move_constructible_v<T> ||
+            std::is_trivially_copy_constructible_v<T>
+        ) &&
+        (
+            std::is_trivially_move_assignable_v<T> ||
+            std::is_trivially_copy_assignable_v<T>
+        )
+    );
+
 template<class... Ts>
-struct is_never_valueless
-    : std::conjunction<
-        std::disjunction<
-            is_ttp_specialization_of<Ts, recursive_wrapper>,
-            std::conjunction<
-                std::bool_constant<sizeof(Ts) <= never_valueless_trivial_size_limit>,
-                std::is_trivially_destructible<Ts>,
-                std::disjunction<std::is_trivially_move_constructible<Ts>, std::is_trivially_copy_constructible<Ts>>,
-                std::disjunction<std::is_trivially_move_assignable<Ts>, std::is_trivially_copy_assignable<Ts>>
-            >
-        >...
+struct is_never_valueless;
+
+template<>
+struct is_never_valueless<> : std::true_type {};
+
+template<class T, class... Ts>
+    requires is_never_valueless_impl<T>
+struct is_never_valueless<T, Ts...>
+    : std::bool_constant<
+        is_never_valueless<Ts...>::value
     >
-{
-    static_assert(sizeof...(Ts) > 0);
-};
+{};
+
+template<class T, class... Ts>
+    requires (!is_never_valueless_impl<T>)
+struct is_never_valueless<T, Ts...>
+    : std::false_type
+{};
 
 template<class... Ts>
 constexpr bool is_never_valueless_v = is_never_valueless<Ts...>::value;
@@ -131,13 +151,17 @@ template<bool TriviallyDestructible, class... Ts>
 struct variadic_union {};
 
 template<class... Ts>
-using make_variadic_union_t = variadic_union<std::conjunction_v<std::is_trivially_destructible<Ts>...>, Ts...>;
-
+using make_variadic_union_t = variadic_union<
+    (std::is_trivially_destructible_v<Ts> && ...),
+    Ts...
+>;
 
 template<class T, class... Ts>
 struct variadic_union<true, T, Ts...>
 {
+#if IRIS_CI
     static_assert(std::conjunction_v<std::is_trivially_destructible<T>, std::is_trivially_destructible<Ts>...>);
+#endif
 
     static constexpr std::size_t size = sizeof...(Ts) + 1;
     static constexpr bool never_valueless = is_never_valueless_v<T, Ts...>;
@@ -174,9 +198,11 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
 IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
     template<std::size_t I, class... Args>
-        requires (I != 0) && std::is_constructible_v<make_variadic_union_t<Ts...>, std::in_place_index_t<I - 1>, Args...>
+        requires
+            (I > 0) && (I < size) &&
+            std::is_constructible_v<IRIS_PACK_INDEXING(I - 1, Ts...), Args...>
     constexpr explicit variadic_union(std::in_place_index_t<I>, Args&&... args)
-        noexcept(std::is_nothrow_constructible_v<make_variadic_union_t<Ts...>, std::in_place_index_t<I - 1>, Args...>)
+        noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I - 1, Ts...), Args...>)
         : rest(std::in_place_index<I - 1>, std::forward<Args>(args)...)
     {}
 
@@ -189,7 +215,9 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 template<class T, class... Ts>
 struct variadic_union<false, T, Ts...>
 {
+#if IRIS_CI
     static_assert(!std::conjunction_v<std::is_trivially_destructible<T>, std::is_trivially_destructible<Ts>...>);
+#endif
 
     static constexpr std::size_t size = sizeof...(Ts) + 1;
     static constexpr bool never_valueless = is_never_valueless_v<T, Ts...>;
@@ -222,9 +250,11 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
 IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
     template<std::size_t I, class... Args>
-        requires (I != 0) && std::is_constructible_v<make_variadic_union_t<Ts...>, std::in_place_index_t<I - 1>, Args...>
+        requires
+            (I > 0) && (I < size) &&
+            std::is_constructible_v<IRIS_PACK_INDEXING(I - 1, Ts...), Args...>
     constexpr explicit variadic_union(std::in_place_index_t<I>, Args&&... args)
-        noexcept(std::is_nothrow_constructible_v<make_variadic_union_t<Ts...>, std::in_place_index_t<I - 1>, Args...>)
+        noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I - 1, Ts...), Args...>)
         : rest(std::in_place_index<I - 1>, std::forward<Args>(args)...)
     {}
 

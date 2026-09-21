@@ -372,11 +372,6 @@ TEST_CASE("Cpp17CopyAssignable")
     }
 }
 
-template<class T>
-concept Cpp17Destructible_expr = requires(T a) {
-    a.~T();
-};
-
 TEST_CASE("Cpp17Destructible")
 {
     STATIC_REQUIRE(iris::req::Cpp17Destructible<int>);

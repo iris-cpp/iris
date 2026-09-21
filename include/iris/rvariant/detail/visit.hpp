@@ -186,6 +186,14 @@ struct raw_visit_dispatch<NeverValueless, -1>
             return static_cast<Visitor&&>(vis)(std::in_place_index<(n)>, detail::raw_get<(n)>(static_cast<Storage&&>(storage))); \
         } else std::unreachable(); [[fallthrough]]
 
+#if IRIS_CI
+# define IRIS_RAW_VISIT_ASSERT(flag_flip, strategy) \
+    static_assert(flag_flip std::remove_cvref_t<Storage>::never_valueless); \
+    static_assert((1uz << ((strategy) * 2uz)) <= N && N <= (1uz << (((strategy) + 1) * 2uz)));
+#else
+# define IRIS_RAW_VISIT_ASSERT(flag_flip, strategy)
+#endif
+
 #define IRIS_RAW_VISIT_DISPATCH_DEF(strategy) \
     template<> \
     struct raw_visit_dispatch<true, (strategy)> \
@@ -195,8 +203,7 @@ struct raw_visit_dispatch<NeverValueless, -1>
         apply(std::size_t const i, [[maybe_unused]] Visitor&& vis, [[maybe_unused]] Storage&& storage) \
             noexcept(detail::raw_visit_noexcept_all<Visitor, Storage>) \
         { \
-            static_assert(std::remove_cvref_t<Storage>::never_valueless); \
-            static_assert((1uz << ((strategy) * 2uz)) <= N && N <= (1uz << (((strategy) + 1) * 2uz))); \
+            IRIS_RAW_VISIT_ASSERT(!!, strategy) \
             switch (i) { \
             IRIS_VISIT_CASES_ ## strategy (IRIS_RAW_VISIT_NEVER_VALUELESS_CASE, 0); \
             default: std::unreachable(); \
@@ -211,8 +218,7 @@ struct raw_visit_dispatch<NeverValueless, -1>
         apply(std::size_t const i, [[maybe_unused]] Visitor&& vis, [[maybe_unused]] Storage&& storage) \
             noexcept(detail::raw_visit_noexcept_all<Visitor, Storage>) \
         { \
-            static_assert(!std::remove_cvref_t<Storage>::never_valueless); \
-            static_assert((1uz << ((strategy) * 2uz)) <= N && N <= (1uz << (((strategy) + 1) * 2uz))); \
+            IRIS_RAW_VISIT_ASSERT(!, strategy) \
             switch (i) { \
             case 0: return static_cast<Visitor&&>(vis)(std::in_place_index<std::variant_npos>, static_cast<Storage&&>(storage)); \
             IRIS_VISIT_CASES_ ## strategy (IRIS_RAW_VISIT_MAYBE_VALUELESS_CASE, 0); \
@@ -229,7 +235,7 @@ IRIS_RAW_VISIT_DISPATCH_DEF(3);
 #undef IRIS_RAW_VISIT_NEVER_VALUELESS_CASE
 #undef IRIS_RAW_VISIT_MAYBE_VALUELESS_CASE
 #undef IRIS_RAW_VISIT_DISPATCH_DEF
-
+#undef IRIS_RAW_VISIT_ASSERT
 
 template<class Variant, class Visitor>
 IRIS_FORCEINLINE constexpr raw_visit_result_t<Visitor, forward_storage_t<Variant>>
@@ -461,6 +467,13 @@ struct visit_dispatch<-1>
             ); \
         } else { std::unreachable(); } [[fallthrough]]
 
+#if IRIS_CI
+# define IRIS_VISIT_ASSERT(strategy) \
+    static_assert((1uz << ((strategy) * 2uz)) <= OverloadSeq::size && OverloadSeq::size <= (1uz << (((strategy) + 1) * 2uz)));
+#else
+# define IRIS_VISIT_ASSERT(strategy)
+#endif
+
 #define IRIS_VISIT_DISPATCH_DEF(strategy) \
     template<> \
     struct visit_dispatch<(strategy)> \
@@ -469,7 +482,7 @@ struct visit_dispatch<-1>
         [[nodiscard]] static constexpr R apply(std::size_t const flat_i, [[maybe_unused]] Visitor&& vis, [[maybe_unused]] Storage&&... storage) \
             noexcept(multi_visit_noexcept<R, OverloadSeq, Visitor, Storage...>::value) \
         { \
-            static_assert((1uz << ((strategy) * 2uz)) <= OverloadSeq::size && OverloadSeq::size <= (1uz << (((strategy) + 1) * 2uz))); \
+            IRIS_VISIT_ASSERT(strategy) \
             switch (flat_i) { \
             IRIS_VISIT_CASES_ ## strategy (IRIS_VISIT_CASE, 0); \
             default: std::unreachable(); \
@@ -489,6 +502,8 @@ IRIS_VISIT_DISPATCH_DEF(3);
 #undef IRIS_VISIT_CASES_1
 #undef IRIS_VISIT_CASES_2
 #undef IRIS_VISIT_CASES_3
+
+#undef IRIS_VISIT_ASSERT
 
 
 template<class Ns, bool... NeverValueless>
