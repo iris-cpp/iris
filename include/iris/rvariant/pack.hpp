@@ -7,7 +7,9 @@
 
 // Utilities related to [rvariant.pack]
 
-#include <iris/type_traits.hpp>
+#include <iris/type_list.hpp>
+
+#include <type_traits>
 
 namespace iris {
 
@@ -25,7 +27,7 @@ struct pack_union_impl<TT, type_list<Ts...>>
 template<template<class...> class TT, class... Ts, class U, class... Us>
 struct pack_union_impl<TT, type_list<Ts...>, U, Us...>
     : std::conditional_t<
-    is_in_v<U, Ts...>,
+        is_in_v<U, Ts...>,
         pack_union_impl<TT, type_list<Ts...>, Us...>,
         pack_union_impl<TT, type_list<Ts..., U>, Us...>
     >

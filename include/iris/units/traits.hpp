@@ -8,6 +8,7 @@
 // Don't include <iris/units/concepts.hpp>; dependency ordering is important
 
 #include <iris/type_traits.hpp>
+#include <iris/type_list.hpp>
 
 #include <type_traits>
 #include <concepts>

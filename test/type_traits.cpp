@@ -20,7 +20,7 @@ template<class... Ts>
 struct tuple;
 
 template<class... Ts>
-struct type_list;
+struct not_tuple;
 
 template<int... Ns>
 struct n_tuple;
@@ -618,9 +618,9 @@ TEST_CASE("specialization_of")
     STATIC_CHECK(iris::is_ttp_specialization_of_v<tuple<int>, tuple>);
     STATIC_CHECK(iris::is_ttp_specialization_of_v<tuple<int, double>, tuple>);
 
-    STATIC_CHECK(!iris::is_ttp_specialization_of_v<tuple<>, type_list>);
-    STATIC_CHECK(!iris::is_ttp_specialization_of_v<tuple<int>, type_list>);
-    STATIC_CHECK(!iris::is_ttp_specialization_of_v<tuple<int, double>, type_list>);
+    STATIC_CHECK(!iris::is_ttp_specialization_of_v<tuple<>, not_tuple>);
+    STATIC_CHECK(!iris::is_ttp_specialization_of_v<tuple<int>, not_tuple>);
+    STATIC_CHECK(!iris::is_ttp_specialization_of_v<tuple<int, double>, not_tuple>);
 
     STATIC_CHECK(iris::is_ctp_specialization_of_v<n_tuple<>, n_tuple>);
     STATIC_CHECK(iris::is_ctp_specialization_of_v<n_tuple<0>, n_tuple>);

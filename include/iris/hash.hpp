@@ -6,7 +6,8 @@
 #include <iris/config.hpp> // IWYU pragma: keep
 
 #include <iris/requirements.hpp>
-#include <iris/type_traits.hpp>
+#include <iris/bits/specialization_of.hpp>
+#include <iris/bits/is_function_object.hpp>
 
 #include <functional>
 #include <ranges>

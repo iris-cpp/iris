@@ -7,7 +7,9 @@
 
 #include <iris/rvariant/detail/rvariant_fwd.hpp>
 #include <iris/rvariant/variant_helper.hpp>
-#include <iris/type_traits.hpp>
+#include <iris/type_list.hpp>
+
+#include <iris/bits/specialization_of.hpp>
 
 #include <type_traits>
 

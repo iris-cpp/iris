@@ -9,10 +9,10 @@
 
 #include <iris/rvariant/detail/rvariant_fwd.hpp>
 
-#include <iris/type_traits.hpp>
+#include <iris/type_list.hpp>
+#include <iris/bits/specialization_of.hpp>
 
 #include <type_traits>
-#include <utility>
 
 #include <cstddef> // IWYU pragma: keep
 
@@ -79,7 +79,7 @@ template<class Variant, class T>
 //   => valueless iff move constructor throws
 //
 // Emplace (if VT(Args...) is throwing)
-//   rvariant tmp(std::in_place_index<I>, std::forward<Args>(args)...);
+//   rvariant tmp(std::in_place_index<I>, static_cast<Args&&>(args)...);
 //   *this = std::move(tmp);
 //        ^^^ needs to be NOT observable on user's part, as per "Effects" https://eel.is/c++draft/variant.mod#7
 //                        ^^^^^^^^^^^^^^
@@ -193,7 +193,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
         requires std::is_constructible_v<T, Args...> // required for not confusing some compilers
     constexpr explicit variadic_union(std::in_place_index_t<0>, Args&&... args)
         noexcept(std::is_nothrow_constructible_v<T, Args...>)
-        : first(std::forward<Args>(args)...) // value-initialize; https://eel.is/c++draft/variant.ctor#3
+        : first(static_cast<Args&&>(args)...) // value-initialize; https://eel.is/c++draft/variant.ctor#3
     {}
 IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
@@ -203,7 +203,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
             std::is_constructible_v<IRIS_PACK_INDEXING(I - 1, Ts...), Args...>
     constexpr explicit variadic_union(std::in_place_index_t<I>, Args&&... args)
         noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I - 1, Ts...), Args...>)
-        : rest(std::in_place_index<I - 1>, std::forward<Args>(args)...)
+        : rest(std::in_place_index<I - 1>, static_cast<Args&&>(args)...)
     {}
 
     union {
@@ -245,7 +245,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
         requires std::is_constructible_v<T, Args...> // required for not confusing some compilers
     constexpr explicit variadic_union(std::in_place_index_t<0>, Args&&... args)
         noexcept(std::is_nothrow_constructible_v<T, Args...>)
-        : first(std::forward<Args>(args)...) // value-initialize; https://eel.is/c++draft/variant.ctor#3
+        : first(static_cast<Args&&>(args)...) // value-initialize; https://eel.is/c++draft/variant.ctor#3
     {}
 IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
@@ -255,7 +255,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
             std::is_constructible_v<IRIS_PACK_INDEXING(I - 1, Ts...), Args...>
     constexpr explicit variadic_union(std::in_place_index_t<I>, Args&&... args)
         noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I - 1, Ts...), Args...>)
-        : rest(std::in_place_index<I - 1>, std::forward<Args>(args)...)
+        : rest(std::in_place_index<I - 1>, static_cast<Args&&>(args)...)
     {}
 
     union {
@@ -281,56 +281,56 @@ template<class Variant>
 [[nodiscard]] IRIS_FORCEINLINE constexpr forward_storage_t<Variant>&&
 forward_storage(std::remove_reference_t<Variant>& v IRIS_LIFETIMEBOUND) noexcept
 {
-    return std::forward<Variant>(v).storage();
+    return static_cast<Variant&&>(v).storage();
 }
 
 template<class Variant>
 [[nodiscard]] IRIS_FORCEINLINE constexpr forward_storage_t<Variant>&&
 forward_storage(std::remove_reference_t<Variant>&& v IRIS_LIFETIMEBOUND) noexcept  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
 {
-    return std::forward<Variant>(v).storage();
+    return static_cast<Variant&&>(v).storage();
 }
 
 
 template<std::size_t I, class Storage>
 [[nodiscard]] IRIS_FORCEINLINE constexpr auto&& raw_get(Storage&& storage IRIS_LIFETIMEBOUND) noexcept
 {
-         if constexpr (I ==  0) return std::forward<Storage>(storage).first;
-    else if constexpr (I ==  1) return std::forward<Storage>(storage).rest.first;
-    else if constexpr (I ==  2) return std::forward<Storage>(storage).rest.rest.first;
-    else if constexpr (I ==  3) return std::forward<Storage>(storage).rest.rest.rest.first;
-    else if constexpr (I ==  4) return std::forward<Storage>(storage).rest.rest.rest.rest.first;
-    else if constexpr (I ==  5) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.first;
-    else if constexpr (I ==  6) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I ==  7) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I ==  8) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I ==  9) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 10) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 11) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 12) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 13) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 14) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 15) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 16) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 17) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 18) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 19) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 20) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 21) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 22) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 23) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 24) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 25) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 26) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 27) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 28) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 29) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 30) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
-    else if constexpr (I == 31) return std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+         if constexpr (I ==  0) return static_cast<Storage&&>(storage).first;
+    else if constexpr (I ==  1) return static_cast<Storage&&>(storage).rest.first;
+    else if constexpr (I ==  2) return static_cast<Storage&&>(storage).rest.rest.first;
+    else if constexpr (I ==  3) return static_cast<Storage&&>(storage).rest.rest.rest.first;
+    else if constexpr (I ==  4) return static_cast<Storage&&>(storage).rest.rest.rest.rest.first;
+    else if constexpr (I ==  5) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.first;
+    else if constexpr (I ==  6) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I ==  7) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I ==  8) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I ==  9) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 10) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 11) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 12) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 13) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 14) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 15) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 16) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 17) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 18) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 19) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 20) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 21) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 22) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 23) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 24) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 25) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 26) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 27) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 28) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 29) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 30) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
+    else if constexpr (I == 31) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.first;
     else if constexpr (I < 64)  return detail::raw_get<I - 32>(
-                                       std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest);
+                                       static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest);
     else                        return detail::raw_get<I - 64>(
-                                       std::forward<Storage>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest
+                                       static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest
                                                                      .rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest);
 }
 

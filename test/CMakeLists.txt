@@ -181,6 +181,7 @@ if(PROJECT_IS_TOP_LEVEL)
             IRIS_TEST_IRIS_TESTS
             library_config
             core
+            type_list
             type_traits
             ranges
             container_traits

@@ -12,6 +12,7 @@
 #include <iris/rvariant/detail/variant_storage.hpp>
 #include <iris/rvariant/variant_helper.hpp>
 
+#include <iris/type_list.hpp>
 #include <iris/type_traits.hpp>
 
 #include <variant> // std::bad_variant_access
@@ -108,11 +109,11 @@ do_raw_visit(Visitor&& vis, Storage&& storage)  // NOLINT(cppcoreguidelines-rval
     noexcept(raw_visit_noexcept<I, Visitor, Storage>::value)
 {
     if constexpr (!std::remove_cvref_t<Storage>::never_valueless && I == 0) {
-        return std::forward<Visitor>(vis)(std::in_place_index<std::variant_npos>, std::forward<Storage>(storage));
+        return static_cast<Visitor&&>(vis)(std::in_place_index<std::variant_npos>, static_cast<Storage&&>(storage));
 
     } else {
         constexpr std::size_t RealI = valueless_unbias<Storage>(I);
-        return std::forward<Visitor>(vis)(std::in_place_index<RealI>, raw_get<RealI>(std::forward<Storage>(storage)));
+        return static_cast<Visitor&&>(vis)(std::in_place_index<RealI>, detail::raw_get<RealI>(static_cast<Storage&&>(storage)));
     }
 }
 
@@ -170,7 +171,7 @@ struct raw_visit_dispatch<NeverValueless, -1>
     {
         constexpr auto const& table = raw_visit_table<Visitor, Storage>::table;
         auto const& f = table[i];
-        return f(std::forward<Visitor>(vis), std::forward<Storage>(storage));
+        return f(static_cast<Visitor&&>(vis), static_cast<Storage&&>(storage));
     }
 };
 
@@ -247,7 +248,7 @@ raw_visit(Variant&& v, Visitor&& vis)  // NOLINT(cppcoreguidelines-missing-std-f
         N, Visitor, forward_storage_t<Variant>
     >(
         detail::valueless_bias<Variant>(v.index_),
-        std::forward<Visitor>(vis),
+        static_cast<Visitor&&>(vis),
         detail::forward_storage<Variant>(v)
     );
 }
@@ -262,7 +263,7 @@ raw_visit_i(std::size_t const biased_i, Variant&& v, Visitor&& vis)  // NOLINT(c
         N, Visitor, forward_storage_t<Variant>
     >(
         biased_i,
-        std::forward<Visitor>(vis),
+        static_cast<Visitor&&>(vis),
         detail::forward_storage<Variant>(v)
     );
 }
@@ -415,9 +416,9 @@ struct multi_visitor<std::index_sequence<Is...>>
 
         } else {
             return std::invoke_r<R>(
-                std::forward<Visitor>(vis),
+                static_cast<Visitor&&>(vis),
                 unwrap_recursive(
-                    raw_get<valueless_unbias<Storage>(Is)>(std::forward<Storage>(storage))
+                    detail::raw_get<valueless_unbias<Storage>(Is)>(static_cast<Storage&&>(storage))
                 )...
             );
         }
@@ -455,7 +456,7 @@ struct visit_dispatch<-1>
     {
         constexpr auto const& table = visit_table<R, OverloadSeq, Visitor, Storage...>::table;
         auto const& f = table[flat_i];
-        return f(std::forward<Visitor>(vis), std::forward<Storage>(storage)...);
+        return f(static_cast<Visitor&&>(vis), static_cast<Storage&&>(storage)...);
     }
 };
 
@@ -587,7 +588,7 @@ struct visit_impl<
         return visit_dispatch<visit_strategy<OverloadSeq::size>>::template apply<
             R, OverloadSeq, Visitor, forward_storage_t<as_variant_t<Variants>>...
         >(
-            flat_i, std::forward<Visitor>(vis), forward_storage<as_variant_t<Variants>>(vars)...
+            flat_i, static_cast<Visitor&&>(vis), detail::forward_storage<as_variant_t<Variants>>(vars)...
         );
     }
 };
