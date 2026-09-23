@@ -5,7 +5,7 @@
 
 #include <iris/config.hpp> // IWYU pragma: keep
 
-#include <iris/type_traits.hpp>
+#include <iris/type_list.hpp>
 
 #include <utility>
 

@@ -17,6 +17,7 @@
 #include <iris/compare.hpp>
 #include <iris/cond_trivial_smf.hpp>
 #include <iris/type_traits.hpp>
+#include <iris/type_list.hpp>
 #include <iris/hash.hpp>
 
 #include <concepts>

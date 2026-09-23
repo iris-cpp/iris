@@ -7,12 +7,12 @@
 
 #include <iris/alloy/detail/deduce.hpp>
 
-#include <iris/type_traits.hpp>
+#include <iris/bits/specialization_of.hpp>
 
 #include <functional>
 #include <type_traits>
 
-#include <cstddef>
+#include <cstddef> // IWYU pragma: keep
 
 namespace iris::alloy {
 

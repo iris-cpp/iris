@@ -63,48 +63,6 @@ TEST_CASE("EBO")
     STATIC_CHECK(sizeof(Derived5_fixed) == 4);
 }
 
-TEST_CASE("pack_indexing")
-{
-    STATIC_REQUIRE(std::is_same_v<iris::pack_indexing_t<0, int>, int>);
-    STATIC_REQUIRE(std::is_same_v<iris::pack_indexing_t<0, int, float>, int>);
-    STATIC_REQUIRE(std::is_same_v<iris::pack_indexing_t<1, int, float>, float>);
-
-    // make sure non-object and non-referenceable type is working
-    STATIC_REQUIRE(std::is_same_v<iris::pack_indexing_t<0, void>, void>);
-    STATIC_REQUIRE(std::is_same_v<iris::pack_indexing_t<0, void, int>, void>);
-    STATIC_REQUIRE(std::is_same_v<iris::pack_indexing_t<1, void, int>, int>);
-    STATIC_REQUIRE(std::is_same_v<iris::pack_indexing_t<0, int, void>, int>);
-    STATIC_REQUIRE(std::is_same_v<iris::pack_indexing_t<1, int, void>, void>);
-    STATIC_REQUIRE(std::is_same_v<iris::pack_indexing_t<0, void, void>, void>);
-    STATIC_REQUIRE(std::is_same_v<iris::pack_indexing_t<1, void, void>, void>);
-
-    STATIC_REQUIRE(std::is_same_v<iris::at_c_t<0, iris::type_list<int>>, int>);
-    STATIC_REQUIRE(std::is_same_v<iris::at_c_t<0, iris::type_list<int, float>>, int>);
-    STATIC_REQUIRE(std::is_same_v<iris::at_c_t<1, iris::type_list<int, float>>, float>);
-}
-
-TEST_CASE("exactly_once")
-{
-    STATIC_REQUIRE(iris::exactly_once_v<int, iris::type_list<int, float>>);
-    STATIC_REQUIRE_FALSE(iris::exactly_once_v<int, iris::type_list<int, int>>);
-}
-
-TEST_CASE("is_in")
-{
-    STATIC_REQUIRE(iris::is_in_v<int, int, float>);
-    STATIC_REQUIRE_FALSE(iris::is_in_v<int, float>);
-}
-
-TEST_CASE("find_index")
-{
-    STATIC_REQUIRE(iris::find_index_v<int,    iris::type_list<int, float, double>> == 0);
-    STATIC_REQUIRE(iris::find_index_v<float,  iris::type_list<int, float, double>> == 1);
-    STATIC_REQUIRE(iris::find_index_v<double, iris::type_list<int, float, double>> == 2);
-    STATIC_REQUIRE(iris::find_index_v<int,    iris::type_list<float, double>> == iris::find_npos);
-
-    STATIC_REQUIRE(iris::find_index_v<int, iris::type_list<int, int, double>> == 0);
-}
-
 TEST_CASE("Cpp17EqualityComparable")
 {
     STATIC_REQUIRE(iris::req::Cpp17EqualityComparable<int>);
