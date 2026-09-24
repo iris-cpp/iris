@@ -8,8 +8,6 @@
 #include <iris/bits/is_function_object.hpp>  // IWYU pragma: export
 #include <iris/bits/specialization_of.hpp>  // IWYU pragma: export
 
-#include <iris/requirements.hpp>
-
 #include <concepts>
 #include <type_traits> // IWYU pragma: export
 #include <utility>
@@ -188,6 +186,11 @@ template<> struct is_trivially_swappable<std::byte> : std::true_type {};
 
 template<class T>
 inline constexpr bool is_trivially_swappable_v = is_trivially_swappable<T>::value;
+
+// ----------------------------------------------
+
+template<class T, class U>
+concept weakly_assignable_from = std::is_assignable_v<T, U>;
 
 
 namespace detail {

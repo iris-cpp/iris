@@ -7,10 +7,10 @@
 
 // IWYU pragma: private, include <iris/rvariant.hpp>
 
-#include <iris/rvariant/detail/rvariant_fwd.hpp>
 #include <iris/rvariant/detail/seq.hpp>
 #include <iris/rvariant/detail/variant_storage.hpp>
 #include <iris/rvariant/variant_helper.hpp>
+#include <iris/rvariant/rvariant_fwd.hpp>
 
 #include <iris/type_list.hpp>
 #include <iris/type_traits.hpp>

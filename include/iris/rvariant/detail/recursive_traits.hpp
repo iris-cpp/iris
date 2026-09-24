@@ -7,7 +7,7 @@
 
 // IWYU pragma: private, include <iris/rvariant.hpp>
 
-#include <iris/rvariant/detail/rvariant_fwd.hpp>
+#include <iris/rvariant/rvariant_fwd.hpp>
 
 namespace iris::detail {
 
@@ -45,7 +45,7 @@ struct select_maybe_wrapped : select_maybe_wrapped_impl<false, 0, U, Ts...>
 {
     // Precondition: either T or recursive_wrapper<T> occurs at least once in Ts...
     static_assert(sizeof...(Ts) > 0);
-    static_assert(!detail::is_recursive_wrapper_like_v<U>);
+    static_assert(!is_recursive_wrapper_v<U>);
 };
 
 template<class U, class... Ts>

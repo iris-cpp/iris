@@ -7,6 +7,7 @@
 
 #include <iris/alloy/detail/deduce.hpp>
 
+#include <iris/type_list.hpp>
 #include <iris/bits/specialization_of.hpp>
 
 #include <functional>

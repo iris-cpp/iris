@@ -61,6 +61,62 @@ struct concat_type_list<type_list<Ts...>, type_list<Us...>, Rest...>
 
 namespace detail {
 
+template<class... Ts>
+struct identity_bases : std::type_identity<Ts>...
+{
+    template<template<class...> class TT>
+    using rebind = TT<Ts...>;
+};
+
+template<class T, class BasesT>
+concept identity_base_of = requires(BasesT* bases) {
+    static_cast<std::type_identity<T>*>(bases);
+};
+
+template<class BasesT, class... Ts>
+struct unique_type_list_impl;
+
+template<class BasesT>
+struct unique_type_list_impl<BasesT>
+{
+    using type = BasesT;
+};
+
+template<class BasesT, class T, class... Rest>
+    requires identity_base_of<T, BasesT>
+struct unique_type_list_impl<BasesT, T, Rest...>
+    : unique_type_list_impl<BasesT, Rest...>
+{};
+
+template<class... AcceptedTs, class T, class... Rest>
+    requires (!identity_base_of<T, identity_bases<AcceptedTs...>>)
+struct unique_type_list_impl<identity_bases<AcceptedTs...>, T, Rest...>
+    : unique_type_list_impl<identity_bases<AcceptedTs..., T>, Rest...>
+{};
+
+} // detail
+
+template<class List = void>
+struct unique_type_list;
+
+template<>
+struct unique_type_list<void>
+{
+    using type = type_list<>;
+};
+
+template<class... Ts>
+struct unique_type_list<type_list<Ts...>>
+{
+    using type = detail::unique_type_list_impl<
+        detail::identity_bases<>, Ts...
+    >::type::template rebind<type_list>;
+};
+
+// ----------------------------------------------------------
+
+namespace detail {
+
 template<class Voids>
 struct do_pack_indexing;
 

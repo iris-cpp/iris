@@ -7,7 +7,7 @@
 
 // IWYU pragma: private, include <iris/rvariant.hpp>
 
-#include <iris/rvariant/detail/rvariant_fwd.hpp>
+#include <iris/rvariant/rvariant_fwd.hpp>
 
 #include <iris/type_list.hpp>
 #include <iris/bits/specialization_of.hpp>

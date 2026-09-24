@@ -11,13 +11,12 @@
 
 #include <iris/config.hpp> // IWYU pragma: keep
 
-#include <iris/rvariant/detail/rvariant_fwd.hpp>
+#include <iris/rvariant/rvariant_fwd.hpp>
 #include <iris/type_list.hpp>
-#include <iris/bits/specialization_of.hpp>
 
-#include <utility>
 #include <type_traits>
-#include <cstddef>
+
+#include <cstddef> // IWYU pragma: keep
 
 namespace iris {
 
@@ -73,11 +72,6 @@ struct variant_size<rvariant<Ts...>> : std::integral_constant<std::size_t, sizeo
 namespace detail {
 
 template<class T>
-constexpr bool is_recursive_wrapper_like_v =
-    is_ttp_specialization_of_v<T, recursive_wrapper> ||
-    is_ttp_specialization_of_v<T, recursive_wrapper_alloca>;
-
-template<class T>
 struct unwrap_recursive_impl
 {
     using type = T;
@@ -119,10 +113,10 @@ struct unwrap_recursive_fn
     [[nodiscard]] IRIS_FORCEINLINE static constexpr auto&&
     operator()(T&& o IRIS_LIFETIMEBOUND) noexcept
     {
-        if constexpr (is_recursive_wrapper_like_v<std::remove_cvref_t<T>>) {
-            return *std::forward<T>(o);
+        if constexpr (is_recursive_wrapper_v<std::remove_cvref_t<T>>) {
+            return *static_cast<T&&>(o);
         } else {
-            return std::forward<T>(o);
+            return static_cast<T&&>(o);
         }
     }
 };
