@@ -10,7 +10,7 @@ project(iris VERSION 0.0.1 LANGUAGES CXX)
 
 get_directory_property(IRIS_PARENT_DIRECTORY PARENT_DIRECTORY)
 
-if(DEFINED IRIS_ROOT AND NOT "${IRIS_ROOT}" PATH_EQUAL "${CMAKE_CURRENT_LIST_DIR}")
+if(TARGET Iris::Iris)
     message(FATAL_ERROR "Cannot include Iris more than once")
 endif()
 

@@ -5,12 +5,12 @@
 
 #include <iris/config.hpp> // IWYU pragma: keep
 
-#include <iris/rvariant/detail/rvariant_fwd.hpp>
 #include <iris/rvariant/detail/variant_storage.hpp>
 #include <iris/rvariant/detail/visit.hpp>
 #include <iris/rvariant/detail/recursive_traits.hpp>
 #include <iris/rvariant/variant_helper.hpp>  // IWYU pragma: export
 #include <iris/rvariant/subset.hpp>
+#include <iris/rvariant/rvariant_fwd.hpp>
 
 #include <iris/hash/FNV_hash.hpp>
 
@@ -41,7 +41,7 @@ struct check_recursive_wrapper_duplicate_impl : std::true_type {};
 template<class T, class U>
     requires
         (!std::same_as<T, U>) &&
-        (is_recursive_wrapper_like_v<T> || is_recursive_wrapper_like_v<U>) &&
+        (is_recursive_wrapper_v<T> || is_recursive_wrapper_v<U>) &&
         std::same_as<unwrap_recursive_t<T>, unwrap_recursive_t<U>>
 struct check_recursive_wrapper_duplicate_impl<T, U>
     : std::false_type
@@ -66,7 +66,7 @@ template<class T, class List>
 struct non_wrapped_exactly_once : exactly_once<T, List>
 {
     static_assert(
-        !detail::is_recursive_wrapper_like_v<T>,
+        !is_recursive_wrapper_v<T>,
         "Constructing a `recursive_wrapper` alternative with its full type as the tag is "
         "prohibited to avoid confusion; just specify `T` instead."
     );
@@ -167,9 +167,9 @@ protected:
 IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
     // Primary constructor called from derived class
     template<std::size_t I, class... Args>
-        requires std::is_constructible_v<pack_indexing_t<I, Ts...>, Args...>
+        requires std::is_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>
     constexpr explicit rvariant_base(std::in_place_index_t<I>, Args&&... args)
-        noexcept(std::is_nothrow_constructible_v<pack_indexing_t<I, Ts...>, Args...>)
+        noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>)
         : storage_(std::in_place_index<I>, std::forward<Args>(args)...)
         , index_{static_cast<variant_index_t<sizeof...(Ts)>>(I)}
     {}
@@ -291,7 +291,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     {
         if constexpr (need_destructor_call) {
             // ReSharper disable once CppTypeAliasNeverUsed
-            using T = pack_indexing_t<I, Ts...>;
+            using T = IRIS_PACK_INDEXING(I, Ts...);
             auto&& alt = raw_get<I>(storage_);
             alt.~T();
         }
@@ -330,7 +330,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         assert(index_ == I);
         if constexpr (I != std::variant_npos) {
             // ReSharper disable once CppTypeAliasNeverUsed
-            using T = pack_indexing_t<I, Ts...>;
+            using T = IRIS_PACK_INDEXING(I, Ts...);
             auto&& alt = raw_get<I>(storage_);
             alt.~T();
             index_ = variant_npos<sizeof...(Ts)>;
@@ -340,7 +340,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
     template<std::size_t I, class... Args>
     constexpr void construct_on_valueless(Args&&... args)
-        noexcept(std::is_nothrow_constructible_v<pack_indexing_t<I, Ts...>, Args...>)
+        noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>)
     {
         static_assert(I != std::variant_npos);
         assert(index_ == variant_npos<sizeof...(Ts)>);
@@ -350,7 +350,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
 
     template<std::size_t I, class... Args>
     constexpr void reset_construct(Args&&... args)
-        noexcept(std::is_nothrow_constructible_v<pack_indexing_t<I, Ts...>, Args...>)
+        noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>)
     {
         static_assert(I != std::variant_npos);
         visit_reset();
@@ -360,11 +360,11 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
 
     template<std::size_t i, std::size_t j, class... Args>
     constexpr void reset_construct(Args&&... args)
-        noexcept(std::is_nothrow_constructible_v<pack_indexing_t<j, Ts...>, Args...>)
+        noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(j, Ts...), Args...>)
     {
         if constexpr (i != std::variant_npos) {
             destroy<i>();
-            if constexpr (!std::is_nothrow_constructible_v<pack_indexing_t<j, Ts...>, Args...>) {
+            if constexpr (!std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(j, Ts...), Args...>) {
                 index_ = variant_npos<sizeof...(Ts)>;
             }
         }
@@ -377,7 +377,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
     constexpr void reset_construct_never_valueless(Args&&... args) noexcept
     {
         static_assert(I != std::variant_npos);
-        static_assert(std::is_nothrow_constructible_v<pack_indexing_t<I, Ts...>, Args...>);
+        static_assert(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>);
         static_assert(std::is_nothrow_constructible_v<storage_type, std::in_place_index_t<I>, Args...>);
         visit_destroy();
         std::construct_at(&storage_, std::in_place_index<I>, std::forward<Args>(args)...);
@@ -406,13 +406,13 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
 IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
     template<std::size_t I, class... Args>
-        requires std::is_constructible_v<pack_indexing_t<I, Ts...>, Args...>
+        requires std::is_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>
     constexpr variant_alternative_t<I, rvariant<Ts...>>&
     emplace_impl(Args&&... args)
-        noexcept(std::is_nothrow_constructible_v<pack_indexing_t<I, Ts...>, Args...>) IRIS_LIFETIMEBOUND
+        noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>) IRIS_LIFETIMEBOUND
     {
         static_assert(I < sizeof...(Ts));
-        using T = pack_indexing_t<I, Ts...>;
+        using T = IRIS_PACK_INDEXING(I, Ts...);
 
 #ifndef NDEBUG
         // Self-emplace on non-valueless instance ALWAYS leads to UB.
@@ -470,7 +470,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                 } else if constexpr (std::is_same_v<T_old_i, T>) { // NOT type-changing
                     if constexpr (
                         (sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_move_assignable_v<T>) ||
-                        detail::is_recursive_wrapper_like_v<T>
+                        is_recursive_wrapper_v<T>
                     ) {
                         T tmp{std::forward<Args>(args)...}; // may throw
                         static_assert(noexcept(t_old_i = std::move(tmp)));
@@ -493,7 +493,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                 } else { // type-changing
                     if constexpr (
                         (sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_move_constructible_v<T>) ||
-                        detail::is_recursive_wrapper_like_v<T>
+                        is_recursive_wrapper_v<T>
                     ) {
                         T tmp{std::forward<Args>(args)...}; // may throw
                         t_old_i.~T_old_i();
@@ -610,8 +610,8 @@ public:
     using base_type::index;
 
     // Default constructor
-    constexpr rvariant() noexcept(std::is_nothrow_default_constructible_v<pack_indexing_t<0, Ts...>>)
-        requires std::is_default_constructible_v<pack_indexing_t<0, Ts...>>
+    constexpr rvariant() noexcept(std::is_nothrow_default_constructible_v<IRIS_PACK_INDEXING(0, Ts...)>)
+        requires std::is_default_constructible_v<IRIS_PACK_INDEXING(0, Ts...)>
         : base_type(std::in_place_index<0>) // value-initialized
     {}
 
@@ -840,9 +840,9 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     template<std::size_t I, class... Args>
         requires
             (I < sizeof...(Ts)) &&
-            std::is_constructible_v<pack_indexing_t<I, Ts...>, Args...>
+            std::is_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>
     constexpr explicit rvariant(std::in_place_index_t<I>, Args&&... args) // NOLINT
-        noexcept(std::is_nothrow_constructible_v<pack_indexing_t<I, Ts...>, Args...>)
+        noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>)
         : base_type(std::in_place_index<I>, std::forward<Args>(args)...)
     {}
 
@@ -850,9 +850,9 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     template<std::size_t I, class U, class... Args>
         requires
             (I < sizeof...(Ts)) &&
-            std::is_constructible_v<pack_indexing_t<I, Ts...>, std::initializer_list<U>&, Args...>
+            std::is_constructible_v<IRIS_PACK_INDEXING(I, Ts...), std::initializer_list<U>&, Args...>
     constexpr explicit rvariant(std::in_place_index_t<I>, std::initializer_list<U> il, Args&&... args) // NOLINT
-        noexcept(std::is_nothrow_constructible_v<pack_indexing_t<I, Ts...>, std::initializer_list<U>&, Args...>)
+        noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), std::initializer_list<U>&, Args...>)
         : base_type(std::in_place_index<I>, il, std::forward<Args>(args)...)
     {}
 
@@ -879,20 +879,20 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     }
 
     template<std::size_t I, class... Args>
-        requires std::is_constructible_v<pack_indexing_t<I, Ts...>, Args...>
+        requires std::is_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>
     constexpr variant_alternative_t<I, rvariant>&
     emplace(Args&&... args)
-        noexcept(std::is_nothrow_constructible_v<pack_indexing_t<I, Ts...>, Args...>) IRIS_LIFETIMEBOUND
+        noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>) IRIS_LIFETIMEBOUND
     {
         static_assert(I < sizeof...(Ts));
         return base_type::template emplace_impl<I>(std::forward<Args>(args)...);
     }
 
     template<std::size_t I, class U, class... Args>
-        requires std::is_constructible_v<pack_indexing_t<I, Ts...>, std::initializer_list<U>&, Args...>
+        requires std::is_constructible_v<IRIS_PACK_INDEXING(I, Ts...), std::initializer_list<U>&, Args...>
     constexpr variant_alternative_t<I, rvariant>&
     emplace(std::initializer_list<U> il, Args&&... args)
-        noexcept(std::is_nothrow_constructible_v<pack_indexing_t<I, Ts...>, std::initializer_list<U>&, Args...>) IRIS_LIFETIMEBOUND
+        noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), std::initializer_list<U>&, Args...>) IRIS_LIFETIMEBOUND
     {
         static_assert(I < sizeof...(Ts));
         return base_type::template emplace_impl<I>(il, std::forward<Args>(args)...);
@@ -1193,7 +1193,7 @@ private:
 // -------------------------------------------------
 
 template<class T, class... Ts>
-    requires detail::is_recursive_wrapper_like_v<T>
+    requires is_recursive_wrapper_v<T>
 [[nodiscard]] constexpr bool holds_alternative(rvariant<Ts...> const& v) noexcept = delete;
 
 template<class T, class... Ts>
@@ -1294,19 +1294,19 @@ get(rvariant<Ts...> const&& v IRIS_LIFETIMEBOUND)
 }
 
 template<class T, class... Ts>
-    requires detail::is_recursive_wrapper_like_v<T>
+    requires is_recursive_wrapper_v<T>
 constexpr T& get(rvariant<Ts...>&) = delete;
 
 template<class T, class... Ts>
-    requires detail::is_recursive_wrapper_like_v<T>
+    requires is_recursive_wrapper_v<T>
 constexpr T&& get(rvariant<Ts...>&&) = delete;
 
 template<class T, class... Ts>
-    requires detail::is_recursive_wrapper_like_v<T>
+    requires is_recursive_wrapper_v<T>
 constexpr T const& get(rvariant<Ts...> const&) = delete;
 
 template<class T, class... Ts>
-    requires detail::is_recursive_wrapper_like_v<T>
+    requires is_recursive_wrapper_v<T>
 constexpr T const&& get(rvariant<Ts...> const&&) = delete;
 
 // -------------------------------------------------
@@ -1375,19 +1375,19 @@ unsafe_get(rvariant<Ts...> const&& v IRIS_LIFETIMEBOUND) noexcept
 }
 
 template<class T, class... Ts>
-    requires detail::is_recursive_wrapper_like_v<T>
+    requires is_recursive_wrapper_v<T>
 constexpr T& unsafe_get(rvariant<Ts...>&) = delete;
 
 template<class T, class... Ts>
-    requires detail::is_recursive_wrapper_like_v<T>
+    requires is_recursive_wrapper_v<T>
 constexpr T&& unsafe_get(rvariant<Ts...>&&) = delete;
 
 template<class T, class... Ts>
-    requires detail::is_recursive_wrapper_like_v<T>
+    requires is_recursive_wrapper_v<T>
 constexpr T const& unsafe_get(rvariant<Ts...> const&) = delete;
 
 template<class T, class... Ts>
-    requires detail::is_recursive_wrapper_like_v<T>
+    requires is_recursive_wrapper_v<T>
 constexpr T const&& unsafe_get(rvariant<Ts...> const&&) = delete;
 
 // ---------------------------------------------

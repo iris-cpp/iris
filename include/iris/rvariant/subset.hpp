@@ -5,8 +5,8 @@
 
 #include <iris/config.hpp> // IWYU pragma: keep
 
-#include <iris/rvariant/detail/rvariant_fwd.hpp>
 #include <iris/rvariant/variant_helper.hpp>
+#include <iris/rvariant/rvariant_fwd.hpp>
 #include <iris/type_list.hpp>
 
 #include <iris/bits/specialization_of.hpp>

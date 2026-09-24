@@ -8,6 +8,7 @@
 
 using iris::type_list;
 using iris::concat_type_list;
+using iris::unique_type_list;
 
 TEST_CASE("type_list")
 {
@@ -23,6 +24,35 @@ TEST_CASE("type_list")
     STATIC_CHECK(std::same_as<concat_type_list<type_list<int>, type_list<>, type_list<>>::type, type_list<int>>);
     STATIC_CHECK(std::same_as<concat_type_list<type_list<>, type_list<int>, type_list<>>::type, type_list<int>>);
     STATIC_CHECK(std::same_as<concat_type_list<type_list<>, type_list<>, type_list<int>>::type, type_list<int>>);
+
+    // -----------------------------------------------------------
+
+    STATIC_CHECK(std::same_as<unique_type_list<>::type, type_list<>>);
+    STATIC_CHECK(std::same_as<unique_type_list<type_list<>>::type, type_list<>>);
+
+    struct A{};
+    struct B{};
+
+    STATIC_CHECK(std::same_as<unique_type_list<type_list<A>>::type, type_list<A>>);
+
+    STATIC_CHECK(std::same_as<unique_type_list<type_list<A, B>>::type, type_list<A, B>>);
+    STATIC_CHECK(std::same_as<unique_type_list<type_list<A, B, A>>::type, type_list<A, B>>);
+    STATIC_CHECK(std::same_as<unique_type_list<type_list<A, B, B>>::type, type_list<A, B>>);
+
+    STATIC_CHECK(std::same_as<unique_type_list<type_list<A, A>>::type, type_list<A>>);
+    STATIC_CHECK(std::same_as<unique_type_list<type_list<A, A, A>>::type, type_list<A>>);
+    STATIC_CHECK(std::same_as<unique_type_list<type_list<A, A, B>>::type, type_list<A, B>>);
+
+    STATIC_CHECK(std::same_as<unique_type_list<type_list<B, A>>::type, type_list<B, A>>);
+    STATIC_CHECK(std::same_as<unique_type_list<type_list<B, A, A>>::type, type_list<B, A>>);
+    STATIC_CHECK(std::same_as<unique_type_list<type_list<B, A, B>>::type, type_list<B, A>>);
+
+    struct C{};
+
+    STATIC_CHECK(std::same_as<unique_type_list<type_list<A, B, C>>::type, type_list<A, B, C>>);
+    STATIC_CHECK(std::same_as<unique_type_list<type_list<A, B, C, A>>::type, type_list<A, B, C>>);
+    STATIC_CHECK(std::same_as<unique_type_list<type_list<A, B, C, B>>::type, type_list<A, B, C>>);
+    STATIC_CHECK(std::same_as<unique_type_list<type_list<A, B, C, C>>::type, type_list<A, B, C>>);
 }
 
 TEST_CASE("pack_indexing")
