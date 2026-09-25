@@ -80,7 +80,7 @@ private:
     template<std::size_t... Is, class UTuple>
     constexpr explicit tuple(construct_t, std::index_sequence<Is...>, UTuple&& other)
         noexcept(detail::tuple_traits<UTuple, Ts...>::all_nothrow_gettable && detail::tuple_traits<UTuple, Ts...>::all_nothrow_constructible)
-        : base_type(alloy::get<Is>(static_cast<UTuple>(other))...)
+        : base_type(alloy::get<Is>(static_cast<UTuple&&>(other))...)
     {}
 
 public:
@@ -191,7 +191,7 @@ public:
 #endif
     constexpr explicit(!detail::tuple_traits<UTuple, Ts...>::all_convertible) tuple(UTuple&& other)
         noexcept(detail::tuple_traits<UTuple, Ts...>::all_nothrow_gettable && detail::tuple_traits<UTuple, Ts...>::all_nothrow_constructible)
-        : tuple(construct, std::make_index_sequence<tuple_size_v<std::remove_cvref_t<UTuple>>>{}, static_cast<UTuple>(other))
+        : tuple(construct, std::make_index_sequence<tuple_size_v<std::remove_cvref_t<UTuple>>>{}, static_cast<UTuple&&>(other))
     {}
 
 #if __cpp_lib_reference_from_temporary >= 202202L
@@ -315,7 +315,7 @@ public:
     constexpr tuple& operator=(UTuple&& other)
         noexcept(detail::tuple_traits<UTuple, Ts...>::all_nothrow_assignable)
     {
-        base_type::operator=(static_cast<UTuple>(other));
+        base_type::operator=(static_cast<UTuple&&>(other));
         return *this;
     }
 

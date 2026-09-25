@@ -271,6 +271,10 @@ struct tuple_assign_impl;
 template<class From, class To, std::size_t... Is>
 struct tuple_assign_impl<From, To, std::index_sequence<Is...>>
 {
+    static constexpr bool assignable = std::conjunction_v<
+        std::is_assignable<tuple_get_t<Is, To>, tuple_get_t<Is, From>>...
+    >;
+
     static constexpr bool nothrow = std::conjunction_v<
         std::conjunction<is_nothrow_gettable<Is, From>, is_nothrow_gettable<Is, To>>...,
         std::is_nothrow_assignable<tuple_get_t<Is, To>, tuple_get_t<Is, From>>...
@@ -345,9 +349,11 @@ template<std::size_t... Sizes, TupleLike Tuple>
 }
 
 template<TupleLike From, TupleLike To>
+    requires
+        (tuple_size_v<std::remove_cvref_t<From>> == tuple_size_v<std::remove_cvref_t<To>>) &&
+        detail::tuple_assign_impl<From, To>::assignable
 constexpr void tuple_assign(From&& from, To&& to) noexcept(detail::tuple_assign_impl<From, To>::nothrow)
 {
-    static_assert(tuple_size_v<std::remove_cvref_t<From>> == tuple_size_v<std::remove_cvref_t<To>>);
     detail::tuple_assign_impl<From, To>::apply(std::forward<From>(from), std::forward<To>(to));
 }
 

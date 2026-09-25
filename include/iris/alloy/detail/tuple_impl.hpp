@@ -83,7 +83,7 @@ public:
 #define IRIS_ALLOY_DETAIL_FWD_INITS(n, data) \
     IRIS_PP_COMMA_IF(n) \
     IRIS_PP_CAT(IRIS_ALLOY_DETAIL_MEMBER_PREFIX, \
-                 n)(static_cast<IRIS_PP_CAT(IRIS_ALLOY_DETAIL_TEMPLATE_PARAM_2, n)>(IRIS_PP_CAT(IRIS_ALLOY_DETAIL_FUNCTION_PARAM_2, n)))
+                 n)(static_cast<IRIS_PP_CAT(IRIS_ALLOY_DETAIL_TEMPLATE_PARAM_2, n)&&>(IRIS_PP_CAT(IRIS_ALLOY_DETAIL_FUNCTION_PARAM_2, n)))
 
 #define IRIS_ALLOY_DETAIL_INITS(n, other) \
     IRIS_PP_COMMA_IF(n) \
@@ -116,7 +116,7 @@ public:
 
 #define IRIS_ALLOY_DETAIL_ASSIGN_ASSIGN(n, data) \
     IRIS_PP_CAT(IRIS_ALLOY_DETAIL_MEMBER_PREFIX, n) = \
-        static_cast<IRIS_PP_CAT(IRIS_ALLOY_DETAIL_TEMPLATE_PARAM_2, n)>(IRIS_PP_CAT(IRIS_ALLOY_DETAIL_FUNCTION_PARAM_2, n));
+        static_cast<IRIS_PP_CAT(IRIS_ALLOY_DETAIL_TEMPLATE_PARAM_2, n)&&>(IRIS_PP_CAT(IRIS_ALLOY_DETAIL_FUNCTION_PARAM_2, n));
 
 #define IRIS_ALLOY_DETAIL_ASSIGN_GET(n, other) \
     IRIS_PP_CAT(IRIS_ALLOY_DETAIL_MEMBER_PREFIX, n) = alloy::get<n>(static_cast<decltype(other)>(other));
@@ -306,7 +306,7 @@ private:
     constexpr void assign(IRIS_PP_REPEAT(IRIS_ALLOY_TUPLE_LIMIT, IRIS_ALLOY_DETAIL_FWD_PARAMS, ), Us&&... us)
     {
         IRIS_PP_REPEAT(IRIS_ALLOY_TUPLE_LIMIT, IRIS_ALLOY_DETAIL_ASSIGN_ASSIGN, )
-        rest.assign(static_cast<Us>(us)...);
+        rest.assign(static_cast<Us&&>(us)...);
     }
 
     template<IRIS_PP_REPEAT(IRIS_ALLOY_TUPLE_LIMIT, IRIS_ALLOY_DETAIL_TEMPLATE_PARAMS, IRIS_ALLOY_DETAIL_TEMPLATE_PARAM_2)>
@@ -425,7 +425,7 @@ public:
     template<class UTuple>
     constexpr tuple_impl& operator=(UTuple&& other)
     {
-        [&, this]<std::size_t... Is>(std::index_sequence<Is...>) { assign(alloy::get<Is>(static_cast<UTuple>(other))...); }(std::index_sequence_for<Ts...>{});
+        [&, this]<std::size_t... Is>(std::index_sequence<Is...>) { assign(alloy::get<Is>(static_cast<UTuple&&>(other))...); }(std::index_sequence_for<Ts...>{});
         return *this;
     }
 
