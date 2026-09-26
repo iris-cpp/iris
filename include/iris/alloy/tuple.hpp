@@ -269,6 +269,7 @@ public:
 
     constexpr tuple& operator=(tuple const& other)
         noexcept(std::conjunction_v<std::is_nothrow_copy_assignable<Ts>...>)
+        requires std::conjunction_v<std::is_copy_assignable<Ts>...>
     {
         base_type::operator=(other);
         return *this;
