@@ -78,7 +78,7 @@ TEST_CASE("pack_indexing")
 TEST_CASE("exactly_once")
 {
     STATIC_CHECK(iris::exactly_once_v<int, type_list<int, float>>);
-    STATIC_CHECK_FALSE(iris::exactly_once_v<int, type_list<int, int>>);
+    STATIC_CHECK(!iris::exactly_once_v<int, type_list<int, int>>);
 }
 
 TEST_CASE("is_in")
