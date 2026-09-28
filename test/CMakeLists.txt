@@ -183,6 +183,7 @@ if(PROJECT_IS_TOP_LEVEL)
             core
             type_list
             type_traits
+            narrowing
             ranges
             container_traits
             stdint
