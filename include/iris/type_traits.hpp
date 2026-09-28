@@ -9,6 +9,7 @@
 #include <iris/bits/specialization_of.hpp>  // IWYU pragma: export
 
 #include <concepts>
+#include <initializer_list>
 #include <type_traits> // IWYU pragma: export
 #include <utility>
 
@@ -193,6 +194,24 @@ template<class T, class U>
 concept weakly_assignable_from = std::is_assignable_v<T, U>;
 
 
+template<class T>
+// ReSharper disable once CppFunctionDoesntReturnValue
+[[nodiscard]] T declval_exact() noexcept
+{
+    // ReSharper disable once CppStaticAssertFailure
+    static_assert(false, "declval_exact() must not be odr-used");
+}
+
+template<class T>
+// ReSharper disable once CppFunctionDoesntReturnValue
+[[nodiscard]] T copy_initialize(T) noexcept
+{
+    // ReSharper disable once CppStaticAssertFailure
+    static_assert(false, "copy_initialize() must not be odr-used");
+}
+
+// ----------------------------------------------
+
 namespace detail {
 
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2026/p0870r8.html
@@ -212,14 +231,6 @@ struct is_convertible_without_narrowing_array_check<From, To>
 
 // ----------------------------------------------
 
-// Array of reference cannot be formed, handle special case.
-template<class From, class To>
-struct is_convertible_without_narrowing_dispatch
-    : is_convertible_without_narrowing_array_check<From, To>
-{
-    static_assert(!std::is_reference_v<To>);
-};
-
 template<class From, class To>
 using is_never_narrowing_family = std::disjunction<
     std::is_same<std::remove_cvref_t<From>, std::remove_cvref_t<To>>,
@@ -227,47 +238,52 @@ using is_never_narrowing_family = std::disjunction<
     std::is_function<std::remove_cvref_t<To>>,
     std::is_array<std::remove_cvref_t<To>>
 >;
-template<class From, class To>
+
+template<bool Direct, class From, class To>
+using reference_binds_to_temporary = std::conditional_t<
+    Direct,
+    std::reference_constructs_from_temporary<To, From>,
+    std::reference_converts_from_temporary<To, From>
+>;
+
+// `Check<From, To>` judges the initialization of a non-reference `To`.
+// Array of reference cannot be formed, so a reference is judged by the temporary it binds to.
+template<template<class, class> class Check, bool Direct, class From, class To>
+struct narrowing_check_dispatch
+    : Check<From, To>
+{
+    static_assert(!std::is_reference_v<To>);
+};
+
+template<template<class, class> class Check, bool Direct, class From, class To>
     requires
         std::is_reference_v<To> &&
-        is_never_narrowing_family<From, To>::value
-struct is_convertible_without_narrowing_dispatch<From, To>
+        (is_never_narrowing_family<From, To>::value || !reference_binds_to_temporary<Direct, From, To>::value)
+struct narrowing_check_dispatch<Check, Direct, From, To>
     : std::true_type
 {};
 
-template<class From, class To>
+template<template<class, class> class Check, bool Direct, class From, class To>
     requires
         std::is_reference_v<To> &&
         (!is_never_narrowing_family<From, To>::value) &&
-        (!std::reference_converts_from_temporary_v<To, From>)
-struct is_convertible_without_narrowing_dispatch<From, To>
-    : std::true_type
-{};
-
-template<class From, class To>
-    requires
-        std::is_reference_v<To> &&
-        (!is_never_narrowing_family<From, To>::value) &&
-        std::reference_converts_from_temporary_v<To, From>
-struct is_convertible_without_narrowing_dispatch<From, To>
-    : is_convertible_without_narrowing_array_check<
-        From,
-        std::remove_reference_t<To> // temporary type is copy-list-initialized
-    >
+        reference_binds_to_temporary<Direct, From, To>::value
+struct narrowing_check_dispatch<Check, Direct, From, To>
+    : Check<From, std::remove_reference_t<To>> // temporary is copy-initialized
 {};
 
 // ----------------------------------------------
 
-template<class From, class To>
-struct is_convertible_without_narrowing_impl
-    : is_convertible_without_narrowing_dispatch<From, To>
+template<template<class, class> class Check, class From, class To>
+struct convertible_narrowing_check
+    : narrowing_check_dispatch<Check, false, From, To>
 {};
 
 // Corner case mentioned on the paper: void
 // cv variants are already handled via `std::is_convertible`.
-template<class From, class To>
+template<template<class, class> class Check, class From, class To>
     requires std::is_void_v<To>
-struct is_convertible_without_narrowing_impl<From, To>
+struct convertible_narrowing_check<Check, From, To>
     : std::true_type
 {};
 
@@ -277,9 +293,10 @@ struct is_convertible_without_narrowing_impl<From, To>
 // This is already applied to all major vendors, but some implementations
 // disagree with `std::nullptr_t`. Note that `std::nullptr_t` is NOT a
 // pointer type, so it cannot be checked with `std::is_pointer`.
-template<class From, class To>
+template<template<class, class> class Check, class From, class To>
     requires std::is_null_pointer_v<From> && std::same_as<std::remove_cvref_t<To>, bool>
-struct is_convertible_without_narrowing_impl<From, To> : std::false_type
+struct convertible_narrowing_check<Check, From, To>
+    : std::false_type
 {};
 
 } // namespace detail
@@ -291,11 +308,194 @@ struct is_convertible_without_narrowing : std::false_type
 template<class From, class To>
     requires std::is_convertible_v<From, To>
 struct is_convertible_without_narrowing<From, To>
-    : detail::is_convertible_without_narrowing_impl<From, To>
+    : detail::convertible_narrowing_check<detail::is_convertible_without_narrowing_array_check, From, To>
 {};
 
 template<class From, class To>
 inline constexpr bool is_convertible_without_narrowing_v = is_convertible_without_narrowing<From, To>::value;
+
+// ----------------------------------------------
+
+namespace detail {
+
+template<class T>
+concept class_or_union = std::is_class_v<T> || std::is_union_v<T>;
+
+// Unlike `std::is_convertible_v`, false for an incomplete or abstract `T`
+template<class T, class From>
+concept copy_initializable = requires { iris::copy_initialize<T>(std::declval<From>()); };
+
+template<class T, class From>
+concept copy_list_initializable = requires { iris::copy_initialize<std::remove_cv_t<T>>({std::declval<From>()}); };
+
+template<class T, class... Args>
+concept direct_list_initializable = requires { std::type_identity_t<std::remove_cv_t<T>>{std::declval<Args>()...}; };
+
+template<class T, class U>
+concept list_assignable = requires { std::declval<T>() = {std::declval<U>()}; };
+
+// ----------------------------------------------
+
+struct opaque_checker
+{
+    opaque_checker() = default;
+    opaque_checker(opaque_checker const&) = delete;
+};
+
+template<class... Args>
+struct initializer_list_checker : opaque_checker
+{
+    template<class E>
+        requires (copy_initializable<E, Args> && ...)
+    operator std::initializer_list<E>() const;
+};
+
+// `T{args...}` selects an initializer-list constructor regardless of narrowing
+template<class T, class... Args>
+concept selects_initializer_list =
+    !std::is_aggregate_v<T> &&
+    (
+        (!std::is_constructible_v<T, opaque_checker const&> &&
+         std::is_constructible_v<T, initializer_list_checker<Args...> const&>) ||
+        (direct_list_initializable<T, Args..., Args...> && !std::is_constructible_v<T, Args..., Args...>)
+    );
+
+template<class T, class U>
+concept selects_initializer_list_assignment =
+    selects_initializer_list<std::remove_cvref_t<T>, U> ||
+    std::is_assignable_v<T, initializer_list_checker<U> const&>;
+
+// ----------------------------------------------
+
+template<class From, class To>
+concept copy_initializable_without_any_narrowing =
+    !selects_initializer_list<To, From> &&
+    (
+        (class_or_union<To> && class_or_union<std::remove_cvref_t<From>>) ||
+        copy_list_initializable<To, From>
+    );
+
+template<class From, class To>
+struct copy_initialization_narrowing_check
+    : std::bool_constant<copy_initializable_without_any_narrowing<From, To>>
+{};
+
+// ----------------------------------------------
+
+template<class V, bool Strict>
+struct class_checker : opaque_checker
+{
+    template<class P>
+        requires std::is_scalar_v<P> && std::is_convertible_v<V, P>
+    operator P() const = delete;
+
+    template<class Q>
+        requires
+            class_or_union<Q> && copy_initializable<Q, V> &&
+            (!Strict || copy_initializable_without_any_narrowing<V, Q>)
+    operator Q() const;
+};
+
+template<class V>
+struct value_checker : opaque_checker
+{
+    operator std::add_rvalue_reference_t<V>() const;
+};
+
+template<class T, class... Args>
+struct direct_initialization_narrowing_check
+    : std::false_type
+{};
+
+template<class T, class... Args>
+    requires
+        (!selects_initializer_list<T, Args...>) &&
+        direct_list_initializable<T, Args...> &&
+        std::is_constructible_v<
+            T,
+            std::conditional_t<class_or_union<std::remove_cvref_t<Args>>, Args, value_checker<Args>>...
+        >
+struct direct_initialization_narrowing_check<T, Args...>
+    : std::true_type
+{};
+
+template<class T>
+struct direct_initialization_narrowing_check<T>
+    : std::true_type
+{};
+
+template<class T, class Arg>
+concept direct_initializable_without_any_narrowing =
+    !selects_initializer_list<T, Arg> &&
+    direct_list_initializable<T, Arg> &&
+    (
+        // `T{v}` may not check narrowing in the converting constructor of a class-type parameter
+        !std::is_constructible_v<T, class_checker<Arg, false>> ||
+        std::is_constructible_v<T, class_checker<Arg, true>>
+    );
+
+template<class T, class Arg>
+struct direct_initialization_narrowing_check<T, Arg>
+    : std::bool_constant<direct_initializable_without_any_narrowing<T, Arg>>
+{};
+
+template<class T, class Arg>
+    requires std::is_reference_v<T>
+struct direct_initialization_narrowing_check<T, Arg>
+    : narrowing_check_dispatch<copy_initialization_narrowing_check, true, Arg, T>
+{};
+
+// See the note on P1957R2 above
+template<class T, class Arg>
+    requires std::is_null_pointer_v<std::remove_cvref_t<Arg>> && std::same_as<std::remove_cv_t<T>, bool>
+struct direct_initialization_narrowing_check<T, Arg>
+    : std::false_type
+{};
+
+} // detail
+
+// is_convertible_without_narrowing + also rejects user-defined conversion in constructor
+template<class From, class To>
+struct is_convertible_without_any_narrowing : std::false_type
+{};
+
+template<class From, class To>
+    requires std::is_convertible_v<From, To>
+struct is_convertible_without_any_narrowing<From, To>
+    : detail::convertible_narrowing_check<detail::copy_initialization_narrowing_check, From, To>
+{};
+
+template<class From, class To>
+inline constexpr bool is_convertible_without_any_narrowing_v = is_convertible_without_any_narrowing<From, To>::value;
+
+template<class T, class... Args>
+struct is_constructible_without_any_narrowing : std::false_type
+{};
+
+template<class T, class... Args>
+    requires std::is_constructible_v<T, Args...>
+struct is_constructible_without_any_narrowing<T, Args...>
+    : detail::direct_initialization_narrowing_check<T, Args...>
+{};
+
+template<class T, class... Args>
+inline constexpr bool is_constructible_without_any_narrowing_v = is_constructible_without_any_narrowing<T, Args...>::value;
+
+template<class T, class U>
+struct is_assignable_without_any_narrowing : std::false_type
+{};
+
+template<class T, class U>
+    requires
+        std::is_assignable_v<T, U> &&
+        (!detail::selects_initializer_list_assignment<T, U>) &&
+        detail::list_assignable<T, U>
+struct is_assignable_without_any_narrowing<T, U>
+    : std::true_type
+{};
+
+template<class T, class U>
+inline constexpr bool is_assignable_without_any_narrowing_v = is_assignable_without_any_narrowing<T, U>::value;
 
 
 namespace detail {
@@ -351,24 +551,6 @@ struct no_narrowing_resolution<
 // legitimate infinite recursion errors on recursive types.
 template<class T, class... Ts>
 struct no_narrowing_resolution : detail::no_narrowing_resolution<void, T, Ts...> {};
-
-// ----------------------------------------------
-
-template<class T>
-// ReSharper disable once CppFunctionDoesntReturnValue
-[[nodiscard]] T declval_exact() noexcept
-{
-    // ReSharper disable once CppStaticAssertFailure
-    static_assert(false, "declval_exact() must not be odr-used");
-}
-
-template<class T>
-// ReSharper disable once CppFunctionDoesntReturnValue
-[[nodiscard]] T copy_initialize(T) noexcept
-{
-    // ReSharper disable once CppStaticAssertFailure
-    static_assert(false, "copy_initialize() must not be odr-used");
-}
 
 // ----------------------------------------------
 
