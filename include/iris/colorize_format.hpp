@@ -21,6 +21,7 @@
 #include <string_view>
 #include <utility>
 #include <unordered_map>
+#include <vector>
 #include <ostream>
 
 #include <cstdint>
@@ -423,7 +424,9 @@ static constexpr auto color_lookup_table = std::array
 
 [[nodiscard]] static constexpr color name_to_color(std::string_view name) noexcept
 {
-    auto it = std::ranges::lower_bound(color_lookup_table, name, {}, &color_pair::name);
+    auto it = std::lower_bound(color_lookup_table.begin(), color_lookup_table.end(), name, [](color_pair const& pair, std::string_view key) {
+        return pair.name < key;
+    });
     if (it == color_lookup_table.end() || it->name != name) return color{};
     return it->value;
 }
@@ -552,8 +555,13 @@ struct colorizer
         };
 
         // write emphases
-        for (auto em : iris::each_bit(style_.emphasis)) {
-            it = append_u8_to(std::move(it), detail::emphasis_to_value(em));
+        for (auto const em : {
+            detail::emphasis::bold, detail::emphasis::faint, detail::emphasis::italic, detail::emphasis::underline,
+            detail::emphasis::blink, detail::emphasis::reverse, detail::emphasis::conceal, detail::emphasis::strike,
+        }) {
+            if (std::to_underlying(style_.emphasis) & std::to_underlying(em)) {
+                it = append_u8_to(std::move(it), detail::emphasis_to_value(em));
+            }
         }
 
         if (style_.fg_reset) {
@@ -594,14 +602,20 @@ struct colorizer
 
     static constexpr void parse_styles(colorize_style& style, std::string_view const style_text, colorize_config const* cfg = nullptr)
     {
-        for (auto&& specifier : style_text | std::views::split('|')) {
-            colorizer::parse_style_impl(style, std::string_view{specifier}, cfg);
+        if (style_text.empty()) return;
+
+        for (std::string_view rest = style_text;;) {
+            auto const pos = rest.find('|');
+            colorizer::parse_style_impl(style, rest.substr(0, pos), cfg);
+            if (pos == std::string_view::npos) break;
+            rest.remove_prefix(pos + 1);
         }
     }
 
     [[nodiscard]] static constexpr colorize_config make_config(std::vector<std::pair<std::string_view, std::string_view>> def)
     {
-        std::ranges::sort(def, {}, &decltype(def)::value_type::first);
+        using definition = std::pair<std::string_view, std::string_view>;
+        std::sort(def.begin(), def.end(), [](definition const& a, definition const& b) { return a.first < b.first; });
         colorize_config cfg;
         cfg.map.reserve(def.size());
 
@@ -649,17 +663,17 @@ private:
     static constexpr void parse_style_impl(colorize_style& style, std::string_view specifier, colorize_config const* cfg = nullptr)
     {
         if (specifier.starts_with('$')) {
-            if (!cfg) throw colorize_error(std::format("custom tag \"{}\" was found, but `cfg` was not specified", specifier));
+            if (!cfg) throw colorize_error("custom tag \"" + std::string(specifier) + "\" was found, but `cfg` was not specified");
 
             auto const it = cfg->map.find(specifier);
-            if (it == cfg->map.end()) throw colorize_error(std::format("custom tag \"{}\" not found in `cfg`", specifier));
+            if (it == cfg->map.end()) throw colorize_error("custom tag \"" + std::string(specifier) + "\" not found in `cfg`");
             style = it->second.opening;
 
         } else if (specifier.starts_with("/")) {
-            if (!cfg) throw colorize_error(std::format("custom tag \"{}\" was found, but `cfg` was not specified", specifier));
+            if (!cfg) throw colorize_error("custom tag \"" + std::string(specifier) + "\" was found, but `cfg` was not specified");
 
             auto const it = cfg->map.find(specifier.substr(1));
-            if (it == cfg->map.end()) throw colorize_error(std::format("custom tag \"{}\" not found in `cfg`", specifier.substr(1)));
+            if (it == cfg->map.end()) throw colorize_error("custom tag \"" + std::string(specifier.substr(1)) + "\" not found in `cfg`");
             style = it->second.closing;
 
         } else if (specifier == "reset") {
@@ -714,7 +728,7 @@ private:
             }
 
         } else {
-            throw colorize_error(std::format("invalid specifier: \"{}\"", specifier));
+            throw colorize_error("invalid specifier: \"" + std::string(specifier) + "\"");
         }
     }
 
