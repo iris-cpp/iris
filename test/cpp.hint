@@ -4,10 +4,15 @@
 // such as names of functions and macros.
 // For more information see https://go.microsoft.com/fwlink/?linkid=865984
 
-#define TEST_CASE
-#define REQUIRE
-#define STATIC_REQUIRE
+#define TEST_CASE void test_case()
+#define TEMPLATE_TEST_CASE void test_case()
 #define CHECK
+#define REQUIRE
+#define REQUIRE_FALSE
+#define REQUIRE_THROWS_AS
 #define STATIC_CHECK
+#define STATIC_REQUIRE
+#define CAPTURE
+#define SECTION
 
 #define IRIS_REQUIRE_STATIC_NOTHROW
