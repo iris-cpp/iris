@@ -43,6 +43,27 @@ concept unique_mapping_container =
 
 namespace detail {
 
+template<class T>
+struct element_impl
+{
+    using type = T;
+};
+
+template<class K, class V>
+struct element_impl<std::pair<K const, V>>
+{
+    using type = std::pair<K, V>;
+};
+
+} // detail
+
+// The type of an element made before it is added to `ContainerT`: the value type, whose key is not const
+template<class ContainerT>
+using element_t = detail::element_impl<std::ranges::range_value_t<ContainerT>>::type;
+
+
+namespace detail {
+
 template<class ContainerT>
 concept has_front = requires(ContainerT& cont) {
     { cont.front() } -> std::same_as<std::ranges::range_reference_t<ContainerT>>;
@@ -108,32 +129,38 @@ template<class R> concept back_accessible = requires(R& r) { back(r); };
 namespace detail {
 
 template<class ContainerT, class... Args>
-concept has_emplace_front =
-    requires(ContainerT& cont) {
-        cont.emplace_front(std::declval<Args>()...);
-    };
+concept emplaceable = std::constructible_from<std::ranges::range_value_t<ContainerT>, Args...>;
 
 template<class ContainerT, class... Args>
-concept has_push_front =
-    sizeof...(Args) == 1 &&
-    requires(ContainerT& cont) {
-        cont.push_front(std::declval<Args>()...);
-    };
+concept position_emplaceable =
+    emplaceable<ContainerT, Args...> &&
+    !requires { typename std::remove_cvref_t<ContainerT>::key_type; };
 
 template<class ContainerT, class... Args>
-concept has_begin_emplace =
-    std::ranges::range<ContainerT> &&
-    requires(ContainerT& cont) {
-        cont.emplace(std::ranges::begin(cont), std::declval<Args>()...);
-    };
+concept has_emplace_front = requires(ContainerT& cont) {
+    requires emplaceable<ContainerT, Args...>;
+    cont.emplace_front(std::declval<Args>()...);
+};
 
 template<class ContainerT, class... Args>
-concept has_begin_insert =
-    sizeof...(Args) == 1 &&
-    std::ranges::range<ContainerT> &&
-    requires(ContainerT& cont) {
-        cont.insert(std::ranges::begin(cont), std::declval<Args>()...);
-    };
+concept has_push_front = requires(ContainerT& cont) {
+    requires sizeof...(Args) == 1;
+    cont.push_front(std::declval<Args>()...);
+};
+
+template<class ContainerT, class... Args>
+concept has_begin_emplace = requires(ContainerT& cont) {
+    requires std::ranges::range<ContainerT>;
+    requires position_emplaceable<ContainerT, Args...>;
+    cont.emplace(std::ranges::begin(cont), std::declval<Args>()...);
+};
+
+template<class ContainerT, class... Args>
+concept has_begin_insert = requires(ContainerT& cont) {
+    requires sizeof...(Args) == 1;
+    requires std::ranges::range<ContainerT>;
+    cont.insert(std::ranges::begin(cont), std::declval<Args>()...);
+};
 
 } // detail
 
@@ -162,7 +189,10 @@ concept prependable =
     front_pushable<ContainerT, Args...> ||
     detail::has_begin_emplace<ContainerT, Args...> ||
     detail::has_begin_insert<ContainerT, Args...> ||
-    (sizeof...(Args) == 0 && default_prependable<ContainerT>);
+    requires {
+        requires sizeof...(Args) == 0;
+        requires default_prependable<ContainerT>;
+    };
 
 namespace detail {
 
@@ -296,32 +326,30 @@ struct prepend_fn
 namespace detail {
 
 template<class ContainerT, class... Args>
-concept has_emplace_back =
-    requires(ContainerT& cont) {
-        cont.emplace_back(std::declval<Args>()...);
-    };
+concept has_emplace_back = requires(ContainerT& cont) {
+    requires emplaceable<ContainerT, Args...>;
+    cont.emplace_back(std::declval<Args>()...);
+};
 
 template<class ContainerT, class... Args>
-concept has_push_back =
-    sizeof...(Args) == 1 &&
-    requires(ContainerT& cont) {
-        cont.push_back(std::declval<Args>()...);
-    };
+concept has_push_back = requires(ContainerT& cont) {
+    requires sizeof...(Args) == 1;
+    cont.push_back(std::declval<Args>()...);
+};
 
 template<class ContainerT, class... Args>
-concept has_end_emplace =
-    std::ranges::range<ContainerT> &&
-    requires(ContainerT& cont) {
-        cont.emplace(std::ranges::end(cont), std::declval<Args>()...);
-    };
+concept has_end_emplace = requires(ContainerT& cont) {
+    requires std::ranges::range<ContainerT>;
+    requires position_emplaceable<ContainerT, Args...>;
+    cont.emplace(std::ranges::end(cont), std::declval<Args>()...);
+};
 
 template<class ContainerT, class... Args>
-concept has_end_insert =
-    sizeof...(Args) == 1 &&
-    std::ranges::range<ContainerT> &&
-    requires(ContainerT& cont) {
-        cont.insert(std::ranges::end(cont), std::declval<Args>()...);
-    };
+concept has_end_insert = requires(ContainerT& cont) {
+    requires sizeof...(Args) == 1;
+    requires std::ranges::range<ContainerT>;
+    cont.insert(std::ranges::end(cont), std::declval<Args>()...);
+};
 
 } // detail
 
@@ -350,7 +378,10 @@ concept appendable =
     back_pushable<ContainerT, Args...> ||
     detail::has_end_emplace<ContainerT, Args...> ||
     detail::has_end_insert<ContainerT, Args...> ||
-    (sizeof...(Args) == 0 && default_appendable<ContainerT>);
+    requires {
+        requires sizeof...(Args) == 0;
+        requires default_appendable<ContainerT>;
+    };
 
 namespace detail {
 
@@ -613,6 +644,90 @@ template<class R, class ElemT>
 concept compatible_range =
     std::ranges::input_range<R> &&
     std::convertible_to<std::ranges::range_reference_t<R>, ElemT>;
+
+// ------------------------------------------------------------
+
+namespace detail {
+
+template<class ContainerT, class R>
+concept has_append_range = requires(ContainerT& cont, R&& r) {
+    cont.append_range(std::forward<R>(r));
+};
+
+template<class ContainerT, class R>
+concept has_end_insert_range =
+    std::ranges::range<ContainerT> &&
+    requires(ContainerT& cont, R&& r) {
+        cont.insert_range(std::ranges::end(cont), std::forward<R>(r));
+    };
+
+template<class ContainerT, class R>
+concept has_insert_range = requires(ContainerT& cont, R&& r) {
+    cont.insert_range(std::forward<R>(r));
+};
+
+template<class ContainerT, class R>
+concept has_end_insert_iterators =
+    std::ranges::range<ContainerT> &&
+    std::ranges::common_range<R> &&
+    requires(ContainerT& cont, R& r) {
+        cont.insert(std::ranges::end(cont), std::ranges::begin(r), std::ranges::end(r));
+    };
+
+template<class ContainerT, class R>
+concept has_insert_iterators =
+    std::ranges::common_range<R> &&
+    requires(ContainerT& cont, R& r) {
+        cont.insert(std::ranges::begin(r), std::ranges::end(r));
+    };
+
+// The elements of `r` at the end of `cont`, or into the associative `cont`
+struct append_range_fn
+{
+    template<class ContainerT, class R>
+        requires
+            compatible_range<R, std::ranges::range_value_t<ContainerT>> &&
+            (
+                has_append_range<ContainerT, R> ||
+                has_end_insert_range<ContainerT, R> ||
+                has_insert_range<ContainerT, R> ||
+                has_end_insert_iterators<ContainerT, R> ||
+                has_insert_iterators<ContainerT, R>
+            )
+    static constexpr void operator()(ContainerT& cont, R&& r)
+    {
+        if constexpr (has_append_range<ContainerT, R>) {
+            cont.append_range(std::forward<R>(r));
+
+        } else if constexpr (has_end_insert_range<ContainerT, R>) {
+            cont.insert_range(std::ranges::end(cont), std::forward<R>(r));
+
+        } else if constexpr (has_insert_range<ContainerT, R>) {
+            cont.insert_range(std::forward<R>(r));
+
+        } else if constexpr (has_end_insert_iterators<ContainerT, R>) {
+            cont.insert(std::ranges::end(cont), std::ranges::begin(r), std::ranges::end(r));
+
+        } else {
+            cont.insert(std::ranges::begin(r), std::ranges::end(r));
+        }
+    }
+};
+
+struct clear_fn
+{
+    template<class ContainerT>
+        requires requires(ContainerT& cont) { cont.clear(); }
+    static constexpr void operator()(ContainerT& cont) noexcept(noexcept(cont.clear()))
+    {
+        cont.clear();
+    }
+};
+
+} // detail
+
+[[maybe_unused]] inline constexpr detail::append_range_fn append_range{};
+[[maybe_unused]] inline constexpr detail::clear_fn clear{};
 
 } // iris::container
 

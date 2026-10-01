@@ -798,3 +798,66 @@ TEST_CASE("container: append")
         STATIC_CHECK(!std::invocable<decltype(iris::container::append_return), Cont&, int, int>);
     }
 }
+
+TEST_CASE("container: append into associative containers")
+{
+    // `emplace(it, x)` of an associative container is a valid expression but not a valid call
+    STATIC_CHECK(iris::container::appendable<std::set<int>, int>);
+    STATIC_CHECK(iris::container::growable_array<std::map<int, int>>);
+
+    std::set<int> s;
+    iris::container::append(s, 2);
+    iris::container::append(s, 1);
+    CHECK(s == std::set<int>{1, 2});
+
+    std::map<int, int> m;
+    iris::container::append(m, std::pair{1, 10});
+    CHECK(m == std::map<int, int>{{1, 10}});
+}
+
+TEST_CASE("container: append_range")
+{
+    std::vector<std::string> source{"a", "b"};
+
+    std::vector<std::string> v{"x"};
+    iris::container::append_range(v, source);
+    CHECK(v == std::vector<std::string>{"x", "a", "b"});
+
+    std::vector<std::string> moved{"x"};
+    iris::container::append_range(moved, source | std::views::as_rvalue);
+    CHECK(moved == std::vector<std::string>{"x", "a", "b"});
+    CHECK(source == std::vector<std::string>{"", ""});
+
+    std::string str = "x";
+    iris::container::append_range(str, "ab"sv);
+    CHECK(str == "xab");
+
+    std::set<int> s{3};
+    iris::container::append_range(s, std::vector{2, 1});
+    CHECK(s == std::set<int>{1, 2, 3});
+
+    std::map<int, int> m{{1, 10}};
+    iris::container::append_range(m, std::vector<std::pair<int, int>>{{2, 20}});
+    CHECK(m == std::map<int, int>{{1, 10}, {2, 20}});
+
+    // `std::vector<int>(std::size_t)` is not a conversion
+    STATIC_CHECK(!std::invocable<decltype(iris::container::append_range), std::vector<std::vector<int>>&, std::vector<int>>);
+    STATIC_CHECK(!std::invocable<decltype(iris::container::append_range), std::array<int, 1>&, std::vector<int>>);
+}
+
+TEST_CASE("container: clear")
+{
+    std::vector<int> v{1, 2};
+    iris::container::clear(v);
+    CHECK(v.empty());
+
+    STATIC_CHECK(!std::invocable<decltype(iris::container::clear), std::array<int, 1>&>);
+    STATIC_CHECK(!std::invocable<decltype(iris::container::clear), std::vector<int> const&>);
+}
+
+TEST_CASE("container: element_t")
+{
+    STATIC_CHECK(std::same_as<iris::container::element_t<std::vector<int>>, int>);
+    STATIC_CHECK(std::same_as<iris::container::element_t<std::map<int, std::string>>, std::pair<int, std::string>>);
+    STATIC_CHECK(std::same_as<iris::container::element_t<std::set<int>>, int>);
+}
