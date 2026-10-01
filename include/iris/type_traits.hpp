@@ -314,6 +314,24 @@ struct is_convertible_without_narrowing<From, To>
 template<class From, class To>
 inline constexpr bool is_convertible_without_narrowing_v = is_convertible_without_narrowing<From, To>::value;
 
+template<class T, class U>
+struct is_assignable_without_narrowing : std::false_type
+{};
+
+template<class T, class U>
+    requires
+        std::is_assignable_v<T, U> &&
+        (
+            !std::is_scalar_v<std::remove_reference_t<T>> ||
+            is_convertible_without_narrowing_v<U, std::remove_reference_t<T>>
+        )
+struct is_assignable_without_narrowing<T, U>
+    : std::true_type
+{};
+
+template<class T, class U>
+inline constexpr bool is_assignable_without_narrowing_v = is_assignable_without_narrowing<T, U>::value;
+
 // ----------------------------------------------
 
 namespace detail {
@@ -551,6 +569,26 @@ struct no_narrowing_resolution<
 // legitimate infinite recursion errors on recursive types.
 template<class T, class... Ts>
 struct no_narrowing_resolution : detail::no_narrowing_resolution<void, T, Ts...> {};
+
+template<std::size_t I, class T>
+struct conversion_overload
+{
+    static std::integral_constant<std::size_t, I> select(T); // not defined
+};
+
+template<class... Overloads>
+struct conversion_overloads : Overloads...
+{
+    using Overloads::select...;
+};
+
+template<class Overloads, class U>
+concept conversion_resolves = requires { Overloads::select(std::declval<U>()); };
+
+template<class Overloads, class U, std::size_t I>
+concept conversion_selects = requires {
+    { Overloads::select(std::declval<U>()) } -> std::same_as<std::integral_constant<std::size_t, I>>;
+};
 
 // ----------------------------------------------
 
