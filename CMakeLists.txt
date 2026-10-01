@@ -49,6 +49,24 @@ if(MSVC)
     unset(IRIS_MSVC_BIN_DIR)
 endif()
 
+# Make debug information embedded in the object files (/Z7) also in Release.
+# Unlike /Zi, it lets a precompiled header be shared between targets.
+# See also: https://gitlab.kitware.com/cmake/cmake/-/issues/27434
+function(iris_set_msvc_debug_info)
+    if(MSVC)
+        set(
+            CMAKE_MSVC_DEBUG_INFORMATION_FORMAT
+            "$<$<CONFIG:Debug>:ProgramDatabase>$<$<CONFIG:RelWithDebInfo,Release>:Embedded>"
+            PARENT_SCOPE
+        )
+        add_link_options("$<$<CONFIG:Release>:/DEBUG:FULL;/OPT:REF;/OPT:ICF>")
+    endif()
+endfunction()
+
+if(PROJECT_IS_TOP_LEVEL)
+    iris_set_msvc_debug_info()
+endif()
+
 
 # -----------------------------------------------------------------
 # Create common base targets
@@ -198,12 +216,6 @@ if(MSVC)
         _iris_cxx_best_practices
         INTERFACE
             /W4
-            $<$<CONFIG:Release>:/Zi /Zo>
-    )
-    target_link_options(
-        _iris_cxx_best_practices
-        INTERFACE
-            $<$<CONFIG:Release>:/DEBUG:FULL>
     )
 
 else()
