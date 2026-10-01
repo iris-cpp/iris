@@ -79,8 +79,8 @@ constexpr bool non_wrapped_exactly_once_v = non_wrapped_exactly_once<T, List>::v
 template<class T, class Variant>
 struct exactly_once_index
 {
-    static_assert(exactly_once_v<T, typename Variant::unwrapped_types>, "`T` or `recursive_wrapper<T>` or `recursive_wrapper_alloca<T, A>` must occur exactly once in Ts...");
-    static constexpr std::size_t value = find_index_v<T, typename Variant::unwrapped_types>;
+    static constexpr std::size_t value = find_index_exactly_once_v<T, typename Variant::unwrapped_types>;
+    static_assert(value != find_npos, "`T` or `recursive_wrapper<T>` or `recursive_wrapper_alloca<T, A>` must occur exactly once in Ts...");
 };
 
 template<class T, class Variant>
