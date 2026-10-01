@@ -53,6 +53,12 @@ TEST_CASE("type_list")
     STATIC_CHECK(std::same_as<unique_type_list<type_list<A, B, C, A>>::type, type_list<A, B, C>>);
     STATIC_CHECK(std::same_as<unique_type_list<type_list<A, B, C, B>>::type, type_list<A, B, C>>);
     STATIC_CHECK(std::same_as<unique_type_list<type_list<A, B, C, C>>::type, type_list<A, B, C>>);
+
+    STATIC_CHECK(std::same_as<unique_type_list<type_list<>, type_list<A>>::type, type_list<>>);
+    STATIC_CHECK(std::same_as<unique_type_list<type_list<A>, type_list<A>>::type, type_list<>>);
+    STATIC_CHECK(std::same_as<unique_type_list<type_list<A, B>, type_list<C>>::type, type_list<A, B>>);
+    STATIC_CHECK(std::same_as<unique_type_list<type_list<A, B, A, C>, type_list<C>>::type, type_list<A, B>>);
+    STATIC_CHECK(std::same_as<unique_type_list<type_list<C, B, A, B>, type_list<A, C>>::type, type_list<B>>);
 }
 
 TEST_CASE("pack_indexing")
@@ -79,12 +85,19 @@ TEST_CASE("exactly_once")
 {
     STATIC_CHECK(iris::exactly_once_v<int, type_list<int, float>>);
     STATIC_CHECK(!iris::exactly_once_v<int, type_list<int, int>>);
+    STATIC_CHECK(!iris::exactly_once_v<int, type_list<float, double>>);
+    STATIC_CHECK(!iris::exactly_once_v<int, type_list<int, float, int, int>>);
+    STATIC_CHECK(iris::exactly_once_v<float, type_list<int, float, int>>);
 }
 
 TEST_CASE("is_in")
 {
     STATIC_CHECK(iris::is_in_v<int, int, float>);
     STATIC_CHECK(!iris::is_in_v<int, float>);
+    STATIC_CHECK(!iris::is_in_v<int>);
+    STATIC_CHECK(iris::is_in_v<int, float, int, int>);
+    STATIC_CHECK(iris::is_in<int, float, int>::value);
+    STATIC_CHECK(!iris::is_in<int, float>::value);
 }
 
 TEST_CASE("find_index")
@@ -95,4 +108,18 @@ TEST_CASE("find_index")
     STATIC_CHECK(iris::find_index_v<int,    type_list<float, double>> == iris::find_npos);
 
     STATIC_CHECK(iris::find_index_v<int, type_list<int, int, double>> == 0);
+    STATIC_CHECK(iris::find_index_v<float, type_list<int, float, float>> == 1);
+    STATIC_CHECK(iris::find_index_v<int, type_list<>> == iris::find_npos);
+    STATIC_CHECK(iris::find_index<double, type_list<int, double>>::value == 1);
+}
+
+TEST_CASE("find_index_exactly_once")
+{
+    STATIC_CHECK(iris::find_index_exactly_once_v<int,    type_list<int, float, double>> == 0);
+    STATIC_CHECK(iris::find_index_exactly_once_v<double, type_list<int, float, double>> == 2);
+    STATIC_CHECK(iris::find_index_exactly_once_v<int,    type_list<float, double>> == iris::find_npos);
+    STATIC_CHECK(iris::find_index_exactly_once_v<int,    type_list<>> == iris::find_npos);
+
+    STATIC_CHECK(iris::find_index_exactly_once_v<int,   type_list<int, float, int>> == iris::find_npos);
+    STATIC_CHECK(iris::find_index_exactly_once_v<float, type_list<int, float, int>> == 1);
 }

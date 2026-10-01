@@ -102,78 +102,55 @@ concept has_identity_base = requires(BasesT* bases) {
 
 // --------------------------------------------------
 
+// A type occurring more than once in `Ts...` is an ambiguous base of `indexed_identity_bases<Ts...>`: it is
+// still a base ([meta.rel]), but no pointer converts into it
 template<std::size_t I, class T>
-struct indexed_virtual_identity : virtual std::type_identity<T>
-{
-    static void select(std::type_identity<T>*);
-};
-
-template<std::size_t... Is, class... Ts>
-    requires (sizeof...(Ts) > 0)
-struct type_bases<indexed_virtual_identity<Is, Ts>...> : indexed_virtual_identity<Is, Ts>...
-{
-    template<template<class...> class TT>
-    using rebind = TT<Ts...>;
-
-    using indexed_virtual_identity<Is, Ts>::select...;
-};
-
-template<class T, class BasesT>
-concept has_exactly_one_identity_base = requires(std::type_identity<T>* base) {
-    // If multiple bases exist, overload resolution is ambiguous
-    BasesT::select(base);
-};
-
-// --------------------------------------------------
+struct indexed_identity : std::type_identity<T> {};
 
 namespace detail {
 
-template<template<std::size_t, class> class IdentityTT, class Indexes, class... Ts>
+template<class Indexes, class... Ts>
 struct indexed_identity_bases_impl;
 
-template<template<std::size_t, class> class IdentityTT, std::size_t... Is, class... Ts>
-struct indexed_identity_bases_impl<
-    IdentityTT, std::index_sequence<Is...>, Ts...
->
+template<std::size_t... Is, class... Ts>
+struct indexed_identity_bases_impl<std::index_sequence<Is...>, Ts...>
 {
-    using type = type_bases<IdentityTT<Is, Ts>...>;
+    using type = type_bases<indexed_identity<Is, Ts>...>;
 };
 
 } // detail
 
 template<class... Ts>
-using indexed_virtual_identity_bases = detail::indexed_identity_bases_impl<
-    indexed_virtual_identity, std::index_sequence_for<Ts...>, Ts...
->::type;
+using indexed_identity_bases = detail::indexed_identity_bases_impl<std::index_sequence_for<Ts...>, Ts...>::type;
 
 // --------------------------------------------------
 
 namespace detail {
 
-template<class BasesT, class... Ts>
-struct unique_type_list_impl;
-
-template<class BasesT>
-struct unique_type_list_impl<BasesT>
+// `BasesT` is `identity_bases` of the types seen, and `Accepted` the types accepted
+template<class BasesT, class Accepted, class... Ts>
+struct unique_type_list_impl
 {
-    using type = BasesT;
+    using type = Accepted;
 };
 
-template<class BasesT, class T, class... Rest>
+template<class BasesT, class... Accepted, class T, class... Rest>
     requires has_identity_base<T, BasesT>
-struct unique_type_list_impl<BasesT, T, Rest...>
-    : unique_type_list_impl<BasesT, Rest...>
+struct unique_type_list_impl<BasesT, type_list<Accepted...>, T, Rest...>
+    : unique_type_list_impl<BasesT, type_list<Accepted...>, Rest...>
 {};
 
-template<class... AcceptedTs, class T, class... Rest>
-    requires (!has_identity_base<T, identity_bases<AcceptedTs...>>)
-struct unique_type_list_impl<identity_bases<AcceptedTs...>, T, Rest...>
-    : unique_type_list_impl<identity_bases<AcceptedTs..., T>, Rest...>
+template<class... Seen, class... Accepted, class T, class... Rest>
+    requires (!has_identity_base<T, identity_bases<Seen...>>)
+struct unique_type_list_impl<identity_bases<Seen...>, type_list<Accepted...>, T, Rest...>
+    : unique_type_list_impl<identity_bases<Seen..., T>, type_list<Accepted..., T>, Rest...>
 {};
 
 } // detail
 
-template<class List = void>
+// The types of `List` not in `Excluded`, each once, in the order of their first occurrences. `Excluded`
+// has no type more than once.
+template<class List = void, class Excluded = type_list<>>
 struct unique_type_list;
 
 template<>
@@ -182,12 +159,10 @@ struct unique_type_list<void>
     using type = type_list<>;
 };
 
-template<class... Ts>
-struct unique_type_list<type_list<Ts...>>
+template<class... Ts, class... Excluded>
+struct unique_type_list<type_list<Ts...>, type_list<Excluded...>>
 {
-    using type = detail::unique_type_list_impl<
-        identity_bases<>, Ts...
-    >::type::template rebind<type_list>;
+    using type = detail::unique_type_list_impl<identity_bases<Excluded...>, type_list<>, Ts...>::type;
 };
 
 // ----------------------------------------------------------
@@ -298,19 +273,14 @@ inline constexpr std::size_t find_npos = static_cast<std::size_t>(-1);
 
 namespace detail {
 
-template<std::size_t I, class T, class... Ts>
-struct find_index_impl
-    : std::integral_constant<std::size_t, find_npos>
-{};
-
-template<std::size_t I, class T, class U, class... Us>
-struct find_index_impl<I, T, U, Us...>
-    : std::conditional_t<
-        std::is_same_v<T, U>,
-        std::integral_constant<std::size_t, I>,
-        find_index_impl<I + 1, T, Us...>
-    >
-{};
+template<class T, class... Ts>
+inline constexpr std::size_t find_index_impl = [] {
+    constexpr bool same[]{std::is_same_v<T, Ts>..., false};
+    for (std::size_t i = 0; i < sizeof...(Ts); ++i) {
+        if (same[i]) return i;
+    }
+    return find_npos;
+}();
 
 } // detail
 
@@ -318,35 +288,51 @@ template<class T, class List>
 struct find_index;
 
 template<class T, template<class...> class TT, class... Ts>
-struct find_index<T, TT<Ts...>> : detail::find_index_impl<0, T, Ts...> {};
+struct find_index<T, TT<Ts...>> : std::integral_constant<std::size_t, detail::find_index_impl<T, Ts...>> {};
 
 template<class T, class List>
 inline constexpr std::size_t find_index_v = find_index<T, List>::value;
 
 
-template<class T, class... Ts>
-struct is_in : std::bool_constant<
-    has_identity_base<T, indexed_virtual_identity_bases<Ts...>>
->
+namespace detail {
+
+template<class T, std::size_t I>
+std::integral_constant<std::size_t, I> index_of_identity(indexed_identity<I, T> const*); // not defined
+
+} // detail
+
+// The index of `T` if `T` occurs exactly once in `List`, `find_npos` otherwise. The deduction from a
+// base fails unless exactly one base of `indexed_identity_bases` is `indexed_identity<I, T>`.
+template<class T, class List>
+struct find_index_exactly_once;
+
+template<class T, template<class...> class TT, class... Ts>
+struct find_index_exactly_once<T, TT<Ts...>> : std::integral_constant<std::size_t, find_npos> {};
+
+template<class T, template<class...> class TT, class... Ts>
+    requires requires { detail::index_of_identity<T>(static_cast<indexed_identity_bases<Ts...> const*>(nullptr)); }
+struct find_index_exactly_once<T, TT<Ts...>>
+    : decltype(detail::index_of_identity<T>(static_cast<indexed_identity_bases<Ts...> const*>(nullptr)))
 {};
 
+template<class T, class List>
+inline constexpr std::size_t find_index_exactly_once_v = find_index_exactly_once<T, List>::value;
+
+
 template<class T, class... Ts>
-inline constexpr bool is_in_v = has_identity_base<T, indexed_virtual_identity_bases<Ts...>>;
+inline constexpr bool is_in_v = (std::is_same_v<T, Ts> || ...);
+
+template<class T, class... Ts>
+struct is_in : std::bool_constant<is_in_v<T, Ts...>> {};
 
 // ----------------------------------------------------------
 
 template<class T, class List>
 struct exactly_once;
 
+// `has_identity_base` fails for a type occurring more than once, whose base is ambiguous
 template<class T, template<class...> class TT, class... Ts>
-struct exactly_once<T, TT<Ts...>> : std::false_type
-{
-    static_assert(sizeof...(Ts) > 0);
-};
-
-template<class T, template<class...> class TT, class... Ts>
-    requires has_exactly_one_identity_base<T, indexed_virtual_identity_bases<Ts...>>
-struct exactly_once<T, TT<Ts...>> : std::true_type
+struct exactly_once<T, TT<Ts...>> : std::bool_constant<has_identity_base<T, indexed_identity_bases<Ts...>>>
 {
     static_assert(sizeof...(Ts) > 0);
 };
