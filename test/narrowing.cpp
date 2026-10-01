@@ -425,3 +425,35 @@ TEST_CASE("is_assignable_without_any_narrowing", "[type_traits]")
 
     STATIC_CHECK(!iris::is_assignable_without_any_narrowing_v<std::string&, char>); // initializer-list assignment
 }
+
+TEST_CASE("is_assignable_without_narrowing", "[type_traits]")
+{
+    STATIC_CHECK(iris::is_assignable_without_narrowing_v<int&, int>);
+    STATIC_CHECK(iris::is_assignable_without_narrowing_v<long long&, int>);
+    STATIC_CHECK(!iris::is_assignable_without_narrowing_v<int&, long long>);
+    STATIC_CHECK(!iris::is_assignable_without_narrowing_v<double&, long long>);
+    STATIC_CHECK(!iris::is_assignable_without_narrowing_v<bool&, int*>);
+    STATIC_CHECK(!iris::is_assignable_without_narrowing_v<int&, to_long_long>); // after the conversion function
+    STATIC_CHECK(!iris::is_assignable_without_narrowing_v<int const&, int>);
+
+    // a class takes the value as the parameter of its assignment operator
+    STATIC_CHECK(iris::is_assignable_without_narrowing_v<port&, long long>);
+    STATIC_CHECK(iris::is_assignable_without_narrowing_v<assign_int&, long long>);
+    STATIC_CHECK(!iris::is_assignable_without_narrowing_v<assign_int&, std::string>);
+}
+
+TEST_CASE("conversion_overloads", "[type_traits]")
+{
+    using int_or_long_long = iris::conversion_overloads<iris::conversion_overload<3, int>, iris::conversion_overload<5, long long>>;
+    STATIC_CHECK(iris::conversion_selects<int_or_long_long, int, 3>);
+    STATIC_CHECK(iris::conversion_selects<int_or_long_long, long long, 5>);
+    STATIC_CHECK(!iris::conversion_selects<int_or_long_long, int, 5>);
+    STATIC_CHECK(iris::conversion_selects<int_or_long_long, short, 3>); // a promotion
+    STATIC_CHECK(!iris::conversion_resolves<int_or_long_long, unsigned>); // ambiguous: both are conversions
+    STATIC_CHECK(!iris::conversion_resolves<int_or_long_long, std::string>);
+
+    using port_only = iris::conversion_overloads<iris::conversion_overload<0, port>>;
+    STATIC_CHECK(iris::conversion_selects<port_only, long long, 0>); // no narrowing check
+
+    STATIC_CHECK(!iris::conversion_resolves<iris::conversion_overloads<>, int>);
+}
