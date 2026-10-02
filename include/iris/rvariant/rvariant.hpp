@@ -472,15 +472,27 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                         (sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_move_assignable_v<T>) ||
                         is_recursive_wrapper_v<T>
                     ) {
-                        T tmp{std::forward<Args>(args)...}; // may throw
-                        static_assert(noexcept(t_old_i = std::move(tmp)));
-                        t_old_i = std::move(tmp);
+                        static_assert(noexcept(t_old_i = std::declval<T&&>()));
+                        if constexpr (sizeof...(Args) == 0) {
+                            T tmp = T(); // may throw
+                            t_old_i = std::move(tmp);
+                        } else {
+                            T tmp(std::forward<Args>(args)...); // may throw
+                            t_old_i = std::move(tmp);
+                        }
+
                     } else if constexpr (
                         sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_copy_assignable_v<T>
                     ) { // strange type...
-                        T const tmp{std::forward<Args>(args)...}; // may throw
-                        static_assert(noexcept(t_old_i = tmp));
-                        t_old_i = tmp;
+                        static_assert(noexcept(t_old_i = std::declval<T const&>()));
+                        if constexpr (sizeof...(Args) == 0) {
+                            T const tmp = T(); // may throw
+                            t_old_i = tmp;
+                        } else {
+                            T const tmp(std::forward<Args>(args)...); // may throw
+                            t_old_i = tmp;
+                        }
+
                     } else {
                         static_assert(!never_valueless);
                         t_old_i.~T_old_i();
@@ -495,19 +507,33 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                         (sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_move_constructible_v<T>) ||
                         is_recursive_wrapper_v<T>
                     ) {
-                        T tmp{std::forward<Args>(args)...}; // may throw
-                        t_old_i.~T_old_i();
                         static_assert(std::is_nothrow_constructible_v<storage_type, std::in_place_index_t<I>, T&&>);
-                        std::construct_at(&this->storage_, std::in_place_index<I>, std::move(tmp)); // never throws
+                        if constexpr (sizeof...(Args) == 0) {
+                            T tmp = T(); // may throw
+                            t_old_i.~T_old_i();
+                            std::construct_at(&this->storage_, std::in_place_index<I>, std::move(tmp)); // never throws
+                        } else {
+                            T tmp(std::forward<Args>(args)...); // may throw
+                            t_old_i.~T_old_i();
+                            std::construct_at(&this->storage_, std::in_place_index<I>, std::move(tmp)); // never throws
+                        }
                         this->index_ = I;
+
                     } else if constexpr (
                         sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_copy_constructible_v<T>
                     ) { // strange type...
-                        T const tmp{std::forward<Args>(args)...}; // may throw
-                        t_old_i.~T_old_i();
                         static_assert(std::is_nothrow_constructible_v<storage_type, std::in_place_index_t<I>, T const&>);
-                        std::construct_at(&this->storage_, std::in_place_index<I>, tmp); // never throws
+                        if constexpr (sizeof...(Args) == 0) {
+                            T const tmp = T(); // may throw
+                            t_old_i.~T_old_i();
+                            std::construct_at(&this->storage_, std::in_place_index<I>, tmp); // never throws
+                        } else {
+                            T const tmp(std::forward<Args>(args)...); // may throw
+                            t_old_i.~T_old_i();
+                            std::construct_at(&this->storage_, std::in_place_index<I>, tmp); // never throws
+                        }
                         this->index_ = I;
+
                     } else {
                         static_assert(!never_valueless);
                         t_old_i.~T_old_i();
