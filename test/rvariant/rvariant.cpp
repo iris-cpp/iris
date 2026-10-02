@@ -12,6 +12,7 @@
 #include <bit>
 #include <concepts>
 #include <exception>
+#include <initializer_list>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -1195,11 +1196,11 @@ TEST_CASE("emplace")
             using V = iris::rvariant<int, S>;
             {
                 V v(std::in_place_type<int>);
-                v.emplace<S>(); // type-changing & no args; test T{}
+                v.emplace<S>(); // type-changing & no args; test T()
             }
             {
                 V v(std::in_place_type<S>);
-                v.emplace<S>(); // non-type-changing & no args; test T{}
+                v.emplace<S>(); // non-type-changing & no args; test T()
             }
         }
         {
@@ -1214,12 +1215,87 @@ TEST_CASE("emplace")
             using V = iris::rvariant<int, StrangeS>;
             {
                 V v(std::in_place_type<int>);
-                v.emplace<StrangeS>(); // type-changing & no args; test T{}
+                v.emplace<StrangeS>(); // type-changing & no args; test T()
             }
             {
                 V v(std::in_place_type<StrangeS>);
-                v.emplace<StrangeS>(); // non-type-changing & no args; test T{}
+                v.emplace<StrangeS>(); // non-type-changing & no args; test T()
             }
+        }
+        // NOLINTEND(modernize-use-equals-default)
+    }
+    {
+        // NOLINTBEGIN(modernize-use-equals-default)
+        // The contained value is direct-non-list-initialized ([variant.mod]): an initializer_list
+        // constructor is not preferred, and a narrowing into the parameter of a constructor is not
+        // ill-formed. `S(int)` is not `noexcept` so that the never-valueless paths are taken.
+        {
+            struct S
+            {
+                S(int value) noexcept(false) : value(value) {} // potentially-throwing
+                S(std::initializer_list<int>) noexcept(false) : from_list(true) {} // potentially-throwing
+                int value = 0;
+                bool from_list = false;
+            };
+            using V = iris::rvariant<int, S>;
+            long long wide = 42;
+
+            V v(std::in_place_type<int>);
+            v.emplace<S>(1); // type-changing; test T(args...)
+            CHECK(!iris::get<S>(v).from_list);
+            CHECK(iris::get<S>(v).value == 1);
+            v.emplace<S>(2); // non-type-changing; test T(args...)
+            CHECK(!iris::get<S>(v).from_list);
+            CHECK(iris::get<S>(v).value == 2);
+
+            V w(std::in_place_type<int>);
+#ifdef _MSC_VER
+# pragma warning(push)
+# pragma warning(disable: 4244)
+#endif
+            w.emplace<S>(wide); // type-changing; narrowing into `S(int)`
+#ifdef _MSC_VER
+# pragma warning(pop)
+#endif
+            CHECK(iris::get<S>(w).value == 42);
+            w.emplace<S>(wide); // non-type-changing; narrowing into `S(int)`
+            CHECK(iris::get<S>(w).value == 42);
+        }
+        {
+            struct StrangeS
+            {
+                StrangeS(int value) noexcept(false) : value(value) {} // potentially-throwing
+                StrangeS(std::initializer_list<int>) noexcept(false) : from_list(true) {} // potentially-throwing
+                StrangeS(StrangeS&&) noexcept {} // not trivial
+                StrangeS(StrangeS const&) = default; // trivial
+                StrangeS& operator=(StrangeS&&) noexcept { return *this; } // not trivial
+                StrangeS& operator=(StrangeS const&) = default; // trivial
+                int value = 0;
+                bool from_list = false;
+            };
+            using V = iris::rvariant<int, StrangeS>;
+            long long wide = 42;
+
+            V v(std::in_place_type<int>);
+            v.emplace<StrangeS>(1); // type-changing; test T(args...)
+            CHECK(!iris::get<StrangeS>(v).from_list);
+            CHECK(iris::get<StrangeS>(v).value == 1);
+            v.emplace<StrangeS>(2); // non-type-changing; test T(args...)
+            CHECK(!iris::get<StrangeS>(v).from_list);
+            CHECK(iris::get<StrangeS>(v).value == 2);
+
+            V w(std::in_place_type<int>);
+#ifdef _MSC_VER
+# pragma warning(push)
+# pragma warning(disable: 4244)
+#endif
+            w.emplace<StrangeS>(wide); // type-changing; narrowing into `StrangeS(int)`
+#ifdef _MSC_VER
+# pragma warning(pop)
+#endif
+            CHECK(iris::get<StrangeS>(w).value == 42);
+            w.emplace<StrangeS>(wide); // non-type-changing; narrowing into `StrangeS(int)`
+            CHECK(iris::get<StrangeS>(w).value == 42);
         }
         // NOLINTEND(modernize-use-equals-default)
     }
