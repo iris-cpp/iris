@@ -209,7 +209,7 @@ if(MSVC)
     target_compile_options(
         iris_cxx_abi
         INTERFACE
-            /EHsc /MP /utf-8 /Zc:__cplusplus /Zc:preprocessor /permissive-
+            /EHsc /MP /utf-8 /Zc:__cplusplus /Zc:preprocessor /Zc:inline /permissive-
     )
 
     target_compile_options(
