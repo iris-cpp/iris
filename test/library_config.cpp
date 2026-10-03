@@ -36,6 +36,7 @@
 #include <iris/pp/stringize.hpp>
 #include <iris/pp/sub.hpp>
 #include <iris/pp/tuple.hpp>
+#include <iris/pp/va.hpp>
 #include <iris/pp/while.hpp>
 
 #include <iris/rvariant/pack.hpp>

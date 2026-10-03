@@ -4,43 +4,23 @@
 // SPDX-License-Identifier: MIT
 
 #include <iris/pp/cat.hpp>
-#include <iris/pp/for.hpp>
 #include <iris/pp/increment.hpp>
 
 #define IRIS_PP_SEQ_ELEM(index, seq) IRIS_ZZ_PP_SEQ_ELEM_I(IRIS_PP_CAT(IRIS_ZZ_PP_SEQ_ELEM_I_, index) seq)
 #define IRIS_ZZ_PP_SEQ_ELEM_I(intermediate) IRIS_ZZ_PP_SEQ_ELEM_I_I(intermediate)
 #define IRIS_ZZ_PP_SEQ_ELEM_I_I(x, _) x
 
-#define IRIS_PP_SEQ_HEAD(seq) IRIS_PP_SEQ_ELEM(0, seq)
+#define IRIS_PP_SEQ_HEAD(seq) IRIS_ZZ_PP_SEQ_ELEM_I(IRIS_ZZ_PP_SEQ_ELEM_I_0 seq)
 
 #define IRIS_PP_SEQ_TAIL(seq) IRIS_ZZ_PP_SEQ_TAIL_I seq
 #define IRIS_ZZ_PP_SEQ_TAIL_I(head)
 
 #define IRIS_PP_SEQ_SIZE(seq) IRIS_PP_CAT(IRIS_ZZ_PP_SEQ_SIZE_I_, IRIS_ZZ_PP_SEQ_SIZE_I_0 seq)
 
-#define IRIS_PP_SEQ_FOR_EACH(seq, macro, data) \
-    IRIS_PP_FOR((seq, macro, data), IRIS_ZZ_PP_SEQ_FOR_EACH_I_PRED, IRIS_ZZ_PP_SEQ_FOR_EACH_I_UPDATE, IRIS_ZZ_PP_SEQ_FOR_EACH_I_EXEC)
-
-#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_PRED(state) IRIS_ZZ_PP_SEQ_FOR_EACH_I_PRED_I state
-#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_PRED_I(seq, macro, data) IRIS_PP_SEQ_SIZE(seq)
-
-#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_UPDATE(state) IRIS_ZZ_PP_SEQ_FOR_EACH_I_UPDATE_I state
-#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_UPDATE_I(seq, macro, data) (IRIS_PP_SEQ_TAIL(seq), macro, data)
-
-#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_EXEC(state) IRIS_ZZ_PP_SEQ_FOR_EACH_I_EXEC_I state
-#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_EXEC_I(seq, macro, data) macro(IRIS_PP_SEQ_HEAD(seq), data)
+#define IRIS_PP_SEQ_FOR_EACH(seq, macro, data) IRIS_PP_CAT(IRIS_ZZ_PP_SEQ_FOR_EACH_I_, IRIS_PP_SEQ_SIZE(seq))(macro, data, seq)
 
 #define IRIS_PP_SEQ_FOR_EACH_WITH_INDEX(seq, macro, data) \
-    IRIS_PP_FOR((0, seq, macro, data), IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_PRED, IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_UPDATE, IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_EXEC)
-
-#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_PRED(state) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_PRED_I state
-#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_PRED_I(index, seq, macro, data) IRIS_PP_SEQ_SIZE(seq)
-
-#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_UPDATE(state) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_UPDATE_I state
-#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_UPDATE_I(index, seq, macro, data) (IRIS_PP_INCREMENT(index), IRIS_PP_SEQ_TAIL(seq), macro, data)
-
-#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_EXEC(state) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_EXEC_I state
-#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_EXEC_I(index, seq, macro, data) macro(index, IRIS_PP_SEQ_HEAD(seq), data)
+    IRIS_PP_CAT(IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_, IRIS_PP_SEQ_SIZE(seq))(0, macro, data, seq)
 
 #define IRIS_ZZ_PP_SEQ_ELEM_I_0(seq) seq, dummy
 #define IRIS_ZZ_PP_SEQ_ELEM_I_1(seq) IRIS_ZZ_PP_SEQ_ELEM_I_0
@@ -143,5 +123,73 @@
 #define IRIS_ZZ_PP_SEQ_SIZE_I_IRIS_ZZ_PP_SEQ_SIZE_I_30 30
 #define IRIS_ZZ_PP_SEQ_SIZE_I_IRIS_ZZ_PP_SEQ_SIZE_I_31 31
 #define IRIS_ZZ_PP_SEQ_SIZE_I_IRIS_ZZ_PP_SEQ_SIZE_I_32 32
+
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_0(macro, data, seq)
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_1(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data)
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_2(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_1(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_3(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_2(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_4(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_3(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_5(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_4(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_6(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_5(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_7(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_6(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_8(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_7(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_9(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_8(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_10(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_9(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_11(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_10(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_12(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_11(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_13(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_12(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_14(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_13(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_15(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_14(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_16(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_15(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_17(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_16(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_18(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_17(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_19(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_18(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_20(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_19(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_21(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_20(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_22(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_21(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_23(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_22(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_24(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_23(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_25(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_24(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_26(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_25(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_27(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_26(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_28(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_27(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_29(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_28(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_30(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_29(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_31(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_30(macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_I_32(macro, data, seq) macro(IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_I_31(macro, data, IRIS_PP_SEQ_TAIL(seq))
+
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_0(index, macro, data, seq)
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_1(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data)
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_2(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_1(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_3(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_2(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_4(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_3(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_5(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_4(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_6(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_5(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_7(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_6(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_8(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_7(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_9(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_8(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_10(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_9(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_11(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_10(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_12(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_11(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_13(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_12(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_14(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_13(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_15(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_14(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_16(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_15(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_17(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_16(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_18(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_17(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_19(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_18(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_20(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_19(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_21(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_20(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_22(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_21(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_23(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_22(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_24(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_23(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_25(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_24(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_26(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_25(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_27(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_26(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_28(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_27(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_29(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_28(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_30(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_29(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_31(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_30(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
+#define IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_32(index, macro, data, seq) macro(index, IRIS_PP_SEQ_HEAD(seq), data) IRIS_ZZ_PP_SEQ_FOR_EACH_WITH_INDEX_I_31(IRIS_PP_INCREMENT(index), macro, data, IRIS_PP_SEQ_TAIL(seq))
 
 #endif

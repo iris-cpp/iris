@@ -1,0 +1,83 @@
+#ifndef IRIS_ZZ_PREPROCESS_VA_HPP
+#define IRIS_ZZ_PREPROCESS_VA_HPP
+
+// SPDX-License-Identifier: MIT
+
+#include <iris/pp/cat.hpp>
+#include <iris/pp/tuple.hpp>
+
+#define IRIS_PP_VA_FOR_EACH(macro, data, ...) \
+    IRIS_PP_CAT(IRIS_ZZ_PP_VA_FOR_EACH_I_, IRIS_PP_TUPLE_SIZE((__VA_ARGS__)))(macro, data, __VA_ARGS__)
+
+#define IRIS_PP_VA_ENUM(macro, data, ...) \
+    IRIS_PP_CAT(IRIS_ZZ_PP_VA_ENUM_I_, IRIS_PP_TUPLE_SIZE((__VA_ARGS__)))(macro, data, __VA_ARGS__)
+
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_0(macro, data, ...)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_1(macro, data, head) macro(head, data)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_2(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_1(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_3(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_2(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_4(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_3(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_5(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_4(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_6(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_5(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_7(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_6(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_8(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_7(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_9(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_8(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_10(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_9(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_11(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_10(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_12(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_11(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_13(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_12(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_14(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_13(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_15(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_14(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_16(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_15(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_17(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_16(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_18(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_17(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_19(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_18(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_20(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_19(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_21(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_20(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_22(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_21(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_23(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_22(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_24(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_23(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_25(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_24(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_26(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_25(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_27(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_26(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_28(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_27(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_29(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_28(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_30(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_29(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_31(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_30(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_FOR_EACH_I_32(macro, data, head, ...) macro(head, data) IRIS_ZZ_PP_VA_FOR_EACH_I_31(macro, data, __VA_ARGS__)
+
+#define IRIS_ZZ_PP_VA_ENUM_I_0(macro, data, ...)
+#define IRIS_ZZ_PP_VA_ENUM_I_1(macro, data, head) macro(head, data)
+#define IRIS_ZZ_PP_VA_ENUM_I_2(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_1(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_3(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_2(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_4(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_3(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_5(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_4(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_6(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_5(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_7(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_6(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_8(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_7(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_9(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_8(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_10(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_9(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_11(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_10(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_12(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_11(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_13(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_12(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_14(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_13(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_15(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_14(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_16(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_15(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_17(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_16(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_18(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_17(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_19(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_18(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_20(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_19(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_21(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_20(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_22(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_21(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_23(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_22(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_24(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_23(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_25(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_24(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_26(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_25(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_27(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_26(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_28(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_27(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_29(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_28(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_30(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_29(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_31(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_30(macro, data, __VA_ARGS__)
+#define IRIS_ZZ_PP_VA_ENUM_I_32(macro, data, head, ...) macro(head, data), IRIS_ZZ_PP_VA_ENUM_I_31(macro, data, __VA_ARGS__)
+
+#endif
