@@ -159,9 +159,16 @@ if(MSVC)
     target_sources(_iris_internal_test_base INTERFACE "${CMAKE_CURRENT_LIST_DIR}/cpp.hint")
 endif()
 
+# Must be an executable so that its compile flags (e.g. -fPIE) match the tests
+add_executable(_iris_internal_test_pch ${CMAKE_CURRENT_LIST_DIR}/pch.cpp)
+target_link_libraries(_iris_internal_test_pch PRIVATE Iris::Iris iris_cxx_test Catch2::Catch2WithMain _iris_internal_test_base)
+target_precompile_headers(_iris_internal_test_pch PRIVATE ${CMAKE_CURRENT_LIST_DIR}/pch.hpp)
+set_target_properties(_iris_internal_test_pch PROPERTIES CXX_EXTENSIONS OFF FOLDER "test")
+
 function(iris_define_internal_test test_name)
     iris_define_test(iris_${test_name} ${ARGN})
     target_link_libraries(iris_${test_name}_test PRIVATE _iris_internal_test_base)
+    target_precompile_headers(iris_${test_name}_test REUSE_FROM _iris_internal_test_pch)
     target_sources(iris_${test_name}_test PRIVATE FILE_SET HEADERS BASE_DIRS ${CMAKE_CURRENT_FUNCTION_LIST_DIR} FILES ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/iris_test.hpp)
     set_target_properties(iris_${test_name}_test PROPERTIES FOLDER "test/iris")
 endfunction()

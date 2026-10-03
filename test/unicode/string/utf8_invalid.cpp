@@ -1,6 +1,3 @@
-// TODO: we need secure "getenv" in iris library
-#define _CRT_SECURE_NO_WARNINGS 1
-
 #include "iris_test.hpp"
 
 #include <iris/unicode/string.hpp>
@@ -29,11 +26,18 @@ TEST_CASE("utf8_invalid")
     namespace unicode = iris::unicode;
     using iris::throwf;
 
+#ifdef _MSC_VER
+# pragma warning(push)
+# pragma warning(disable: 4996)
+#endif
     std::filesystem::path const IRIS_ROOT = [] {
-        char const* IRIS_ROOT_str = std::getenv("IRIS_ROOT");
+        char const* IRIS_ROOT_str = std::getenv("IRIS_ROOT");  // NOLINT(concurrency-mt-unsafe)
         if (!IRIS_ROOT_str) throwf<std::invalid_argument>("IRIS_ROOT is not defined");
         return std::filesystem::path(IRIS_ROOT_str);
     }();
+#ifdef _MSC_VER
+# pragma warning(pop)
+#endif
 
     auto const test_file_path = IRIS_ROOT / "test" / "unicode" / "string" / "test_data" / "utf8_invalid.txt";
     std::ifstream fs8(test_file_path);
