@@ -12,9 +12,11 @@
 
 #include <iris/pp/tuple.hpp>
 #include <iris/pp/seq.hpp>
+#include <iris/pp/va.hpp>
 #include <iris/pp/stringize.hpp>
 #include <iris/pp/cat.hpp>
 #include <iris/pp/arg.hpp>
+#include <iris/pp/if.hpp>
 
 #include <type_traits>
 
@@ -109,7 +111,7 @@ using setter_param_t = std::conditional_t<
 
 #define IRIS_MARSHAL_FIELD_GET(maybe_paren_type, field_name, ...) \
     IRIS_ZZ_MARSHAL_FIELD_DATA_MEMBER(maybe_paren_type, field_name, __VA_ARGS__) \
-    IRIS_PP_IF( \
+    IRIS_PP_IIF( \
         IRIS_PP_IS_PAREN( IRIS_PP_CAT_ONLY_TWO(IRIS_ZZ_MARSHAL_FIELD_TYPE_IS_, IRIS_PP_UNPAREN_IF_PAREN(maybe_paren_type)) ), \
         IRIS_ZZ_MARSHAL_FIELD_BOOL_GET, \
         IRIS_ZZ_MARSHAL_FIELD_GET_I \
@@ -121,7 +123,7 @@ using setter_param_t = std::conditional_t<
 
 #define IRIS_MARSHAL_FIELD_GET_SET(maybe_paren_type, field_name, ...) \
     IRIS_ZZ_MARSHAL_FIELD_DATA_MEMBER(maybe_paren_type, field_name, __VA_ARGS__) \
-    IRIS_PP_IF( \
+    IRIS_PP_IIF( \
         IRIS_PP_IS_PAREN( IRIS_PP_CAT_ONLY_TWO(IRIS_ZZ_MARSHAL_FIELD_TYPE_IS_, IRIS_PP_UNPAREN_IF_PAREN(maybe_paren_type)) ), \
         IRIS_ZZ_MARSHAL_FIELD_BOOL_GET_SET, \
         IRIS_ZZ_MARSHAL_FIELD_GET_SET_I \
@@ -162,7 +164,7 @@ using setter_param_t = std::conditional_t<
 // pimpl declare
 
 #define IRIS_ZZ_MARSHAL_PIMPL_FIELD_DECLARE_FIELD_I(maybe_paren_type, field_name, ...) \
-    IRIS_PP_IF( \
+    IRIS_PP_IIF( \
         IRIS_PP_IS_PAREN( IRIS_PP_CAT_ONLY_TWO(IRIS_ZZ_MARSHAL_FIELD_TYPE_IS_, IRIS_PP_UNPAREN_IF_PAREN(maybe_paren_type)) ), \
         IRIS_ZZ_MARSHAL_FIELD_BOOL_GET_SET, \
         IRIS_ZZ_MARSHAL_FIELD_GET_SET_I \
@@ -191,7 +193,7 @@ using setter_param_t = std::conditional_t<
 #define IRIS_ZZ_MARSHAL_PIMPL_FIELD_VARIABLE(field_name) impl_->field_name
 
 #define IRIS_ZZ_MARSHAL_PIMPL_FIELD_ACCESS_DEFINE_FIELD_I(class_name, maybe_paren_type, field_name, ...) \
-    IRIS_PP_IF( \
+    IRIS_PP_IIF( \
         IRIS_PP_IS_PAREN( IRIS_PP_CAT_ONLY_TWO(IRIS_ZZ_MARSHAL_FIELD_TYPE_IS_, IRIS_PP_UNPAREN_IF_PAREN(maybe_paren_type)) ), \
         IRIS_ZZ_MARSHAL_FIELD_BOOL_GET_SET, \
         IRIS_ZZ_MARSHAL_FIELD_GET_SET_I \
@@ -249,32 +251,28 @@ using setter_param_t = std::conditional_t<
         IRIS_ZZ_MARSHAL_SELECT_MEMBER_ACCESS(class_name, field_name, set) \
     >{IRIS_PP_STRINGIZE(field_name)},
 
-#define IRIS_ZZ_MARSHAL_ADAPT_I(class_name, field_defs) \
+#define IRIS_ZZ_MARSHAL_ADAPT_I(class_name, fields_init) \
     template<> \
     struct iris::marshal::adapted_class_traits<class_name> \
     { \
         inline static constexpr auto fields = ::iris::alloy::tuple{ \
-            IRIS_PP_SEQ_FOR_EACH( \
-                field_defs, \
-                IRIS_ZZ_MARSHAL_ADAPT_FIELD, \
-                class_name \
-            ) \
+            fields_init \
         }; \
     };
 
 #define IRIS_MARSHAL_ADAPT(class_name, ...) \
     IRIS_ZZ_MARSHAL_ADAPT_I( \
         class_name, \
-        IRIS_PP_TUPLE_TO_SEQ((__VA_ARGS__)) \
+        IRIS_PP_VA_FOR_EACH(IRIS_ZZ_MARSHAL_ADAPT_FIELD, class_name, __VA_ARGS__) \
     )
 
-#define IRIS_ZZ_MARSHAL_ADAPT_DEFS_EXTRACT_FIELD_NAME(field_def, macro_data) \
-    (IRIS_PP_TUPLE_ELEM(1, field_def))
+#define IRIS_ZZ_MARSHAL_ADAPT_DEFS_FIELD(field_def, class_name) \
+    IRIS_ZZ_MARSHAL_ADAPT_FIELD(IRIS_PP_TUPLE_ELEM(1, field_def), class_name)
 
 #define IRIS_MARSHAL_ADAPT_DEFS(class_name, field_defs) \
     IRIS_ZZ_MARSHAL_ADAPT_I( \
         class_name, \
-        IRIS_PP_SEQ_FOR_EACH(field_defs, IRIS_ZZ_MARSHAL_ADAPT_DEFS_EXTRACT_FIELD_NAME, ~) \
+        IRIS_PP_SEQ_FOR_EACH(field_defs, IRIS_ZZ_MARSHAL_ADAPT_DEFS_FIELD, class_name) \
     )
 
 } // iris::marshal

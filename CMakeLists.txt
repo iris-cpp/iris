@@ -251,12 +251,22 @@ file(
 )
 list(FILTER IRIS_HEADERS EXCLUDE REGEX /include/iris/marshal[./])
 
+file(GLOB IRIS_PP_HEADERS ${PROJECT_SOURCE_DIR}/include/iris/pp/*.hpp)
+set(
+    IRIS_TUPLE_IMPL_GENERATE_DEPENDS
+    ${PROJECT_SOURCE_DIR}/include/iris/alloy/detail/tuple_impl.hpp
+    ${IRIS_PP_HEADERS}
+    ${PROJECT_SOURCE_DIR}/include/iris/alloy/detail/preprocessed/tuple_impl.hpp.pre.in
+    ${PROJECT_SOURCE_DIR}/include/iris/alloy/detail/preprocessed/tuple_impl.hpp.post.in
+    ${PROJECT_SOURCE_DIR}/include/iris/alloy/detail/preprocessed/.clang-format
+)
+
 if(MSVC)
     add_custom_command(
         OUTPUT ${PROJECT_SOURCE_DIR}/include/iris/alloy/detail/preprocessed/tuple_impl.hpp
         COMMAND ${PROJECT_SOURCE_DIR}/scripts/generate_tuple_members.bat
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-        DEPENDS ${PROJECT_SOURCE_DIR}/include/iris/alloy/detail/tuple_impl.hpp
+        DEPENDS ${IRIS_TUPLE_IMPL_GENERATE_DEPENDS} ${PROJECT_SOURCE_DIR}/scripts/generate_tuple_members.bat
         VERBATIM
     )
 else()
@@ -264,7 +274,7 @@ else()
         OUTPUT ${PROJECT_SOURCE_DIR}/include/iris/alloy/detail/preprocessed/tuple_impl.hpp
         COMMAND ${PROJECT_SOURCE_DIR}/scripts/generate_tuple_members.sh
         WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-        DEPENDS ${PROJECT_SOURCE_DIR}/include/iris/alloy/detail/tuple_impl.hpp
+        DEPENDS ${IRIS_TUPLE_IMPL_GENERATE_DEPENDS} ${PROJECT_SOURCE_DIR}/scripts/generate_tuple_members.sh
         VERBATIM
     )
 endif()

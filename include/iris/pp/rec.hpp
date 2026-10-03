@@ -19,6 +19,6 @@
 #define IRIS_ZZ_PP_REC_I_NODE_6(pred) IRIS_PP_IF(pred(6), IRIS_ZZ_PP_REC_I_NODE_5, IRIS_ZZ_PP_REC_I_NODE_7)
 
 #define IRIS_ZZ_PP_REC_I_NODE_5(pred) IRIS_PP_IF(pred(5), 5, 6)
-#define IRIS_ZZ_PP_REC_I_NODE_7(pred) IRIS_PP_IF(pred(5), 7, 8)
+#define IRIS_ZZ_PP_REC_I_NODE_7(pred) IRIS_PP_IF(pred(7), 7, 8)
 
 #endif
