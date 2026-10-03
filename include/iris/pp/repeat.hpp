@@ -27,10 +27,13 @@
 
 #define IRIS_PP_REPEAT_FROM_TO(from, to, macro, data) IRIS_PP_REPEAT(IRIS_PP_SUB(to, from), IRIS_ZZ_PP_REPEAT_FROM_TO_I, (macro, from, data))
 
-#define IRIS_ZZ_PP_REPEAT_FROM_TO_I(index, state) IRIS_ZZ_PP_REPEAT_FROM_TO_I_I(index, IRIS_ZZ_PP_REPEAT_FROM_TO_I_UNPACK state)
-#define IRIS_ZZ_PP_REPEAT_FROM_TO_I_UNPACK(macro, from, data) macro, from, data
-#define IRIS_ZZ_PP_REPEAT_FROM_TO_I_I(...) IRIS_ZZ_PP_REPEAT_FROM_TO_I_II(__VA_ARGS__)
-#define IRIS_ZZ_PP_REPEAT_FROM_TO_I_II(index, macro, from, data) macro(IRIS_PP_ADD(index, from), data)
+#define IRIS_ZZ_PP_REPEAT_FROM_TO_I(index, state) \
+    IRIS_ZZ_PP_REPEAT_FROM_TO_I_I(index, IRIS_ZZ_PP_REPEAT_FROM_TO_I_MACRO state, IRIS_ZZ_PP_REPEAT_FROM_TO_I_FROM state, IRIS_ZZ_PP_REPEAT_FROM_TO_I_DATA state)
+#define IRIS_ZZ_PP_REPEAT_FROM_TO_I_I(index, macro, from, data) macro(IRIS_PP_ADD(index, from), data)
+
+#define IRIS_ZZ_PP_REPEAT_FROM_TO_I_MACRO(macro, from, data) macro
+#define IRIS_ZZ_PP_REPEAT_FROM_TO_I_FROM(macro, from, data) from
+#define IRIS_ZZ_PP_REPEAT_FROM_TO_I_DATA(macro, from, data) data
 
 #define IRIS_ZZ_PP_REPEAT_1_I_0(macro, data)
 #define IRIS_ZZ_PP_REPEAT_1_I_1(macro, data) macro(0, data)
