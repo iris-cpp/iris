@@ -8,13 +8,44 @@
 #include <iris/iterator.hpp> // IWYU pragma: keep
 #include <iris/ranges.hpp> // IWYU pragma: keep
 
+#include <algorithm>
+#include <memory>
 #include <iterator>
 #include <ranges>
 #include <concepts>
 #include <type_traits>
 #include <utility>
 
+#include <cassert>
+
 namespace iris::container {
+
+namespace detail {
+
+template<class T>
+concept allocator_aware_impl = requires(T const& c) {
+    typename T::allocator_type;
+    { c.get_allocator() } -> std::same_as<typename T::allocator_type>;
+};
+
+} // detail
+
+template<class T>
+concept allocator_aware = detail::allocator_aware_impl<std::remove_cvref_t<T>>;
+
+template<class T>
+concept has_stateless_allocator = std::allocator_traits<typename std::remove_cvref_t<T>::allocator_type>::is_always_equal::value;
+
+template<class ContainerT>
+concept keeps_allocator_on_move_assignment =
+    !allocator_aware<ContainerT> ||
+    has_stateless_allocator<ContainerT> ||
+    !std::allocator_traits<typename std::remove_cvref_t<ContainerT>::allocator_type>::propagate_on_container_move_assignment::value;
+
+template<class A, class B>
+concept has_same_allocator_type =
+    allocator_aware<A> && allocator_aware<B> &&
+    std::same_as<typename std::remove_cvref_t<A>::allocator_type, typename std::remove_cvref_t<B>::allocator_type>;
 
 template<class C>
 concept mapping_container =
@@ -417,6 +448,15 @@ concept back_emplace_back_accessible =
         (has_end_emplace<ContainerT, Args...> || has_end_insert<ContainerT, Args...>)
     );
 
+template<class ContainerT, class ElementT>
+concept try_emplaceable =
+    unique_mapping_container<ContainerT> &&
+    std::is_constructible_v<typename ContainerT::key_type, decltype(std::get<0>(std::declval<ElementT>()))> &&
+    std::is_constructible_v<typename ContainerT::mapped_type, decltype(std::get<1>(std::declval<ElementT>()))> &&
+    requires(ContainerT& cont, ElementT&& element) {
+        cont.try_emplace(std::ranges::end(cont), std::get<0>(std::forward<ElementT>(element)), std::get<1>(std::forward<ElementT>(element)));
+    };
+
 template<bool NeedReturn>
 struct append_fn
 {
@@ -466,7 +506,14 @@ struct append_fn
     static constexpr decltype(auto)
     operator()(ContainerT& cont, FirstT&& first, Rest&&... rest)
     {
-        if constexpr (has_emplace_back<ContainerT, FirstT, Rest...>) {
+        if constexpr (sizeof...(Rest) == 0 && try_emplaceable<ContainerT, FirstT>) {
+            if constexpr (NeedReturn) {
+                return *cont.try_emplace(std::ranges::end(cont), std::get<0>(std::forward<FirstT>(first)), std::get<1>(std::forward<FirstT>(first)));
+            } else {
+                (void)cont.try_emplace(std::ranges::end(cont), std::get<0>(std::forward<FirstT>(first)), std::get<1>(std::forward<FirstT>(first)));
+            }
+
+        } else if constexpr (has_emplace_back<ContainerT, FirstT, Rest...>) {
             if constexpr (NeedReturn) {
                 if constexpr (std::is_void_v<decltype(cont.emplace_back(std::forward<FirstT>(first), std::forward<Rest>(rest)...))>) {
                     cont.emplace_back(std::forward<FirstT>(first), std::forward<Rest>(rest)...);
@@ -583,7 +630,6 @@ struct erase_back_fn
 
 template<class ContainerT> concept front_erasable = requires(ContainerT& cont) { erase_front(cont); };
 template<class ContainerT> concept back_erasable = requires(ContainerT& cont) { erase_back(cont); };
-
 
 // ------------------------------------------------------------
 
@@ -728,6 +774,213 @@ struct clear_fn
 
 [[maybe_unused]] inline constexpr detail::append_range_fn append_range{};
 [[maybe_unused]] inline constexpr detail::clear_fn clear{};
+
+// ------------------------------------------------------------
+
+namespace detail {
+
+template<class DstT, class SrcT>
+concept element_wise_transferable_from =
+    requires(DstT& dst, SrcT src) {
+        append_range(dst, std::forward<SrcT>(src) | std::views::as_rvalue);
+    };
+
+template<class DstT, class SrcT>
+concept has_splice = requires(DstT& dst, SrcT src) {
+    dst.splice(std::ranges::end(dst), std::forward<SrcT>(src));
+};
+
+template<class DstT, class SrcT>
+concept has_merge = requires(DstT& dst, SrcT src) {
+    typename std::remove_cvref_t<DstT>::key_type; // `std::list::merge` merges sorted lists
+    dst.merge(std::forward<SrcT>(src));
+};
+
+template<class DstT, class SrcT>
+concept node_family_transferable_from =
+    has_splice<DstT, SrcT> ||
+    has_merge<DstT, SrcT>;
+
+template<class SrcT>
+using extracted_t = decltype(std::declval<std::remove_reference_t<SrcT>&&>().extract());
+
+template<class Extracted>
+[[nodiscard]] constexpr auto moved_elements(Extracted& extracted) noexcept
+{
+    if constexpr (requires { extracted.keys; extracted.values; }) {
+        // `std::views::zip` would be simpler, but Clang 22 rejects inserting two kinds of `zip_view` into libc++'s
+        // flat containers in one translation unit (an access check on a constraint of `__product_iterator_traits`).
+        using key_type = std::ranges::range_value_t<decltype(extracted.keys)>;
+        using mapped_type = std::ranges::range_value_t<decltype(extracted.values)>;
+        return std::views::zip_transform(
+            [](auto&& key, auto&& value) { return std::pair<key_type, mapped_type>(std::move(key), std::move(value)); },
+            extracted.keys, extracted.values
+        );
+    } else {
+        return extracted | std::views::as_rvalue;
+    }
+}
+
+template<class DstT, class SrcT>
+concept flat_transferable_from =
+    (
+        std::same_as<extracted_t<SrcT>, typename std::remove_cvref_t<SrcT>::containers> ||
+        std::same_as<extracted_t<SrcT>, typename std::remove_cvref_t<SrcT>::container_type>
+    ) &&
+    requires(DstT& dst, extracted_t<SrcT>& extracted) {
+        append_range(dst, detail::moved_elements(extracted));
+    };
+
+template<class DstT, class SrcT>
+concept flat_sorted_transferable_from =
+    flat_transferable_from<DstT, SrcT> &&
+    std::same_as<std::remove_cvref_t<DstT>, std::remove_cvref_t<SrcT>> &&
+    std::is_empty_v<typename std::remove_cvref_t<DstT>::key_compare>;
+
+template<class ContainerT>
+concept has_unique_keys = requires(ContainerT& cont, std::ranges::range_value_t<ContainerT>&& value) {
+    cont.insert(std::move(value)).second;
+};
+
+template<class DstT, class SrcT>
+concept node_transferable_from =
+    has_same_allocator_type<DstT, SrcT> &&
+    node_family_transferable_from<DstT, SrcT> &&
+    (
+        has_stateless_allocator<DstT> ||
+        // When we merge containers with stateful allocator, it is
+        // UB unless `dst.get_allocator() == src.get_allocator()`.
+        // Which means we must ensure they *always* have well-defined
+        // element-wise operation available for fallback.
+        element_wise_transferable_from<DstT, SrcT>
+    );
+
+struct transfer_from_fn
+{
+    template<class DstT, class SrcT>
+        requires
+            (!node_transferable_from<DstT, SrcT>) &&
+            (flat_transferable_from<DstT, SrcT> || element_wise_transferable_from<DstT, SrcT>)
+    static constexpr void operator()(DstT& dst, SrcT&& src)
+    {
+        assert(
+            static_cast<void const*>(std::addressof(src)) != static_cast<void const*>(std::addressof(dst)) &&
+            "self-transfer cannot be defined as a generic operation, even though some "
+            "containers define it"
+        );
+
+        if constexpr (flat_sorted_transferable_from<DstT, SrcT>) {
+            auto extracted = std::move(src).extract();
+            auto const comp = dst.key_comp();
+
+            if constexpr (requires { extracted.keys; extracted.values; }) {
+                if constexpr (
+                    keeps_allocator_on_move_assignment<decltype(extracted.keys)> &&
+                    keeps_allocator_on_move_assignment<decltype(extracted.values)>
+                ) {
+                    if (std::ranges::empty(dst)) {
+                        dst.replace(std::move(extracted.keys), std::move(extracted.values));
+                        return;
+                    }
+                }
+
+                // TODO: use `std::ranges::inplace_merge`.
+                // Currently merged into new containers, because `std::ranges::inplace_merge` on `std::views::zip`
+                // does not compile on libstdc++, which dispatches on `input_iterator_tag`
+                auto existing = std::move(dst).extract();
+                auto merged = std::move(dst).extract(); // empty, with the allocators of the destination
+                if constexpr (requires { merged.keys.reserve(0); merged.values.reserve(0); }) {
+                    auto const size = std::ranges::size(existing.keys) + std::ranges::size(extracted.keys);
+                    merged.keys.reserve(size);
+                    merged.values.reserve(size);
+                }
+
+                auto key_it = std::ranges::begin(existing.keys);
+                auto value_it = std::ranges::begin(existing.values);
+                auto const key_end = std::ranges::end(existing.keys);
+                auto source_key_it = std::ranges::begin(extracted.keys);
+                auto source_value_it = std::ranges::begin(extracted.values);
+                auto const source_key_end = std::ranges::end(extracted.keys);
+                while (key_it != key_end || source_key_it != source_key_end) {
+                    if (key_it == key_end || (source_key_it != source_key_end && comp(*source_key_it, *key_it))) {
+                        append(merged.keys, std::move(*source_key_it++));
+                        append(merged.values, std::move(*source_value_it++));
+                        continue;
+                    }
+                    if constexpr (has_unique_keys<std::remove_cvref_t<DstT>>) {
+                        // the destination keeps its own element for an equivalent key
+                        if (source_key_it != source_key_end && !comp(*key_it, *source_key_it)) {
+                            ++source_key_it;
+                            ++source_value_it;
+                        }
+                    }
+                    append(merged.keys, std::move(*key_it++));
+                    append(merged.values, std::move(*value_it++));
+                }
+                dst.replace(std::move(merged.keys), std::move(merged.values));
+
+            } else {
+                if constexpr (keeps_allocator_on_move_assignment<decltype(extracted)>) {
+                    if (std::ranges::empty(dst)) {
+                        dst.replace(std::move(extracted));
+                        return;
+                    }
+                }
+                auto merged = std::move(dst).extract();
+                auto const middle = std::ranges::ssize(merged);
+                append_range(merged, extracted | std::views::as_rvalue);
+
+                std::ranges::inplace_merge(merged, std::ranges::begin(merged) + middle, comp);
+                if constexpr (has_unique_keys<std::remove_cvref_t<DstT>>) {
+                    auto const is_equivalent = [&comp](auto const& a, auto const& b) { return !comp(a, b) && !comp(b, a); };
+                    auto const removed = std::ranges::unique(merged, is_equivalent);
+                    merged.erase(std::ranges::begin(removed), std::ranges::end(removed));
+                }
+                dst.replace(std::move(merged));
+            }
+
+        } else if constexpr (flat_transferable_from<DstT, SrcT>) {
+            auto extracted = std::move(src).extract();
+            append_range(dst, detail::moved_elements(extracted));
+
+        } else {
+            append_range(dst, std::forward<SrcT>(src) | std::views::as_rvalue);
+        }
+    }
+
+    template<class DstT, class SrcT>
+        requires node_transferable_from<DstT, SrcT>
+    static constexpr void operator()(DstT& dst, SrcT&& src)
+    {
+        assert(
+            static_cast<void const*>(std::addressof(src)) != static_cast<void const*>(std::addressof(dst)) &&
+            "self-transfer cannot be defined as a generic operation, even though some "
+            "containers define it"
+        );
+
+        if constexpr (!has_stateless_allocator<DstT>) {
+            if (dst.get_allocator() != src.get_allocator()) {
+                append_range(dst, std::forward<SrcT>(src) | std::views::as_rvalue);
+                return;
+            }
+        }
+
+        if constexpr (has_splice<DstT, SrcT>) {
+            dst.splice(std::ranges::end(dst), std::forward<SrcT>(src));
+
+        } else if constexpr (has_merge<DstT, SrcT>) {
+            dst.merge(std::forward<SrcT>(src));
+
+        } else {
+            static_assert(false);
+        }
+    }
+};
+
+} // detail
+
+[[maybe_unused]] inline constexpr detail::transfer_from_fn transfer_from{};
+
 
 } // iris::container
 
