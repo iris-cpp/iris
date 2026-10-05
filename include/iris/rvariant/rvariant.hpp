@@ -137,10 +137,9 @@ struct relops_visitor;
 template<class... Ts>
 struct rvariant_base
 {
-private:
+protected:
     static constexpr bool need_destructor_call = !std::conjunction_v<std::is_trivially_destructible<Ts>...>;
 
-protected:
     using storage_type = make_variadic_union_t<Ts...>;
     static constexpr bool never_valueless = storage_type::never_valueless;
 
@@ -663,16 +662,48 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
         constexpr std::size_t j = no_narrowing_resolution<T, Ts...>::index;
         static_assert(j != std::variant_npos);
 
+        // TC(noexcept) && MC(throw)    => A maybe valueless if | never |
+        // TC(noexcept) && MC(noexcept) => A maybe valueless if | never |
+        // TC(throw)    && MC(throw)    => A maybe valueless if | TC throws => yes | MC throws => yes |
+        // TC(throw)    && MC(noexcept) => B maybe valueless if | never |
+        if constexpr (!base_type::need_destructor_call) {
+            // Nothing needs to be destroyed, so a comparison of the index replaces the visit
+            if (this->index_ == j) {
+                detail::raw_get<j>(this->storage_) = std::forward<T>(t);
+
+            } else if constexpr (std::is_nothrow_constructible_v<Tj, T> || !std::is_nothrow_move_constructible_v<Tj>) {
+#ifndef NDEBUG
+                // Self-assign on non-valueless instance ALWAYS leads to UB.
+                // For details, see the comments on `emplace`.
+                assert(
+                    (this->index_ == detail::variant_npos<sizeof...(Ts)> || (
+                        static_cast<void const*>(std::addressof(t)) != static_cast<void const*>(this) &&
+                        static_cast<void const*>(std::addressof(t)) != static_cast<void const*>(std::addressof(this->storage_))
+                    )) &&
+                    "Self-assigning `variant` will lead to undefined behavior because the standard specifies `emplace` to destruct the contained object *before* emplacing the new value ([variant.mod])."
+                );
+#endif
+                static_assert(std::is_nothrow_constructible_v<Tj, T> || !base_type::never_valueless);
+                if constexpr (!std::is_nothrow_constructible_v<Tj, T>) {
+                    this->index_ = detail::variant_npos<sizeof...(Ts)>;
+                }
+                detail::alternative_constructor<j>::construct(this->storage_, std::forward<T>(t));
+                this->index_ = j;
+
+            } else {
+                Tj tmp(std::forward<T>(t));
+                detail::alternative_constructor<j>::construct(this->storage_, std::move(tmp)); // B
+                this->index_ = j;
+            }
+            return *this;
+        }
+
         this->raw_visit([this, &t]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti& ti)
             noexcept(detail::variant_nothrow_assignable<Tj, T>::value)
         {
             if constexpr (i == j) {
                 ti = std::forward<T>(t);
             } else {
-                // TC(noexcept) && MC(throw)    => A maybe valueless if | never |
-                // TC(noexcept) && MC(noexcept) => A maybe valueless if | never |
-                // TC(throw)    && MC(throw)    => A maybe valueless if | TC throws => yes | MC throws => yes |
-                // TC(throw)    && MC(noexcept) => B maybe valueless if | never |
                 if constexpr (std::is_nothrow_constructible_v<Tj, T> || !std::is_nothrow_move_constructible_v<Tj>) {
 #ifndef NDEBUG
                     // Self-assign on non-valueless instance ALWAYS leads to UB.

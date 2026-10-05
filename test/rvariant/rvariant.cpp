@@ -1128,6 +1128,46 @@ TEST_CASE("generic assignment")
         REQUIRE_NOTHROW(a = MC_Thrower::potentially_throwing);
         CHECK(a.valueless_by_exception() == false);
     }
+
+    {
+        struct throwing_t {};
+        struct potentially_throwing_t {};
+        struct TC_Thrower
+        {
+            struct exception {};
+            TC_Thrower(throwing_t) noexcept(false) { throw exception{}; } // NOLINT(hicpp-exception-baseclass)
+            TC_Thrower(potentially_throwing_t) noexcept(false) {}
+        };
+        STATIC_REQUIRE(std::is_trivially_destructible_v<TC_Thrower>);
+        STATIC_REQUIRE(std::is_nothrow_move_constructible_v<TC_Thrower>);
+        {
+            iris::rvariant<int, TC_Thrower> a;
+            REQUIRE_THROWS_AS(a = throwing_t{}, TC_Thrower::exception);
+            CHECK(a.index() == 0);
+        }
+        {
+            iris::rvariant<int, TC_Thrower> a;
+            REQUIRE_NOTHROW(a = potentially_throwing_t{});
+            CHECK(a.index() == 1);
+        }
+    }
+    STATIC_CHECK([] {
+        iris::rvariant<int, float> a = 42;
+        a = 3.14f;
+        a = 33;
+        return a.index() == 0 && iris::get<0>(a) == 33;
+    }());
+
+    // Alternatives that need to be destroyed
+    {
+        iris::rvariant<int, std::string> a = 42;
+        a = std::string("abc");
+        REQUIRE(a.index() == 1);
+        CHECK(iris::get<1>(a) == "abc");
+        a = 33;
+        REQUIRE(a.index() == 0);
+        CHECK(iris::get<0>(a) == 33);
+    }
 }
 
 TEST_CASE("emplace")
