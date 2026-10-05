@@ -146,16 +146,6 @@ TEST_CASE("storage", "[detail]")
 
         using V = iris::rvariant<T>;
 
-        using Base = iris::detail::rvariant_base<T>;
-        {
-            STATIC_REQUIRE(std::is_trivially_copy_constructible_v<Base>);
-            STATIC_REQUIRE(std::is_trivially_move_constructible_v<Base>);
-            STATIC_REQUIRE(std::is_trivially_copy_assignable_v<Base>);
-            STATIC_REQUIRE(std::is_trivially_move_assignable_v<Base>);
-            STATIC_REQUIRE(std::is_trivially_destructible_v<Base>);
-            STATIC_REQUIRE(std::is_trivially_copyable_v<Base>);
-            STATIC_REQUIRE(std::is_standard_layout_v<Base>);
-        }
         {
             STATIC_REQUIRE(std::is_trivially_copy_constructible_v<V>);
             STATIC_REQUIRE(std::is_trivially_move_constructible_v<V>);
@@ -215,17 +205,6 @@ TEST_CASE("storage", "[detail]")
 
         using V = iris::rvariant<T>;
 
-        using Base = iris::detail::rvariant_base<T>;
-        static_assert(std::is_base_of_v<Base, V>);
-        {
-            STATIC_REQUIRE(!std::is_trivially_copy_constructible_v<Base>);
-            STATIC_REQUIRE(std::is_trivially_move_constructible_v<Base>);
-            STATIC_REQUIRE(!std::is_trivially_copy_assignable_v<Base>); // variant requires TCC && TCA && TD
-            STATIC_REQUIRE(std::is_trivially_move_assignable_v<Base>);
-            STATIC_REQUIRE(std::is_trivially_destructible_v<Base>);
-            STATIC_REQUIRE(!std::is_trivially_copyable_v<Base>);
-            STATIC_REQUIRE(std::is_standard_layout_v<Base>);
-        }
         {
             STATIC_REQUIRE(!std::is_trivially_copy_constructible_v<V>);
             STATIC_REQUIRE(std::is_trivially_move_constructible_v<V>);
