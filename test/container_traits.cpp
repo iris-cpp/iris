@@ -849,6 +849,27 @@ TEST_CASE("container: append_range")
     STATIC_CHECK(!std::invocable<decltype(iris::container::append_range), std::array<int, 1>&, std::vector<int>>);
 }
 
+// propagates on move assignment, and two objects compare equal only when they have the same tag
+template<class T>
+struct tagged_allocator
+{
+    using value_type = T;
+    using propagate_on_container_move_assignment = std::true_type;
+
+    int tag = 0;
+
+    tagged_allocator() = default;
+    explicit tagged_allocator(int tag) noexcept : tag(tag) {}
+    template<class U>
+    tagged_allocator(tagged_allocator<U> const& other) noexcept : tag(other.tag) {} // NOLINT(google-explicit-constructor)
+
+    T* allocate(std::size_t n) { return std::allocator<T>{}.allocate(n); }
+    void deallocate(T* p, std::size_t n) noexcept { std::allocator<T>{}.deallocate(p, n); }
+
+    template<class U>
+    bool operator==(tagged_allocator<U> const& other) const noexcept { return tag == other.tag; }
+};
+
 // orders in reverse when `is_reversed`, so that two objects of this type can order differently
 struct stateful_less
 {
@@ -897,7 +918,7 @@ TEST_CASE("container: transfer_from")
         CHECK(dst == std::map<int, std::string>{{1, "a"}, {2, "c"}});
     }
     {
-        // nodes are not moved between different memory resources
+        // Nodes are not moved between different memory resources
         std::pmr::monotonic_buffer_resource dst_resource, src_resource;
         std::pmr::list<int> dst(&dst_resource), src({1, 2}, &src_resource);
         auto const* const node = &src.front();
@@ -939,7 +960,7 @@ TEST_CASE("container: transfer_from")
         CHECK(dst == std::flat_multimap<int, int>{{1, 10}, {1, 20}, {2, 30}});
     }
     {
-        // a flat container yields its mapped values as lvalues, so they are moved out of the underlying containers
+        // A flat container yields its mapped values as lvalues, so they are moved out of the underlying containers
         std::map<std::string, std::unique_ptr<int>> dst;
         std::flat_map<std::string, std::unique_ptr<int>> src;
         src.emplace("a", std::make_unique<int>(1));
@@ -948,7 +969,44 @@ TEST_CASE("container: transfer_from")
         CHECK(*dst.at("a") == 1);
     }
     {
-        // the source is sorted by its own comparator, so an empty destination does not take it as it is
+        // The destination keeps the memory resource of its underlying containers
+        using pmr_flat_map = std::flat_map<int, int, std::less<int>, std::pmr::vector<int>, std::pmr::vector<int>>;
+        std::pmr::monotonic_buffer_resource dst_resource, src_resource;
+        pmr_flat_map dst{std::pmr::polymorphic_allocator<int>(&dst_resource)}, src{std::pmr::polymorphic_allocator<int>(&src_resource)};
+        src.emplace(2, 20);
+        src.emplace(1, 10);
+        transfer_from(dst, src);
+        CHECK(dst == pmr_flat_map{{1, 10}, {2, 20}});
+        CHECK(dst.keys().get_allocator().resource() == &dst_resource);
+
+        pmr_flat_map more{std::pmr::polymorphic_allocator<int>(&src_resource)};
+        more.emplace(0, 0);
+        more.emplace(2, 200);
+        transfer_from(dst, more);
+        CHECK(dst == pmr_flat_map{{0, 0}, {1, 10}, {2, 20}});
+        CHECK(dst.values().get_allocator().resource() == &dst_resource);
+    }
+    {
+        // An empty destination takes the buffers of a source that has an equal memory resource
+        using pmr_flat_set = std::flat_set<int, std::less<int>, std::pmr::vector<int>>;
+        std::pmr::monotonic_buffer_resource resource;
+        pmr_flat_set dst{std::pmr::polymorphic_allocator<int>(&resource)}, src{std::pmr::polymorphic_allocator<int>(&resource)};
+        src.insert(1);
+        auto const* const element = &*src.begin();
+        transfer_from(dst, src);
+        CHECK(&*dst.begin() == element);
+    }
+    {
+        // An allocator that propagates on move assignment would replace the allocator of an empty destination
+        using tagged_flat_set = std::flat_set<int, std::less<int>, std::vector<int, tagged_allocator<int>>>;
+        tagged_flat_set dst{tagged_allocator<int>(1)}, src{tagged_allocator<int>(2)};
+        src.insert(1);
+        transfer_from(dst, src);
+        CHECK(dst == tagged_flat_set{1});
+        CHECK(std::move(dst).extract().get_allocator().tag == 1);
+    }
+    {
+        // The source is sorted by its own comparator, which the destination cannot rely on
         std::flat_set<int, stateful_less> dst(stateful_less{false}), src({1, 2, 3}, stateful_less{true});
         transfer_from(dst, src);
         CHECK(std::ranges::equal(dst, std::vector{1, 2, 3}));

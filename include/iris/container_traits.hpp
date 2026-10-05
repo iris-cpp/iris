@@ -8,10 +8,12 @@
 #include <iris/iterator.hpp> // IWYU pragma: keep
 #include <iris/ranges.hpp> // IWYU pragma: keep
 
+#include <algorithm>
 #include <memory>
 #include <iterator>
 #include <ranges>
 #include <concepts>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -36,7 +38,10 @@ template<class T>
 concept has_stateless_allocator = std::allocator_traits<typename std::remove_cvref_t<T>::allocator_type>::is_always_equal::value;
 
 template<class ContainerT>
-concept has_interchangeable_allocator = !allocator_aware<ContainerT> || has_stateless_allocator<ContainerT>;
+concept keeps_allocator_on_move_assignment =
+    !allocator_aware<ContainerT> ||
+    has_stateless_allocator<ContainerT> ||
+    !std::allocator_traits<typename std::remove_cvref_t<ContainerT>::allocator_type>::propagate_on_container_move_assignment::value;
 
 template<class A, class B>
 concept has_same_allocator_type =
@@ -811,23 +816,16 @@ concept flat_transferable_from =
         append_range(dst, detail::moved_elements(extracted));
     };
 
-// An empty destination takes the underlying containers as they are. They are sorted by the source's
-// comparator, which orders the same as the destination's only when the comparator has no state.
 template<class DstT, class SrcT>
-concept flat_replaceable_from =
+concept flat_sorted_transferable_from =
+    flat_transferable_from<DstT, SrcT> &&
     std::same_as<std::remove_cvref_t<DstT>, std::remove_cvref_t<SrcT>> &&
-    std::is_empty_v<typename std::remove_cvref_t<DstT>::key_compare> &&
-    (
-        requires(DstT& dst, extracted_t<SrcT>& extracted) {
-            requires has_interchangeable_allocator<decltype(extracted.keys)>;
-            requires has_interchangeable_allocator<decltype(extracted.values)>;
-            dst.replace(std::move(extracted.keys), std::move(extracted.values));
-        } ||
-        requires(DstT& dst, extracted_t<SrcT>& extracted) {
-            requires has_interchangeable_allocator<extracted_t<SrcT>>;
-            dst.replace(std::move(extracted));
-        }
-    );
+    std::is_empty_v<typename std::remove_cvref_t<DstT>::key_compare>;
+
+template<class ContainerT>
+concept has_unique_keys = requires(ContainerT& cont, std::ranges::range_value_t<ContainerT>&& value) {
+    cont.insert(std::move(value)).second;
+};
 
 template<class DstT, class SrcT>
 concept node_transferable_from =
@@ -856,19 +854,58 @@ struct transfer_from_fn
             "containers define it"
         );
 
-        if constexpr (flat_transferable_from<DstT, SrcT>) {
+        if constexpr (flat_sorted_transferable_from<DstT, SrcT>) {
             auto extracted = std::move(src).extract();
+            auto const comp = dst.key_comp();
+            auto const is_equivalent = [&comp](auto const& a, auto const& b) { return !comp(a, b) && !comp(b, a); };
 
-            if constexpr (flat_replaceable_from<DstT, SrcT>) {
-                if (std::ranges::empty(dst)) {
-                    if constexpr (requires { extracted.keys; extracted.values; }) {
+            if constexpr (requires { extracted.keys; extracted.values; }) {
+                if constexpr (
+                    keeps_allocator_on_move_assignment<decltype(extracted.keys)> &&
+                    keeps_allocator_on_move_assignment<decltype(extracted.values)>
+                ) {
+                    if (std::ranges::empty(dst)) {
                         dst.replace(std::move(extracted.keys), std::move(extracted.values));
-                    } else {
-                        dst.replace(std::move(extracted));
+                        return;
                     }
-                    return;
                 }
+                auto merged = std::move(dst).extract();
+                auto const middle = std::ranges::ssize(merged.keys);
+                append_range(merged.keys, extracted.keys | std::views::as_rvalue);
+                append_range(merged.values, extracted.values | std::views::as_rvalue);
+
+                auto zipped = std::views::zip(merged.keys, merged.values);
+                auto const key = [](auto const& element) noexcept -> auto const& { return std::get<0>(element); };
+                std::ranges::inplace_merge(zipped, std::ranges::begin(zipped) + middle, comp, key);
+                if constexpr (has_unique_keys<std::remove_cvref_t<DstT>>) {
+                    auto const unique_end = std::ranges::begin(std::ranges::unique(zipped, is_equivalent, key));
+                    auto const size = unique_end - std::ranges::begin(zipped);
+                    merged.keys.erase(std::ranges::begin(merged.keys) + size, std::ranges::end(merged.keys));
+                    merged.values.erase(std::ranges::begin(merged.values) + size, std::ranges::end(merged.values));
+                }
+                dst.replace(std::move(merged.keys), std::move(merged.values));
+
+            } else {
+                if constexpr (keeps_allocator_on_move_assignment<decltype(extracted)>) {
+                    if (std::ranges::empty(dst)) {
+                        dst.replace(std::move(extracted));
+                        return;
+                    }
+                }
+                auto merged = std::move(dst).extract();
+                auto const middle = std::ranges::ssize(merged);
+                append_range(merged, extracted | std::views::as_rvalue);
+
+                std::ranges::inplace_merge(merged, std::ranges::begin(merged) + middle, comp);
+                if constexpr (has_unique_keys<std::remove_cvref_t<DstT>>) {
+                    auto const removed = std::ranges::unique(merged, is_equivalent);
+                    merged.erase(std::ranges::begin(removed), std::ranges::end(removed));
+                }
+                dst.replace(std::move(merged));
             }
+
+        } else if constexpr (flat_transferable_from<DstT, SrcT>) {
+            auto extracted = std::move(src).extract();
             append_range(dst, detail::moved_elements(extracted));
 
         } else {
