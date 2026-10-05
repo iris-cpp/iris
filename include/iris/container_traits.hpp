@@ -8,13 +8,37 @@
 #include <iris/iterator.hpp> // IWYU pragma: keep
 #include <iris/ranges.hpp> // IWYU pragma: keep
 
+#include <memory>
 #include <iterator>
 #include <ranges>
 #include <concepts>
 #include <type_traits>
 #include <utility>
 
+#include <cassert>
+
 namespace iris::container {
+
+namespace detail {
+
+template<class T>
+concept allocator_aware_impl = requires(T const& c) {
+    typename T::allocator_type;
+    { c.get_allocator() } -> std::same_as<typename T::allocator_type>;
+};
+
+} // detail
+
+template<class T>
+concept allocator_aware = detail::allocator_aware_impl<std::remove_cvref_t<T>>;
+
+template<class T>
+concept has_stateless_allocator = std::allocator_traits<typename std::remove_cvref_t<T>::allocator_type>::is_always_equal::value;
+
+template<class A, class B>
+concept has_same_allocator_type =
+    allocator_aware<A> && allocator_aware<B> &&
+    std::same_as<typename std::remove_cvref_t<A>::allocator_type, typename std::remove_cvref_t<B>::allocator_type>;
 
 template<class C>
 concept mapping_container =
@@ -584,7 +608,6 @@ struct erase_back_fn
 template<class ContainerT> concept front_erasable = requires(ContainerT& cont) { erase_front(cont); };
 template<class ContainerT> concept back_erasable = requires(ContainerT& cont) { erase_back(cont); };
 
-
 // ------------------------------------------------------------
 
 template<class ContainerT>
@@ -728,6 +751,94 @@ struct clear_fn
 
 [[maybe_unused]] inline constexpr detail::append_range_fn append_range{};
 [[maybe_unused]] inline constexpr detail::clear_fn clear{};
+
+// ------------------------------------------------------------
+
+namespace detail {
+
+template<class DstT, class SrcT>
+concept element_wise_transferable_from =
+    requires(DstT& dst, SrcT src) {
+        append_range(dst, std::forward<SrcT>(src) | std::views::as_rvalue);
+    };
+
+template<class DstT, class SrcT>
+concept has_splice = requires(DstT& dst, SrcT src) {
+    dst.splice(std::ranges::end(dst), std::forward<SrcT>(src));
+};
+
+template<class DstT, class SrcT>
+concept has_merge = requires(DstT& dst, SrcT src) {
+    typename std::remove_cvref_t<DstT>::key_type; // `std::list::merge` merges sorted lists
+    dst.merge(std::forward<SrcT>(src));
+};
+
+template<class DstT, class SrcT>
+concept node_family_transferable_from =
+    has_splice<DstT, SrcT> ||
+    has_merge<DstT, SrcT>;
+    // TODO: `std::flat_map`, `std::flat_set`
+
+template<class DstT, class SrcT>
+concept node_transferable_from =
+    has_same_allocator_type<DstT, SrcT> &&
+    node_family_transferable_from<DstT, SrcT> &&
+    (
+        has_stateless_allocator<DstT> ||
+        // When we merge containers with stateful allocator, it is
+        // UB unless `dst.get_allocator() == src.get_allocator()`.
+        // Which means we must ensure they *always* have well-defined
+        // element-wise operation available for fallback.
+        element_wise_transferable_from<DstT, SrcT>
+    );
+
+struct transfer_from_fn
+{
+    template<class DstT, class SrcT>
+        requires (!node_transferable_from<DstT, SrcT>) && element_wise_transferable_from<DstT, SrcT>
+    static constexpr void operator()(DstT& dst, SrcT&& src)
+    {
+        assert(
+            static_cast<void const*>(std::addressof(src)) != static_cast<void const*>(std::addressof(dst)) &&
+            "self-transfer cannot be defined as a generic operation, even though some "
+            "containers define it"
+        );
+        append_range(dst, std::forward<SrcT>(src) | std::views::as_rvalue);
+    }
+
+    template<class DstT, class SrcT>
+        requires node_transferable_from<DstT, SrcT>
+    static constexpr void operator()(DstT& dst, SrcT&& src)
+    {
+        assert(
+            static_cast<void const*>(std::addressof(src)) != static_cast<void const*>(std::addressof(dst)) &&
+            "self-transfer cannot be defined as a generic operation, even though some "
+            "containers define it"
+        );
+
+        if constexpr (!has_stateless_allocator<DstT>) {
+            if (dst.get_allocator() != src.get_allocator()) {
+                append_range(dst, std::forward<SrcT>(src) | std::views::as_rvalue);
+                return;
+            }
+        }
+
+        if constexpr (has_splice<DstT, SrcT>) {
+            dst.splice(std::ranges::end(dst), std::forward<SrcT>(src));
+
+        } else if constexpr (has_merge<DstT, SrcT>) {
+            dst.merge(std::forward<SrcT>(src));
+
+        } else {
+            static_assert(false);
+        }
+    }
+};
+
+} // detail
+
+[[maybe_unused]] inline constexpr detail::transfer_from_fn transfer_from{};
+
 
 } // iris::container
 
