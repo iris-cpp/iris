@@ -35,6 +35,9 @@ concept allocator_aware = detail::allocator_aware_impl<std::remove_cvref_t<T>>;
 template<class T>
 concept has_stateless_allocator = std::allocator_traits<typename std::remove_cvref_t<T>::allocator_type>::is_always_equal::value;
 
+template<class ContainerT>
+concept has_interchangeable_allocator = !allocator_aware<ContainerT> || has_stateless_allocator<ContainerT>;
+
 template<class A, class B>
 concept has_same_allocator_type =
     allocator_aware<A> && allocator_aware<B> &&
@@ -777,7 +780,54 @@ template<class DstT, class SrcT>
 concept node_family_transferable_from =
     has_splice<DstT, SrcT> ||
     has_merge<DstT, SrcT>;
-    // TODO: `std::flat_map`, `std::flat_set`
+
+template<class SrcT>
+using extracted_t = decltype(std::declval<std::remove_reference_t<SrcT>&&>().extract());
+
+template<class Extracted>
+[[nodiscard]] constexpr auto moved_elements(Extracted& extracted) noexcept
+{
+    if constexpr (requires { extracted.keys; extracted.values; }) {
+        // `std::views::zip` would be simpler, but Clang 22 rejects inserting two kinds of `zip_view` into libc++'s
+        // flat containers in one translation unit (an access check on a constraint of `__product_iterator_traits`).
+        using key_type = std::ranges::range_value_t<decltype(extracted.keys)>;
+        using mapped_type = std::ranges::range_value_t<decltype(extracted.values)>;
+        return std::views::zip_transform(
+            [](auto&& key, auto&& value) { return std::pair<key_type, mapped_type>(std::move(key), std::move(value)); },
+            extracted.keys, extracted.values
+        );
+    } else {
+        return extracted | std::views::as_rvalue;
+    }
+}
+
+template<class DstT, class SrcT>
+concept flat_transferable_from =
+    (
+        std::same_as<extracted_t<SrcT>, typename std::remove_cvref_t<SrcT>::containers> ||
+        std::same_as<extracted_t<SrcT>, typename std::remove_cvref_t<SrcT>::container_type>
+    ) &&
+    requires(DstT& dst, extracted_t<SrcT>& extracted) {
+        append_range(dst, detail::moved_elements(extracted));
+    };
+
+// An empty destination takes the underlying containers as they are. They are sorted by the source's
+// comparator, which orders the same as the destination's only when the comparator has no state.
+template<class DstT, class SrcT>
+concept flat_replaceable_from =
+    std::same_as<std::remove_cvref_t<DstT>, std::remove_cvref_t<SrcT>> &&
+    std::is_empty_v<typename std::remove_cvref_t<DstT>::key_compare> &&
+    (
+        requires(DstT& dst, extracted_t<SrcT>& extracted) {
+            requires has_interchangeable_allocator<decltype(extracted.keys)>;
+            requires has_interchangeable_allocator<decltype(extracted.values)>;
+            dst.replace(std::move(extracted.keys), std::move(extracted.values));
+        } ||
+        requires(DstT& dst, extracted_t<SrcT>& extracted) {
+            requires has_interchangeable_allocator<extracted_t<SrcT>>;
+            dst.replace(std::move(extracted));
+        }
+    );
 
 template<class DstT, class SrcT>
 concept node_transferable_from =
@@ -795,7 +845,9 @@ concept node_transferable_from =
 struct transfer_from_fn
 {
     template<class DstT, class SrcT>
-        requires (!node_transferable_from<DstT, SrcT>) && element_wise_transferable_from<DstT, SrcT>
+        requires
+            (!node_transferable_from<DstT, SrcT>) &&
+            (flat_transferable_from<DstT, SrcT> || element_wise_transferable_from<DstT, SrcT>)
     static constexpr void operator()(DstT& dst, SrcT&& src)
     {
         assert(
@@ -803,7 +855,25 @@ struct transfer_from_fn
             "self-transfer cannot be defined as a generic operation, even though some "
             "containers define it"
         );
-        append_range(dst, std::forward<SrcT>(src) | std::views::as_rvalue);
+
+        if constexpr (flat_transferable_from<DstT, SrcT>) {
+            auto extracted = std::move(src).extract();
+
+            if constexpr (flat_replaceable_from<DstT, SrcT>) {
+                if (std::ranges::empty(dst)) {
+                    if constexpr (requires { extracted.keys; extracted.values; }) {
+                        dst.replace(std::move(extracted.keys), std::move(extracted.values));
+                    } else {
+                        dst.replace(std::move(extracted));
+                    }
+                    return;
+                }
+            }
+            append_range(dst, detail::moved_elements(extracted));
+
+        } else {
+            append_range(dst, std::forward<SrcT>(src) | std::views::as_rvalue);
+        }
     }
 
     template<class DstT, class SrcT>

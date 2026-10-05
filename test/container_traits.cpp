@@ -17,6 +17,10 @@
 #include <unordered_set> // TODO
 #include <unordered_map>
 #include <flat_map>
+#include <flat_set>
+#include <list>
+#include <memory>
+#include <memory_resource>
 #include <span>
 #include <iterator>
 #include <ranges>
@@ -843,6 +847,115 @@ TEST_CASE("container: append_range")
     // `std::vector<int>(std::size_t)` is not a conversion
     STATIC_CHECK(!std::invocable<decltype(iris::container::append_range), std::vector<std::vector<int>>&, std::vector<int>>);
     STATIC_CHECK(!std::invocable<decltype(iris::container::append_range), std::array<int, 1>&, std::vector<int>>);
+}
+
+// orders in reverse when `is_reversed`, so that two objects of this type can order differently
+struct stateful_less
+{
+    bool is_reversed = false;
+    bool operator()(int a, int b) const { return is_reversed ? b < a : a < b; }
+};
+
+TEST_CASE("container: transfer_from")
+{
+    using iris::container::transfer_from;
+
+    {
+        std::list<std::string> dst{"a"}, src{"b", "c"};
+        auto const* const node = &src.front();
+        transfer_from(dst, src);
+        CHECK(dst == std::list<std::string>{"a", "b", "c"});
+        CHECK(&*std::next(dst.begin()) == node);
+        CHECK(src.empty());
+    }
+    {
+        std::map<int, std::string> dst{{1, "a"}};
+        std::multimap<int, std::string> src{{1, "b"}, {2, "c"}};
+        auto const* const node = &src.find(2)->second;
+        transfer_from(dst, src);
+        CHECK(dst == std::map<int, std::string>{{1, "a"}, {2, "c"}});
+        CHECK(&dst.at(2) == node);
+        CHECK(src == std::multimap<int, std::string>{{1, "b"}});
+    }
+    {
+        std::unordered_map<int, int> dst{{1, 10}};
+        transfer_from(dst, std::unordered_map<int, int>{{1, 20}, {2, 30}});
+        CHECK(dst == std::unordered_map<int, int>{{1, 10}, {2, 30}});
+    }
+
+    // element-wise
+    {
+        std::vector<std::string> dst{"a"}, src{"b"};
+        transfer_from(dst, src);
+        CHECK(dst == std::vector<std::string>{"a", "b"});
+        CHECK(src == std::vector<std::string>{""});
+    }
+    {
+        std::map<int, std::string> dst{{1, "a"}};
+        std::vector<std::pair<int, std::string>> src{{1, "b"}, {2, "c"}};
+        transfer_from(dst, src);
+        CHECK(dst == std::map<int, std::string>{{1, "a"}, {2, "c"}});
+    }
+    {
+        // nodes are not moved between different memory resources
+        std::pmr::monotonic_buffer_resource dst_resource, src_resource;
+        std::pmr::list<int> dst(&dst_resource), src({1, 2}, &src_resource);
+        auto const* const node = &src.front();
+        transfer_from(dst, src);
+        CHECK(dst == std::pmr::list<int>{1, 2});
+        CHECK(&dst.front() != node);
+        CHECK(dst.get_allocator().resource() == &dst_resource);
+
+        std::pmr::list<int> same_resource_src({3}, &dst_resource);
+        auto const* const same_resource_node = &same_resource_src.front();
+        transfer_from(dst, same_resource_src);
+        CHECK(&dst.back() == same_resource_node);
+    }
+
+    // flat containers
+    {
+        std::flat_map<std::string, int> dst, src{{"a", 1}, {"b", 2}};
+        auto const* const keys = src.keys().data();
+        transfer_from(dst, src);
+        CHECK(dst == std::flat_map<std::string, int>{{"a", 1}, {"b", 2}});
+        CHECK(dst.keys().data() == keys);
+        CHECK(src.empty());
+
+        std::flat_map<std::string, int> more{{"a", 3}, {"c", 4}};
+        transfer_from(dst, more);
+        CHECK(dst == std::flat_map<std::string, int>{{"a", 1}, {"b", 2}, {"c", 4}});
+    }
+    {
+        std::flat_set<std::string> dst, src{"b", "a"};
+        transfer_from(dst, src);
+        CHECK(dst == std::flat_set<std::string>{"a", "b"});
+
+        transfer_from(dst, std::flat_set<std::string>{"c", "a"});
+        CHECK(dst == std::flat_set<std::string>{"a", "b", "c"});
+    }
+    {
+        std::flat_multimap<int, int> dst{{1, 10}};
+        transfer_from(dst, std::flat_multimap<int, int>{{1, 20}, {2, 30}});
+        CHECK(dst == std::flat_multimap<int, int>{{1, 10}, {1, 20}, {2, 30}});
+    }
+    {
+        // a flat container yields its mapped values as lvalues, so they are moved out of the underlying containers
+        std::map<std::string, std::unique_ptr<int>> dst;
+        std::flat_map<std::string, std::unique_ptr<int>> src;
+        src.emplace("a", std::make_unique<int>(1));
+        transfer_from(dst, src);
+        REQUIRE(dst.contains("a"));
+        CHECK(*dst.at("a") == 1);
+    }
+    {
+        // the source is sorted by its own comparator, so an empty destination does not take it as it is
+        std::flat_set<int, stateful_less> dst(stateful_less{false}), src({1, 2, 3}, stateful_less{true});
+        transfer_from(dst, src);
+        CHECK(std::ranges::equal(dst, std::vector{1, 2, 3}));
+    }
+
+    STATIC_CHECK(!std::invocable<decltype(transfer_from), std::vector<int>&, std::vector<std::string>&>);
+    STATIC_CHECK(!std::invocable<decltype(transfer_from), std::array<int, 1>&, std::vector<int>&>);
 }
 
 TEST_CASE("container: clear")
