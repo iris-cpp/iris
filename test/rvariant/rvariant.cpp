@@ -14,6 +14,7 @@
 #include <exception>
 #include <initializer_list>
 #include <memory>
+#include <string>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -1422,6 +1423,64 @@ TEST_CASE("emplace")
     STATIC_REQUIRE(is_never_valueless<iris::rvariant<iris::recursive_wrapper<int>>>);
 
     // ReSharper restore CppStaticAssertFailure
+
+    // `emplace<I>` must switch to the I-th alternative even when the current one has the same type
+    {
+        // NOLINTBEGIN(modernize-use-equals-default)
+        {
+            struct S
+            {
+                S(int value) noexcept(false) : value(value) {} // potentially-throwing
+                int value = 0;
+            };
+            iris::rvariant<S, S> v(std::in_place_index<0>, 1);
+            v.emplace<1>(2);
+            REQUIRE(v.index() == 1);
+            CHECK(iris::get<1>(v).value == 2);
+            v.emplace<0>(3);
+            REQUIRE(v.index() == 0);
+            CHECK(iris::get<0>(v).value == 3);
+        }
+        {
+            struct StrangeS
+            {
+                StrangeS(int value) noexcept(false) : value(value) {} // potentially-throwing
+                StrangeS(StrangeS&& other) noexcept : value(other.value) {} // not trivial
+                StrangeS(StrangeS const&) = default; // trivial
+                StrangeS& operator=(StrangeS&& other) noexcept { value = other.value; return *this; } // not trivial
+                StrangeS& operator=(StrangeS const&) = default; // trivial
+                int value = 0;
+            };
+            iris::rvariant<StrangeS, StrangeS> v(std::in_place_index<0>, 1);
+            v.emplace<1>(2);
+            REQUIRE(v.index() == 1);
+            CHECK(iris::get<1>(v).value == 2);
+            v.emplace<0>(3);
+            REQUIRE(v.index() == 0);
+            CHECK(iris::get<0>(v).value == 3);
+        }
+        // NOLINTEND(modernize-use-equals-default)
+        {
+            iris::rvariant<std::string, std::string> v(std::in_place_index<0>, "a");
+            v.emplace<1>("b");
+            REQUIRE(v.index() == 1);
+            CHECK(iris::get<1>(v) == "b");
+            v.emplace<0>("c");
+            REQUIRE(v.index() == 0);
+            CHECK(iris::get<0>(v) == "c");
+        }
+        {
+            iris::rvariant<iris::recursive_wrapper<int>, iris::recursive_wrapper<int>> v(std::in_place_index<0>, 1);
+            v.emplace<1>(2);
+            REQUIRE(v.index() == 1);
+            CHECK(iris::get<1>(v) == 2);
+        }
+        STATIC_CHECK([] {
+            iris::rvariant<std::string, std::string> v(std::in_place_index<0>, "a");
+            v.emplace<1>("b");
+            return v.index() == 1 && iris::get<1>(v) == "b";
+        }());
+    }
 }
 
 
