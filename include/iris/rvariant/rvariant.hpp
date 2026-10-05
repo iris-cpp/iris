@@ -452,20 +452,13 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
             this->template reset_construct_never_valueless<I>(std::forward<Args>(args)...);
 
         } else {
-            this->raw_visit([&, this]<std::size_t old_i, class T_old_i>(std::in_place_index_t<old_i>, T_old_i& t_old_i)
-                noexcept(std::is_nothrow_constructible_v<T, Args...>)
-            {
+            this->raw_visit([&, this]<std::size_t old_i, class T_old_i>(std::in_place_index_t<old_i>, T_old_i& t_old_i) {
                 static_assert(!std::is_reference_v<T_old_i>);
                 static_assert(!std::is_const_v<T_old_i>);
 
                 if constexpr (old_i == std::variant_npos) {
                     (void)t_old_i;
                     this->template construct_on_valueless<I>(std::forward<Args>(args)...);
-
-                } else if constexpr (std::is_nothrow_constructible_v<T, Args...>) {
-                    t_old_i.~T_old_i();
-                    static_assert(std::is_nothrow_constructible_v<storage_type, std::in_place_index_t<old_i>, Args...>);
-                    std::construct_at(&this->storage_, std::in_place_index<old_i>, std::forward<Args>(args)...);
 
                 } else if constexpr (old_i == I) { // same alternative
                     if constexpr (
