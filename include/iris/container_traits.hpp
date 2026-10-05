@@ -13,7 +13,6 @@
 #include <iterator>
 #include <ranges>
 #include <concepts>
-#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -509,9 +508,9 @@ struct append_fn
     {
         if constexpr (sizeof...(Rest) == 0 && try_emplaceable<ContainerT, FirstT>) {
             if constexpr (NeedReturn) {
-                return *cont.try_emplace(std::ranges::end(cont), std::forward_like<FirstT>(first.first), std::forward_like<FirstT>(first.second));
+                return *cont.try_emplace(std::ranges::end(cont), std::get<0>(std::forward<FirstT>(first)), std::get<1>(std::forward<FirstT>(first)));
             } else {
-                (void)cont.try_emplace(std::ranges::end(cont), std::forward_like<FirstT>(first.first), std::forward_like<FirstT>(first.second));
+                (void)cont.try_emplace(std::ranges::end(cont), std::get<0>(std::forward<FirstT>(first)), std::get<1>(std::forward<FirstT>(first)));
             }
 
         } else if constexpr (has_emplace_back<ContainerT, FirstT, Rest...>) {
@@ -873,7 +872,6 @@ struct transfer_from_fn
         if constexpr (flat_sorted_transferable_from<DstT, SrcT>) {
             auto extracted = std::move(src).extract();
             auto const comp = dst.key_comp();
-            auto const is_equivalent = [&comp](auto const& a, auto const& b) { return !comp(a, b) && !comp(b, a); };
 
             if constexpr (requires { extracted.keys; extracted.values; }) {
                 if constexpr (
@@ -885,19 +883,39 @@ struct transfer_from_fn
                         return;
                     }
                 }
-                auto merged = std::move(dst).extract();
-                auto const middle = std::ranges::ssize(merged.keys);
-                append_range(merged.keys, extracted.keys | std::views::as_rvalue);
-                append_range(merged.values, extracted.values | std::views::as_rvalue);
 
-                auto zipped = std::views::zip(merged.keys, merged.values);
-                auto const key = [](auto const& element) noexcept -> auto const& { return std::get<0>(element); };
-                std::ranges::inplace_merge(zipped, std::ranges::begin(zipped) + middle, comp, key);
-                if constexpr (has_unique_keys<std::remove_cvref_t<DstT>>) {
-                    auto const unique_end = std::ranges::begin(std::ranges::unique(zipped, is_equivalent, key));
-                    auto const size = unique_end - std::ranges::begin(zipped);
-                    merged.keys.erase(std::ranges::begin(merged.keys) + size, std::ranges::end(merged.keys));
-                    merged.values.erase(std::ranges::begin(merged.values) + size, std::ranges::end(merged.values));
+                // TODO: use `std::ranges::inplace_merge`.
+                // Currently merged into new containers, because `std::ranges::inplace_merge` on `std::views::zip`
+                // does not compile on libstdc++, which dispatches on `input_iterator_tag`
+                auto existing = std::move(dst).extract();
+                auto merged = std::move(dst).extract(); // empty, with the allocators of the destination
+                if constexpr (requires { merged.keys.reserve(0); merged.values.reserve(0); }) {
+                    auto const size = std::ranges::size(existing.keys) + std::ranges::size(extracted.keys);
+                    merged.keys.reserve(size);
+                    merged.values.reserve(size);
+                }
+
+                auto key_it = std::ranges::begin(existing.keys);
+                auto value_it = std::ranges::begin(existing.values);
+                auto const key_end = std::ranges::end(existing.keys);
+                auto source_key_it = std::ranges::begin(extracted.keys);
+                auto source_value_it = std::ranges::begin(extracted.values);
+                auto const source_key_end = std::ranges::end(extracted.keys);
+                while (key_it != key_end || source_key_it != source_key_end) {
+                    if (key_it == key_end || (source_key_it != source_key_end && comp(*source_key_it, *key_it))) {
+                        append(merged.keys, std::move(*source_key_it++));
+                        append(merged.values, std::move(*source_value_it++));
+                        continue;
+                    }
+                    if constexpr (has_unique_keys<std::remove_cvref_t<DstT>>) {
+                        // the destination keeps its own element for an equivalent key
+                        if (source_key_it != source_key_end && !comp(*key_it, *source_key_it)) {
+                            ++source_key_it;
+                            ++source_value_it;
+                        }
+                    }
+                    append(merged.keys, std::move(*key_it++));
+                    append(merged.values, std::move(*value_it++));
                 }
                 dst.replace(std::move(merged.keys), std::move(merged.values));
 
@@ -914,6 +932,7 @@ struct transfer_from_fn
 
                 std::ranges::inplace_merge(merged, std::ranges::begin(merged) + middle, comp);
                 if constexpr (has_unique_keys<std::remove_cvref_t<DstT>>) {
+                    auto const is_equivalent = [&comp](auto const& a, auto const& b) { return !comp(a, b) && !comp(b, a); };
                     auto const removed = std::ranges::unique(merged, is_equivalent);
                     merged.erase(std::ranges::begin(removed), std::ranges::end(removed));
                 }

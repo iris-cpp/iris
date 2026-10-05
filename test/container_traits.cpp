@@ -865,7 +865,6 @@ TEST_CASE("container: append_range")
     STATIC_CHECK(!std::invocable<decltype(iris::container::append_range), std::array<int, 1>&, std::vector<int>>);
 }
 
-// propagates on move assignment, and two objects compare equal only when they have the same tag
 template<class T>
 struct tagged_allocator
 {
@@ -875,9 +874,11 @@ struct tagged_allocator
     int tag = 0;
 
     tagged_allocator() = default;
+
     explicit tagged_allocator(int tag) noexcept : tag(tag) {}
+
     template<class U>
-    tagged_allocator(tagged_allocator<U> const& other) noexcept : tag(other.tag) {} // NOLINT(google-explicit-constructor)
+    tagged_allocator(tagged_allocator<U> const& other) noexcept : tag(other.tag) {} // NOLINT(misc-explicit-constructor)
 
     T* allocate(std::size_t n) { return std::allocator<T>{}.allocate(n); }
     void deallocate(T* p, std::size_t n) noexcept { std::allocator<T>{}.deallocate(p, n); }
@@ -886,7 +887,6 @@ struct tagged_allocator
     bool operator==(tagged_allocator<U> const& other) const noexcept { return tag == other.tag; }
 };
 
-// orders in reverse when `is_reversed`, so that two objects of this type can order differently
 struct stateful_less
 {
     bool is_reversed = false;
@@ -920,7 +920,6 @@ TEST_CASE("container: transfer_from")
         CHECK(dst == std::unordered_map<int, int>{{1, 10}, {2, 30}});
     }
 
-    // element-wise
     {
         std::vector<std::string> dst{"a"}, src{"b"};
         transfer_from(dst, src);
@@ -986,7 +985,7 @@ TEST_CASE("container: transfer_from")
     }
     {
         // The destination keeps the memory resource of its underlying containers
-        using pmr_flat_map = std::flat_map<int, int, std::less<int>, std::pmr::vector<int>, std::pmr::vector<int>>;
+        using pmr_flat_map = std::flat_map<int, int, std::less<>, std::pmr::vector<int>, std::pmr::vector<int>>;
         std::pmr::monotonic_buffer_resource dst_resource, src_resource;
         pmr_flat_map dst{std::pmr::polymorphic_allocator<int>(&dst_resource)}, src{std::pmr::polymorphic_allocator<int>(&src_resource)};
         src.emplace(2, 20);
@@ -1004,7 +1003,7 @@ TEST_CASE("container: transfer_from")
     }
     {
         // An empty destination takes the buffers of a source that has an equal memory resource
-        using pmr_flat_set = std::flat_set<int, std::less<int>, std::pmr::vector<int>>;
+        using pmr_flat_set = std::flat_set<int, std::less<>, std::pmr::vector<int>>;
         std::pmr::monotonic_buffer_resource resource;
         pmr_flat_set dst{std::pmr::polymorphic_allocator<int>(&resource)}, src{std::pmr::polymorphic_allocator<int>(&resource)};
         src.insert(1);
@@ -1014,7 +1013,7 @@ TEST_CASE("container: transfer_from")
     }
     {
         // An allocator that propagates on move assignment would replace the allocator of an empty destination
-        using tagged_flat_set = std::flat_set<int, std::less<int>, std::vector<int, tagged_allocator<int>>>;
+        using tagged_flat_set = std::flat_set<int, std::less<>, std::vector<int, tagged_allocator<int>>>;
         tagged_flat_set dst{tagged_allocator<int>(1)}, src{tagged_allocator<int>(2)};
         src.insert(1);
         transfer_from(dst, src);
