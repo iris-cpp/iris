@@ -438,12 +438,10 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                     "Self-emplacing `variant` will lead to undefined behavior because the standard specifies `emplace` to destruct the contained object *before* emplacing the new value ([variant.mod])."
                 )), ...);
 
-                this->raw_visit([&]<std::size_t i, class Alt>(std::in_place_index_t<i>, [[maybe_unused]] Alt const& alt) {
-                    ((assert(
-                        static_cast<void const*>(std::addressof(args)) != static_cast<void const*>(std::addressof(alt)) &&
-                        "Self-emplacing `variant` will lead to undefined behavior because the standard specifies `emplace` to destruct the contained object *before* emplacing the new value ([variant.mod])."
-                    )), ...);
-                });
+                ((assert(
+                    static_cast<void const*>(std::addressof(args)) != static_cast<void const*>(std::addressof(this->storage_)) &&
+                    "Self-emplacing `variant` will lead to undefined behavior because the standard specifies `emplace` to destruct the contained object *before* emplacing the new value ([variant.mod])."
+                )), ...);
             }
         }
 #endif
