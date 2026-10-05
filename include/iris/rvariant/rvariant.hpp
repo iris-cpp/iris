@@ -467,7 +467,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                     static_assert(std::is_nothrow_constructible_v<storage_type, std::in_place_index_t<old_i>, Args...>);
                     std::construct_at(&this->storage_, std::in_place_index<old_i>, std::forward<Args>(args)...);
 
-                } else if constexpr (std::is_same_v<T_old_i, T>) { // NOT type-changing
+                } else if constexpr (old_i == I) { // same alternative
                     if constexpr (
                         (sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_move_assignable_v<T>) ||
                         is_recursive_wrapper_v<T>
@@ -497,12 +497,12 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                         static_assert(!never_valueless);
                         t_old_i.~T_old_i();
                         this->index_ = detail::variant_npos<sizeof...(Ts)>;
-                        static_assert(!noexcept(std::construct_at(&this->storage(), std::in_place_index<old_i>, std::forward<Args>(args)...)));
-                        std::construct_at(&this->storage_, std::in_place_index<old_i>, std::forward<Args>(args)...); // may throw
-                        this->index_ = old_i;
+                        static_assert(!noexcept(std::construct_at(&this->storage(), std::in_place_index<I>, std::forward<Args>(args)...)));
+                        std::construct_at(&this->storage_, std::in_place_index<I>, std::forward<Args>(args)...); // may throw
+                        this->index_ = I;
                     }
 
-                } else { // type-changing
+                } else { // another alternative, possibly of the same type
                     if constexpr (
                         (sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_move_constructible_v<T>) ||
                         is_recursive_wrapper_v<T>
