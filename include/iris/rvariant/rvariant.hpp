@@ -170,8 +170,10 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
         requires std::is_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>
     constexpr explicit rvariant_base(std::in_place_index_t<I>, Args&&... args)
         noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>)
-        : storage_(std::in_place_index<I>, std::forward<Args>(args)...)
-        , index_{static_cast<variant_index_t<sizeof...(Ts)>>(I)}
+        : storage_{} // valueless
+        // Constructing the alternative inside this initializer stores the index only after the construction succeeds.
+        // This sequential guarantee enables some important optimizations on certain compilers.
+        , index_{(detail::alternative_constructor<I>::construct(storage_, std::forward<Args>(args)...), static_cast<variant_index_t<sizeof...(Ts)>>(I))}
     {}
 IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
@@ -344,7 +346,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
     {
         static_assert(I != std::variant_npos);
         assert(index_ == variant_npos<sizeof...(Ts)>);
-        std::construct_at(&storage_, std::in_place_index<I>, std::forward<Args>(args)...);
+        detail::alternative_constructor<I>::construct(storage_, std::forward<Args>(args)...);
         index_ = static_cast<variant_index_t<sizeof...(Ts)>>(I);
     }
 
@@ -354,7 +356,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
     {
         static_assert(I != std::variant_npos);
         visit_reset();
-        std::construct_at(&storage_, std::in_place_index<I>, std::forward<Args>(args)...);
+        detail::alternative_constructor<I>::construct(storage_, std::forward<Args>(args)...);
         index_ = static_cast<variant_index_t<sizeof...(Ts)>>(I);
     }
 
@@ -369,7 +371,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
             }
         }
         static_assert(j != std::variant_npos);
-        std::construct_at(&storage_, std::in_place_index<j>, std::forward<Args>(args)...);
+        detail::alternative_constructor<j>::construct(storage_, std::forward<Args>(args)...);
         index_ = static_cast<variant_index_t<sizeof...(Ts)>>(j);
     }
 
@@ -378,9 +380,8 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
     {
         static_assert(I != std::variant_npos);
         static_assert(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>);
-        static_assert(std::is_nothrow_constructible_v<storage_type, std::in_place_index_t<I>, Args...>);
         visit_destroy();
-        std::construct_at(&storage_, std::in_place_index<I>, std::forward<Args>(args)...);
+        detail::alternative_constructor<I>::construct(storage_, std::forward<Args>(args)...);
         index_ = static_cast<variant_index_t<sizeof...(Ts)>>(I);
     }
 
@@ -488,8 +489,8 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                         static_assert(!never_valueless);
                         t_old_i.~T_old_i();
                         this->index_ = detail::variant_npos<sizeof...(Ts)>;
-                        static_assert(!noexcept(std::construct_at(&this->storage(), std::in_place_index<I>, std::forward<Args>(args)...)));
-                        std::construct_at(&this->storage_, std::in_place_index<I>, std::forward<Args>(args)...); // may throw
+                        static_assert(!std::is_nothrow_constructible_v<T, Args...>);
+                        detail::alternative_constructor<I>::construct(this->storage_, std::forward<Args>(args)...); // may throw
                         this->index_ = I;
                     }
 
@@ -498,30 +499,30 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                         (sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_move_constructible_v<T>) ||
                         is_recursive_wrapper_v<T>
                     ) {
-                        static_assert(std::is_nothrow_constructible_v<storage_type, std::in_place_index_t<I>, T&&>);
+                        static_assert(std::is_nothrow_constructible_v<T, T&&>);
                         if constexpr (sizeof...(Args) == 0) {
                             T tmp = T(); // may throw
                             t_old_i.~T_old_i();
-                            std::construct_at(&this->storage_, std::in_place_index<I>, std::move(tmp)); // never throws
+                            detail::alternative_constructor<I>::construct(this->storage_, std::move(tmp)); // never throws
                         } else {
                             T tmp(std::forward<Args>(args)...); // may throw
                             t_old_i.~T_old_i();
-                            std::construct_at(&this->storage_, std::in_place_index<I>, std::move(tmp)); // never throws
+                            detail::alternative_constructor<I>::construct(this->storage_, std::move(tmp)); // never throws
                         }
                         this->index_ = I;
 
                     } else if constexpr (
                         sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_copy_constructible_v<T>
                     ) { // strange type...
-                        static_assert(std::is_nothrow_constructible_v<storage_type, std::in_place_index_t<I>, T const&>);
+                        static_assert(std::is_nothrow_constructible_v<T, T const&>);
                         if constexpr (sizeof...(Args) == 0) {
                             T const tmp = T(); // may throw
                             t_old_i.~T_old_i();
-                            std::construct_at(&this->storage_, std::in_place_index<I>, tmp); // never throws
+                            detail::alternative_constructor<I>::construct(this->storage_, tmp); // never throws
                         } else {
                             T const tmp(std::forward<Args>(args)...); // may throw
                             t_old_i.~T_old_i();
-                            std::construct_at(&this->storage_, std::in_place_index<I>, tmp); // never throws
+                            detail::alternative_constructor<I>::construct(this->storage_, tmp); // never throws
                         }
                         this->index_ = I;
 
@@ -529,8 +530,8 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                         static_assert(!never_valueless);
                         t_old_i.~T_old_i();
                         this->index_ = detail::variant_npos<sizeof...(Ts)>;
-                        static_assert(!noexcept(std::construct_at(&this->storage(), std::in_place_index<I>, std::forward<Args>(args)...)));
-                        std::construct_at(&this->storage_, std::in_place_index<I>, std::forward<Args>(args)...); // may throw
+                        static_assert(!std::is_nothrow_constructible_v<T, Args...>);
+                        detail::alternative_constructor<I>::construct(this->storage_, std::forward<Args>(args)...); // may throw
                         this->index_ = I;
                     }
                 }

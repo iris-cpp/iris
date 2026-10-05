@@ -12,7 +12,9 @@
 #include <iris/type_list.hpp>
 #include <iris/bits/specialization_of.hpp>
 
+#include <memory>
 #include <type_traits>
+#include <utility>
 
 #include <cstddef> // IWYU pragma: keep
 
@@ -188,24 +190,6 @@ struct variadic_union<true, T, Ts...>
     variadic_union& operator=(variadic_union&&)      requires((!std::conjunction_v<std::is_trivially_move_assignable<T>, std::is_trivially_move_assignable<Ts>...>)) = delete;
 #endif
 
-IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
-    template<class... Args>
-        requires std::is_constructible_v<T, Args...> // required for not confusing some compilers
-    constexpr explicit variadic_union(std::in_place_index_t<0>, Args&&... args)
-        noexcept(std::is_nothrow_constructible_v<T, Args...>)
-        : first(static_cast<Args&&>(args)...) // value-initialize; https://eel.is/c++draft/variant.ctor#3
-    {}
-IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
-
-    template<std::size_t I, class... Args>
-        requires
-            (I > 0) && (I < size) &&
-            std::is_constructible_v<IRIS_PACK_INDEXING(I - 1, Ts...), Args...>
-    constexpr explicit variadic_union(std::in_place_index_t<I>, Args&&... args)
-        noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I - 1, Ts...), Args...>)
-        : rest(std::in_place_index<I - 1>, static_cast<Args&&>(args)...)
-    {}
-
     union {
         T first;
         make_variadic_union_t<Ts...> rest;
@@ -240,24 +224,6 @@ struct variadic_union<false, T, Ts...>
     variadic_union& operator=(variadic_union&&)      requires((!std::conjunction_v<std::is_trivially_move_assignable<T>, std::is_trivially_move_assignable<Ts>...>)) = delete;
 #endif
 
-IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
-    template<class... Args>
-        requires std::is_constructible_v<T, Args...> // required for not confusing some compilers
-    constexpr explicit variadic_union(std::in_place_index_t<0>, Args&&... args)
-        noexcept(std::is_nothrow_constructible_v<T, Args...>)
-        : first(static_cast<Args&&>(args)...) // value-initialize; https://eel.is/c++draft/variant.ctor#3
-    {}
-IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
-
-    template<std::size_t I, class... Args>
-        requires
-            (I > 0) && (I < size) &&
-            std::is_constructible_v<IRIS_PACK_INDEXING(I - 1, Ts...), Args...>
-    constexpr explicit variadic_union(std::in_place_index_t<I>, Args&&... args)
-        noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I - 1, Ts...), Args...>)
-        : rest(std::in_place_index<I - 1>, static_cast<Args&&>(args)...)
-    {}
-
     union {
         T first;
         make_variadic_union_t<Ts...> rest;
@@ -291,6 +257,48 @@ forward_storage(std::remove_reference_t<Variant>&& v IRIS_LIFETIMEBOUND) noexcep
     return static_cast<Variant&&>(v).storage();
 }
 
+template<std::size_t K, class Storage>
+[[nodiscard]] IRIS_FORCEINLINE constexpr auto&& raw_level(Storage&& storage IRIS_LIFETIMEBOUND) noexcept
+{
+         if constexpr (K ==  0) return static_cast<Storage&&>(storage);
+    else if constexpr (K ==  1) return static_cast<Storage&&>(storage).rest;
+    else if constexpr (K ==  2) return static_cast<Storage&&>(storage).rest.rest;
+    else if constexpr (K ==  3) return static_cast<Storage&&>(storage).rest.rest.rest;
+    else if constexpr (K ==  4) return static_cast<Storage&&>(storage).rest.rest.rest.rest;
+    else if constexpr (K ==  5) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest;
+    else if constexpr (K ==  6) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest;
+    else if constexpr (K ==  7) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K ==  8) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K ==  9) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 10) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 11) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 12) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 13) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 14) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 15) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 16) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 17) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 18) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 19) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 20) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 21) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 22) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 23) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 24) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 25) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 26) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 27) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 28) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 29) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 30) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 31) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K == 32) return static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest;
+    else if constexpr (K < 64)  return detail::raw_level<K - 32>(
+                                       static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest);
+    else                        return detail::raw_level<K - 64>(
+                                       static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest
+                                                                      .rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest);
+}
 
 template<std::size_t I, class Storage>
 [[nodiscard]] IRIS_FORCEINLINE constexpr auto&& raw_get(Storage&& storage IRIS_LIFETIMEBOUND) noexcept
@@ -331,11 +339,31 @@ template<std::size_t I, class Storage>
                                        static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest);
     else                        return detail::raw_get<I - 64>(
                                        static_cast<Storage&&>(storage).rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest
-                                                                     .rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest);
+                                                                      .rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest.rest);
 }
 
 template<std::size_t I, class Storage>
 using raw_get_t = decltype(detail::raw_get<I>(std::declval<Storage>()));
+
+// Starts the lifetime of the storage and each enclosing `rest`, then constructs the I-th alternative in place.
+// Doing both in one function lets GCC see the whole storage start a new lifetime, so ending a trivial old alternative needs no code.
+template<std::size_t I, class Ks = std::make_index_sequence<I + 1>>
+struct alternative_constructor;
+
+template<std::size_t I, std::size_t... Ks>
+struct alternative_constructor<I, std::index_sequence<Ks...>>
+{
+IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
+    template<class Storage, class... Args>
+    static constexpr void construct(Storage& storage, Args&&... args)
+        noexcept(std::is_nothrow_constructible_v<std::remove_cvref_t<raw_get_t<I, Storage&>>, Args...>)
+    {
+        (std::construct_at(std::addressof(detail::raw_level<Ks>(storage))), ...);
+        // value-initializes when Args is empty; https://eel.is/c++draft/variant.ctor#3
+        std::construct_at(std::addressof(detail::raw_get<I>(storage)), static_cast<Args&&>(args)...);
+    }
+IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
+};
 
 // --------------------------------------------------
 // --------------------------------------------------

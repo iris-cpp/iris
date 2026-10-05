@@ -142,10 +142,6 @@ TEST_CASE("storage", "[detail]")
 
             STATIC_REQUIRE(std::is_trivially_copyable_v<VD>);
             STATIC_REQUIRE(std::is_standard_layout_v<VD>);
-
-            STATIC_REQUIRE(std::is_nothrow_constructible_v<VD, std::in_place_index_t<0>>); // default construct
-            STATIC_REQUIRE(std::is_constructible_v<VD, std::in_place_index_t<0>, T>);
-            STATIC_REQUIRE(!std::is_constructible_v<VD, std::in_place_index_t<0>, NonExistent>);
         }
 
         using V = iris::rvariant<T>;
@@ -301,11 +297,6 @@ TEST_CASE("storage", "[detail]")
 
         STATIC_REQUIRE(std::is_trivially_copyable_v<VD>);
         STATIC_REQUIRE(std::is_standard_layout_v<VD>);
-
-        STATIC_REQUIRE(std::is_nothrow_constructible_v<VD, std::in_place_index_t<0>>); // default construct
-        STATIC_REQUIRE( std::is_constructible_v<VD, std::in_place_index_t<0>, S>);
-        STATIC_REQUIRE( std::is_constructible_v<VD, std::in_place_index_t<0>, int>);
-        STATIC_REQUIRE(!std::is_constructible_v<VD, std::in_place_index_t<0>, NonExistent>);
     }
     // `int` on the right side
     {
@@ -335,18 +326,6 @@ TEST_CASE("storage", "[detail]")
 
         STATIC_REQUIRE(std::is_trivially_copyable_v<VD>);
         STATIC_REQUIRE(std::is_standard_layout_v<VD>);
-
-        // for VD[0] aka `S`
-        STATIC_REQUIRE(std::is_nothrow_constructible_v<VD, std::in_place_index_t<0>>); // default construct
-        STATIC_REQUIRE( std::is_constructible_v<VD, std::in_place_index_t<0>, S>);
-        STATIC_REQUIRE( std::is_constructible_v<VD, std::in_place_index_t<0>, int>);
-        STATIC_REQUIRE(!std::is_constructible_v<VD, std::in_place_index_t<0>, NonExistent>);
-
-        // for VD[1] aka `int`
-        STATIC_REQUIRE(std::is_nothrow_constructible_v<VD, std::in_place_index_t<1>>); // default construct
-        STATIC_REQUIRE( std::is_constructible_v<VD, std::in_place_index_t<1>, int>);
-        STATIC_REQUIRE(!std::is_constructible_v<VD, std::in_place_index_t<1>, S>);
-        STATIC_REQUIRE(!std::is_constructible_v<VD, std::in_place_index_t<1>, NonExistent>);
     }
     // `int` on the left side
     {
@@ -376,18 +355,6 @@ TEST_CASE("storage", "[detail]")
 
         STATIC_REQUIRE(std::is_trivially_copyable_v<VD>);
         STATIC_REQUIRE(std::is_standard_layout_v<VD>);
-
-        // for VD[0] aka `int`
-        STATIC_REQUIRE(std::is_nothrow_constructible_v<VD, std::in_place_index_t<0>>); // default construct
-        STATIC_REQUIRE( std::is_constructible_v<VD, std::in_place_index_t<0>, int>);
-        STATIC_REQUIRE(!std::is_constructible_v<VD, std::in_place_index_t<0>, S>);
-        STATIC_REQUIRE(!std::is_constructible_v<VD, std::in_place_index_t<0>, NonExistent>);
-
-        // for VD[1] aka `S`
-        STATIC_REQUIRE(std::is_nothrow_constructible_v<VD, std::in_place_index_t<1>>); // default construct
-        STATIC_REQUIRE( std::is_constructible_v<VD, std::in_place_index_t<1>, S>);
-        STATIC_REQUIRE( std::is_constructible_v<VD, std::in_place_index_t<1>, int>);
-        STATIC_REQUIRE(!std::is_constructible_v<VD, std::in_place_index_t<1>, NonExistent>);
     }
     {
         struct S
@@ -412,7 +379,6 @@ TEST_CASE("storage", "[detail]")
         STATIC_REQUIRE(!std::is_trivially_copyable_v<VD>);
         STATIC_REQUIRE(std::is_standard_layout_v<VD>);
 
-        STATIC_REQUIRE(std::is_nothrow_constructible_v<VD, std::in_place_index_t<0>>); // default construct
         STATIC_REQUIRE(std::is_nothrow_destructible_v<VD>);
     }
     // NOLINTEND(modernize-use-equals-default)
