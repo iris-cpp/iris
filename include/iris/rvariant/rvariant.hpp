@@ -209,7 +209,18 @@ public:
             (!std::conjunction_v<std::is_trivially_copy_constructible<Ts>...>) &&
             std::conjunction_v<std::is_copy_constructible<Ts>...>
     {
-        _copy_construct(w);
+        constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_copy_constructible<Ts>...>;
+        w.template raw_visit<is_noexcept>([this]<std::size_t j, class T>(std::in_place_index_t<j>, [[maybe_unused]] T const& alt)
+            noexcept(is_noexcept)
+        {
+            if constexpr (j != std::variant_npos) {
+            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
+                construct_on_valueless<j>(alt);
+            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
+            } else {
+                (void)this;
+            }
+        });
     }
 
     rvariant_base(rvariant_base&&)
@@ -222,7 +233,19 @@ public:
             (!std::conjunction_v<std::is_trivially_move_constructible<Ts>...>) &&
             std::conjunction_v<std::is_move_constructible<Ts>...>
     {
-        _move_construct(std::move(w));
+        constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_move_constructible<Ts>...>;
+        std::move(w).template raw_visit<is_noexcept>([this]<std::size_t j, class T>(std::in_place_index_t<j>, [[maybe_unused]] T&& alt)
+            noexcept(is_noexcept)
+        {
+            if constexpr (j != std::variant_npos) {
+                static_assert(std::is_rvalue_reference_v<T&&>);
+            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
+                construct_on_valueless<j>(std::move(alt)); // NOLINT(bugprone-move-forwarding-reference)
+            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
+            } else {
+                (void)this;
+            }
+        });
     }
 
     rvariant_base& operator=(rvariant_base const&)
@@ -258,7 +281,34 @@ public:
             >) &&
             std::conjunction_v<std::is_copy_constructible<Ts>..., std::is_copy_assignable<Ts>...>
     {
-        _copy_assign(rhs);
+    IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
+        constexpr bool is_noexcept = std::conjunction_v<variant_nothrow_copy_assignable<Ts>...>;
+        rhs.template raw_visit<is_noexcept>([this]<std::size_t j, class T>(std::in_place_index_t<j>, T const& rhs_alt)
+            noexcept(is_noexcept)
+        {
+            if constexpr (j == std::variant_npos) {
+                (void)rhs_alt;
+                visit_reset();
+            } else {
+            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
+                if (index_ == j) {
+                    raw_get<j>(storage()) = rhs_alt;
+                } else {
+                    // CC(noexcept) && MC(throw)    => A
+                    // CC(noexcept) && MC(noexcept) => A
+                    // CC(throw)    && MC(throw)    => A
+                    // CC(throw)    && MC(noexcept) => B
+                    if constexpr (std::is_nothrow_copy_constructible_v<T> || !std::is_nothrow_move_constructible_v<T>) {
+                        reset_construct<j>(rhs_alt);  // A
+                    } else {
+                        T tmp(rhs_alt);
+                        reset_construct<j>(std::move(tmp)); // B
+                    }
+                }
+            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
+            }
+        });
+    IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         return *this;
     }
 
@@ -307,7 +357,25 @@ public:
             >) &&
             std::conjunction_v<std::is_move_constructible<Ts>..., std::is_move_assignable<Ts>...>
     {
-        _move_assign(std::move(rhs));
+        constexpr bool is_noexcept = std::conjunction_v<variant_nothrow_move_assignable<Ts>...>;
+        std::move(rhs).template raw_visit<is_noexcept>([this]<std::size_t j, class T>(std::in_place_index_t<j>, [[maybe_unused]] T&& rhs_alt)
+            noexcept(is_noexcept)
+        {
+            if constexpr (j == std::variant_npos) {
+                (void)rhs_alt;
+                visit_reset();
+            } else {
+                static_assert(std::is_rvalue_reference_v<T&&>);
+
+            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
+                if (index_ == j) {
+                    raw_get<j>(storage()) = std::move(rhs_alt); // NOLINT(bugprone-move-forwarding-reference)
+                } else {
+                    reset_construct<j>(std::move(rhs_alt)); // NOLINT(bugprone-move-forwarding-reference)
+                }
+            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
+            }
+        });
         return *this;
     }
 
@@ -334,102 +402,6 @@ public:
     }
 
 protected:
-    // Copy constructor
-    constexpr void _copy_construct(rvariant_base const& w)
-        noexcept(std::conjunction_v<std::is_nothrow_copy_constructible<Ts>...>)
-    {
-        static constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_copy_constructible<Ts>...>;
-        w.template raw_visit<is_noexcept>([this]<std::size_t j, class T>(std::in_place_index_t<j>, [[maybe_unused]] T const& alt)
-            noexcept(is_noexcept)
-        {
-            if constexpr (j != std::variant_npos) {
-            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
-                construct_on_valueless<j>(alt);
-            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
-            } else {
-                (void)this;
-            }
-        });
-    }
-
-    // Move constructor
-    constexpr void _move_construct(rvariant_base&& w)
-        noexcept(std::conjunction_v<std::is_nothrow_move_constructible<Ts>...>)
-    {
-        static constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_move_constructible<Ts>...>;
-        std::move(w).template raw_visit<is_noexcept>([this]<std::size_t j, class T>(std::in_place_index_t<j>, [[maybe_unused]] T&& alt)
-            noexcept(is_noexcept)
-        {
-            if constexpr (j != std::variant_npos) {
-                static_assert(std::is_rvalue_reference_v<T&&>);
-            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
-                construct_on_valueless<j>(std::move(alt)); // NOLINT(bugprone-move-forwarding-reference)
-            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
-            } else {
-                (void)this;
-            }
-        });
-    }
-
-    // Copy assignment
-    constexpr void _copy_assign(rvariant_base const& rhs)
-        noexcept(std::conjunction_v<variant_nothrow_copy_assignable<Ts>...>)
-    {
-    IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
-        static constexpr bool is_noexcept = std::conjunction_v<variant_nothrow_copy_assignable<Ts>...>;
-        rhs.template raw_visit<is_noexcept>([this]<std::size_t j, class T>(std::in_place_index_t<j>, T const& rhs_alt)
-            noexcept(is_noexcept)
-        {
-            if constexpr (j == std::variant_npos) {
-                (void)rhs_alt;
-                visit_reset();
-            } else {
-            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
-                if (index_ == j) {
-                    raw_get<j>(storage()) = rhs_alt;
-                } else {
-                    // CC(noexcept) && MC(throw)    => A
-                    // CC(noexcept) && MC(noexcept) => A
-                    // CC(throw)    && MC(throw)    => A
-                    // CC(throw)    && MC(noexcept) => B
-                    if constexpr (std::is_nothrow_copy_constructible_v<T> || !std::is_nothrow_move_constructible_v<T>) {
-                        reset_construct<j>(rhs_alt);  // A
-                    } else {
-                        T tmp(rhs_alt);
-                        reset_construct<j>(std::move(tmp)); // B
-                    }
-                }
-            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
-            }
-        });
-    IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
-    }
-
-    // Move assignment
-    constexpr void _move_assign(rvariant_base&& rhs)
-        noexcept(std::conjunction_v<variant_nothrow_move_assignable<Ts>...>)
-    {
-        static constexpr bool is_noexcept = std::conjunction_v<variant_nothrow_move_assignable<Ts>...>;
-        std::move(rhs).template raw_visit<is_noexcept>([this]<std::size_t j, class T>(std::in_place_index_t<j>, [[maybe_unused]] T&& rhs_alt)
-            noexcept(is_noexcept)
-        {
-            if constexpr (j == std::variant_npos) {
-                (void)rhs_alt;
-                visit_reset();
-            } else {
-                static_assert(std::is_rvalue_reference_v<T&&>);
-
-            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
-                if (index_ == j) {
-                    raw_get<j>(storage()) = std::move(rhs_alt); // NOLINT(bugprone-move-forwarding-reference)
-                } else {
-                    reset_construct<j>(std::move(rhs_alt)); // NOLINT(bugprone-move-forwarding-reference)
-                }
-            IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
-            }
-        });
-    }
-
     // -------------------------------------------------------
 
     [[nodiscard]] constexpr bool valueless_by_exception() const noexcept
@@ -549,7 +521,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     {
         visit_reset();
 
-        static constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_move_constructible<Ts>...>;
+        constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_move_constructible<Ts>...>;
         std::move(rhs).template raw_visit<is_noexcept>([this]<std::size_t i, class T>(std::in_place_index_t<i>, [[maybe_unused]] T&& alt)
             noexcept(is_noexcept)
         {
@@ -835,7 +807,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
             return *this;
         }
 
-        static constexpr bool is_noexcept = detail::variant_nothrow_assignable<Tj, T>::value;
+        constexpr bool is_noexcept = detail::variant_nothrow_assignable<Tj, T>::value;
         this->template raw_visit<is_noexcept>([this, &t]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti& ti)
             noexcept(is_noexcept)
         {
@@ -879,7 +851,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     constexpr rvariant(rvariant<Us...> const& w)
         noexcept(std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>)
     {
-        static constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>;
+        constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>;
         w.template raw_visit<is_noexcept>([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj const& uj)
             noexcept(is_noexcept)
         {
@@ -902,7 +874,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     constexpr rvariant(rvariant<Us...>&& w)
         noexcept(std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>)
     {
-        static constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>;
+        constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>;
         std::move(w).template raw_visit<is_noexcept>([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj&& uj)
             noexcept(is_noexcept)
         {
@@ -928,7 +900,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     constexpr rvariant& operator=(rvariant<Us...> const& rhs)
         noexcept(std::conjunction_v<detail::variant_nothrow_copy_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>)
     {
-        static constexpr bool is_noexcept = std::conjunction_v<detail::variant_nothrow_copy_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>;
+        constexpr bool is_noexcept = std::conjunction_v<detail::variant_nothrow_copy_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>;
         rhs.template raw_visit<is_noexcept>([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj const& uj)
             noexcept(is_noexcept)
         {
@@ -973,7 +945,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     constexpr rvariant& operator=(rvariant<Us...>&& rhs)
         noexcept(std::conjunction_v<detail::variant_nothrow_move_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>)
     {
-        static constexpr bool is_noexcept = std::conjunction_v<detail::variant_nothrow_move_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>;
+        constexpr bool is_noexcept = std::conjunction_v<detail::variant_nothrow_move_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>;
         std::move(rhs).template raw_visit<is_noexcept>([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj&& uj)
             noexcept(is_noexcept)
         {
@@ -1137,7 +1109,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         } else {
             if (index_ == rhs.index_) {
-                static constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_swappable<Ts>...>;
+                constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_swappable<Ts>...>;
                 rhs.template raw_visit<is_noexcept>([this]<std::size_t i, class RhsAlt>(std::in_place_index_t<i>, [[maybe_unused]] RhsAlt& rhs_alt)
                     noexcept(is_noexcept)
                 {
@@ -1186,7 +1158,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         )
     {
         if constexpr (rvariant_set::equivalent_to<rvariant<Us...>, rvariant>) {
-            static constexpr bool is_noexcept = std::is_nothrow_constructible_v<rvariant<Us...>, rvariant const&>;
+            constexpr bool is_noexcept = std::is_nothrow_constructible_v<rvariant<Us...>, rvariant const&>;
             return this->template raw_visit<is_noexcept>([]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti const& ti) static
                 noexcept(is_noexcept) -> rvariant<Us...>
             {
@@ -1227,7 +1199,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         )
     {
         if constexpr (rvariant_set::equivalent_to<rvariant<Us...>, rvariant>) {
-            static constexpr bool is_noexcept = std::is_nothrow_constructible_v<rvariant<Us...>, rvariant&&>;
+            constexpr bool is_noexcept = std::is_nothrow_constructible_v<rvariant<Us...>, rvariant&&>;
             return std::move(*this).template raw_visit<is_noexcept>([]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti&& ti) static
                 noexcept(is_noexcept) -> rvariant<Us...>
             {
