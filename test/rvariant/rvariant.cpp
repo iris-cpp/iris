@@ -215,7 +215,7 @@ TEST_CASE("storage", "[detail]")
 
         using V = iris::rvariant<T>;
 
-        using Base = iris::detail::rvariant_base_t<T>;
+        using Base = iris::detail::rvariant_base<T>;
         static_assert(std::is_base_of_v<Base, V>);
         {
             STATIC_REQUIRE(!std::is_trivially_copy_constructible_v<Base>);

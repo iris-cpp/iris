@@ -15,7 +15,6 @@
 #include <iris/hash/FNV_hash.hpp>
 
 #include <iris/compare.hpp>
-#include <iris/cond_trivial_smf.hpp>
 #include <iris/type_traits.hpp>
 #include <iris/type_list.hpp>
 #include <iris/hash.hpp>
@@ -134,6 +133,21 @@ struct variant_nothrow_assignable : std::conjunction<std::is_nothrow_constructib
 template<class R, class Compare, class... Ts>
 struct relops_visitor;
 
+#if defined(__INTELLISENSE__) || defined(__RESHARPER__)
+// IntelliSense and ReSharper ignore the constraints of assignment operators in some places:
+//   - A user-provided assignment operator is counted as eligible even when its constraints are not
+//     satisfied, so `std::is_trivially_copyable` evaluates to false even when every alternative is
+//     trivial. Swapping the parameter type for these placeholders makes such a declaration stop
+//     being an assignment operator at all ([class.copy.assign]/1).
+//   - A `= default` assignment operator whose constraints are not satisfied makes them declare an
+//     implicit move assignment, and the implicit assignment operators of the derived class are
+//     computed from it. A deleted declaration that is selected exactly when neither of the other two
+//     is prevents this.
+// Constructors and destructors are not affected.
+struct rvariant_base_not_copy_assignable { rvariant_base_not_copy_assignable() = delete; };
+struct rvariant_base_not_move_assignable { rvariant_base_not_move_assignable() = delete; };
+#endif
+
 template<class... Ts>
 struct rvariant_base
 {
@@ -181,6 +195,145 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         : storage_{} // valueless
     {}
 
+public:
+    // Conditionally trivial special member functions
+    // https://eel.is/c++draft/variant.ctor, https://eel.is/c++draft/variant.dtor, https://eel.is/c++draft/variant.assign
+
+    rvariant_base(rvariant_base const&)
+        requires std::conjunction_v<std::is_trivially_copy_constructible<Ts>...>
+        = default;
+
+    constexpr rvariant_base(rvariant_base const& w)
+        noexcept(std::conjunction_v<std::is_nothrow_copy_constructible<Ts>...>)
+        requires
+            (!std::conjunction_v<std::is_trivially_copy_constructible<Ts>...>) &&
+            std::conjunction_v<std::is_copy_constructible<Ts>...>
+    {
+        _copy_construct(w);
+    }
+
+    rvariant_base(rvariant_base&&)
+        requires std::conjunction_v<std::is_trivially_move_constructible<Ts>...>
+        = default;
+
+    constexpr rvariant_base(rvariant_base&& w)
+        noexcept(std::conjunction_v<std::is_nothrow_move_constructible<Ts>...>)
+        requires
+            (!std::conjunction_v<std::is_trivially_move_constructible<Ts>...>) &&
+            std::conjunction_v<std::is_move_constructible<Ts>...>
+    {
+        _move_construct(std::move(w));
+    }
+
+    rvariant_base& operator=(rvariant_base const&)
+        requires std::conjunction_v<
+            std::is_trivially_destructible<Ts>...,
+            std::is_trivially_copy_constructible<Ts>...,
+            std::is_trivially_copy_assignable<Ts>...
+        >
+        = default;
+
+    constexpr rvariant_base& operator=(
+#if defined(__INTELLISENSE__) || defined(__RESHARPER__)
+        std::conditional_t<
+            (!std::conjunction_v<
+                std::is_trivially_destructible<Ts>...,
+                std::is_trivially_copy_constructible<Ts>...,
+                std::is_trivially_copy_assignable<Ts>...
+            >) &&
+            std::conjunction_v<std::is_copy_constructible<Ts>..., std::is_copy_assignable<Ts>...>,
+            rvariant_base,
+            rvariant_base_not_copy_assignable
+        > const& rhs
+#else
+        rvariant_base const& rhs
+#endif
+    )
+        noexcept(std::conjunction_v<variant_nothrow_copy_assignable<Ts>...>)
+        requires
+            (!std::conjunction_v<
+                std::is_trivially_destructible<Ts>...,
+                std::is_trivially_copy_constructible<Ts>...,
+                std::is_trivially_copy_assignable<Ts>...
+            >) &&
+            std::conjunction_v<std::is_copy_constructible<Ts>..., std::is_copy_assignable<Ts>...>
+    {
+        _copy_assign(rhs);
+        return *this;
+    }
+
+#if defined(__INTELLISENSE__) || defined(__RESHARPER__)
+    rvariant_base& operator=(rvariant_base const&)
+        requires
+            (!std::conjunction_v<
+                std::is_trivially_destructible<Ts>...,
+                std::is_trivially_copy_constructible<Ts>...,
+                std::is_trivially_copy_assignable<Ts>...
+            >) &&
+            (!std::conjunction_v<std::is_copy_constructible<Ts>..., std::is_copy_assignable<Ts>...>)
+        = delete;
+#endif
+
+    rvariant_base& operator=(rvariant_base&&)
+        requires std::conjunction_v<
+            std::is_trivially_destructible<Ts>...,
+            std::is_trivially_move_constructible<Ts>...,
+            std::is_trivially_move_assignable<Ts>...
+        >
+        = default;
+
+    constexpr rvariant_base& operator=(
+#if defined(__INTELLISENSE__) || defined(__RESHARPER__)
+        std::conditional_t<
+            (!std::conjunction_v<
+                std::is_trivially_destructible<Ts>...,
+                std::is_trivially_move_constructible<Ts>...,
+                std::is_trivially_move_assignable<Ts>...
+            >) &&
+            std::conjunction_v<std::is_move_constructible<Ts>..., std::is_move_assignable<Ts>...>,
+            rvariant_base,
+            rvariant_base_not_move_assignable
+        >&& rhs
+#else
+        rvariant_base&& rhs
+#endif
+    )
+        noexcept(std::conjunction_v<variant_nothrow_move_assignable<Ts>...>)
+        requires
+            (!std::conjunction_v<
+                std::is_trivially_destructible<Ts>...,
+                std::is_trivially_move_constructible<Ts>...,
+                std::is_trivially_move_assignable<Ts>...
+            >) &&
+            std::conjunction_v<std::is_move_constructible<Ts>..., std::is_move_assignable<Ts>...>
+    {
+        _move_assign(std::move(rhs));
+        return *this;
+    }
+
+#if defined(__INTELLISENSE__) || defined(__RESHARPER__)
+    rvariant_base& operator=(rvariant_base&&)
+        requires
+            (!std::conjunction_v<
+                std::is_trivially_destructible<Ts>...,
+                std::is_trivially_move_constructible<Ts>...,
+                std::is_trivially_move_assignable<Ts>...
+            >) &&
+            (!std::conjunction_v<std::is_move_constructible<Ts>..., std::is_move_assignable<Ts>...>)
+        = delete;
+#endif
+
+    ~rvariant_base()
+        requires std::conjunction_v<std::is_trivially_destructible<Ts>...>
+        = default;
+
+    constexpr ~rvariant_base() noexcept
+        requires (!std::conjunction_v<std::is_trivially_destructible<Ts>...>)
+    {
+        visit_destroy();
+    }
+
+protected:
     // Copy constructor
     constexpr void _copy_construct(rvariant_base const& w)
         noexcept(std::conjunction_v<std::is_nothrow_copy_constructible<Ts>...>)
@@ -577,31 +730,6 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 };
 
 
-template<class... Ts>
-struct rvariant_non_trivial_destructor : rvariant_base<Ts...>
-{
-    constexpr ~rvariant_non_trivial_destructor() noexcept
-    {
-        rvariant_non_trivial_destructor::rvariant_base::visit_destroy();
-    }
-
-    using rvariant_non_trivial_destructor::rvariant_base::rvariant_base;
-    rvariant_non_trivial_destructor() = default;
-    rvariant_non_trivial_destructor(rvariant_non_trivial_destructor const&) = default;
-    rvariant_non_trivial_destructor(rvariant_non_trivial_destructor&&) = default;
-    rvariant_non_trivial_destructor& operator=(rvariant_non_trivial_destructor const&) = default;
-    rvariant_non_trivial_destructor& operator=(rvariant_non_trivial_destructor&&) = default;
-};
-
-template<class... Ts>
-using rvariant_destructor_base_t = std::conditional_t<
-    std::conjunction_v<std::is_trivially_destructible<Ts>...>,
-    rvariant_base<Ts...>,
-    rvariant_non_trivial_destructor<Ts...>
->;
-
-template<class... Ts>
-using rvariant_base_t = cond_trivial_smf<rvariant_destructor_base_t<Ts...>, Ts...>;
 
 template<class... Ts>
 [[nodiscard]] constexpr rvariant<Ts...> make_valueless() noexcept
@@ -614,7 +742,7 @@ template<class... Ts>
 
 
 template<class... Ts>
-class rvariant : private detail::rvariant_base_t<Ts...>
+class rvariant : private detail::rvariant_base<Ts...>
 {
     static_assert(std::conjunction_v<detail::check_recursive_wrapper_duplicate<Ts, Ts...>...>);
     static_assert((req::Cpp17Destructible<Ts> && ...), "All types shall meet the Cpp17Destructible requirements ([variant.variant.general]).");
@@ -622,7 +750,7 @@ class rvariant : private detail::rvariant_base_t<Ts...>
 
     using unwrapped_types = type_list<unwrap_recursive_t<Ts>...>;
 
-    using base_type = detail::rvariant_base_t<Ts...>;
+    using base_type = detail::rvariant_base<Ts...>;
     friend struct detail::rvariant_base<Ts...>;
 
     using base_type::storage;
