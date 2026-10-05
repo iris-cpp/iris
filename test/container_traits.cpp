@@ -817,6 +817,22 @@ TEST_CASE("container: append into associative containers")
     std::map<int, int> m;
     iris::container::append(m, std::pair{1, 10});
     CHECK(m == std::map<int, int>{{1, 10}});
+
+    std::map<std::string, std::string> strings{{"k", "a"}};
+    std::pair<std::string, std::string> duplicate{"k", "b"};
+    iris::container::append(strings, std::move(duplicate));
+    CHECK(strings == std::map<std::string, std::string>{{"k", "a"}});
+    CHECK(duplicate == std::pair<std::string, std::string>{"k", "b"}); // NOLINT(bugprone-use-after-move)
+    CHECK(&iris::container::append_return(strings, std::pair<std::string, std::string>{"k", "c"}) == &*strings.begin());
+
+    std::flat_map<std::string, std::string> flat{{"k", "a"}};
+    iris::container::append(flat, std::move(duplicate));
+    CHECK(flat == std::flat_map<std::string, std::string>{{"k", "a"}});
+    CHECK(duplicate == std::pair<std::string, std::string>{"k", "b"}); // NOLINT(bugprone-use-after-move)
+
+    std::map<std::string, int> converted;
+    iris::container::append(converted, std::pair{"k", 1});
+    CHECK(converted == std::map<std::string, int>{{"k", 1}});
 }
 
 TEST_CASE("container: append_range")

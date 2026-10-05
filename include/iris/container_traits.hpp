@@ -449,6 +449,15 @@ concept back_emplace_back_accessible =
         (has_end_emplace<ContainerT, Args...> || has_end_insert<ContainerT, Args...>)
     );
 
+template<class ContainerT, class ElementT>
+concept try_emplaceable =
+    unique_mapping_container<ContainerT> &&
+    std::is_constructible_v<typename ContainerT::key_type, decltype(std::get<0>(std::declval<ElementT>()))> &&
+    std::is_constructible_v<typename ContainerT::mapped_type, decltype(std::get<1>(std::declval<ElementT>()))> &&
+    requires(ContainerT& cont, ElementT&& element) {
+        cont.try_emplace(std::ranges::end(cont), std::get<0>(std::forward<ElementT>(element)), std::get<1>(std::forward<ElementT>(element)));
+    };
+
 template<bool NeedReturn>
 struct append_fn
 {
@@ -498,7 +507,14 @@ struct append_fn
     static constexpr decltype(auto)
     operator()(ContainerT& cont, FirstT&& first, Rest&&... rest)
     {
-        if constexpr (has_emplace_back<ContainerT, FirstT, Rest...>) {
+        if constexpr (sizeof...(Rest) == 0 && try_emplaceable<ContainerT, FirstT>) {
+            if constexpr (NeedReturn) {
+                return *cont.try_emplace(std::ranges::end(cont), std::forward_like<FirstT>(first.first), std::forward_like<FirstT>(first.second));
+            } else {
+                (void)cont.try_emplace(std::ranges::end(cont), std::forward_like<FirstT>(first.first), std::forward_like<FirstT>(first.second));
+            }
+
+        } else if constexpr (has_emplace_back<ContainerT, FirstT, Rest...>) {
             if constexpr (NeedReturn) {
                 if constexpr (std::is_void_v<decltype(cont.emplace_back(std::forward<FirstT>(first), std::forward<Rest>(rest)...))>) {
                     cont.emplace_back(std::forward<FirstT>(first), std::forward<Rest>(rest)...);
