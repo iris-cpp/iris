@@ -86,18 +86,13 @@ template<class T, class Variant>
 inline constexpr std::size_t exactly_once_index_v = exactly_once_index<T, Variant>::value;
 
 
+// The alternative `T` can be both constructed and assigned from `U`
+// https://eel.is/c++draft/variant.assign
 template<class T, class U>
-struct variant_assignable : std::conjunction<std::is_constructible<T, U>, std::is_assignable<T&, U>>
-{
-    static_assert(!std::is_reference_v<T>);
-};
+concept rvariant_alternative_assignable = std::is_constructible_v<T, U> && std::is_assignable_v<T&, U>;
 
 template<class T, class U>
-struct variant_nothrow_assignable : std::conjunction<std::is_nothrow_constructible<T, U>, std::is_nothrow_assignable<T&, U>>
-{
-    static_assert(!std::is_reference_v<T>);
-    static_assert(variant_assignable<T, U>::value);
-};
+concept rvariant_alternative_nothrow_assignable = std::is_nothrow_constructible_v<T, U> && std::is_nothrow_assignable_v<T&, U>;
 
 
 template<class R, class Compare, class... Ts>
@@ -705,9 +700,9 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
     template<class T>
         requires
             (!std::is_same_v<std::remove_cvref_t<T>, rvariant>) &&
-            detail::variant_assignable<typename no_narrowing_resolution<T, Ts...>::type, T>::value
+            detail::rvariant_alternative_assignable<typename no_narrowing_resolution<T, Ts...>::type, T>
     constexpr rvariant& operator=(T&& t)
-        noexcept(detail::variant_nothrow_assignable<typename no_narrowing_resolution<T, Ts...>::type, T>::value)
+        noexcept(detail::rvariant_alternative_nothrow_assignable<typename no_narrowing_resolution<T, Ts...>::type, T>)
     {
         using Tj = no_narrowing_resolution<T, Ts...>::type; // either plain type or wrapped with recursive_wrapper
         constexpr std::size_t j = no_narrowing_resolution<T, Ts...>::index;
@@ -749,7 +744,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
             return *this;
         }
 
-        constexpr bool is_noexcept = detail::variant_nothrow_assignable<Tj, T>::value;
+        constexpr bool is_noexcept = detail::rvariant_alternative_nothrow_assignable<Tj, T>;
         this->template raw_visit<is_noexcept>([this, &t]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti& ti)
             noexcept(is_noexcept)
         {
@@ -788,8 +783,8 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         requires
             (!std::is_same_v<rvariant<Us...>, rvariant>) &&
             rvariant_set::subset_of<rvariant<Us...>, rvariant> &&
-            (!std::disjunction_v<std::is_same<rvariant<Us...>, unwrap_recursive_t<Ts>>...>) &&
-            std::conjunction_v<std::is_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>
+            (!std::is_same_v<rvariant<Us...>, unwrap_recursive_t<Ts>> && ...) &&
+            (std::is_constructible_v<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&> && ...)
     constexpr rvariant(rvariant<Us...> const& w)
         noexcept(std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>)
     {
@@ -811,8 +806,8 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         requires
             (!std::is_same_v<rvariant<Us...>, rvariant>) &&
             rvariant_set::subset_of<rvariant<Us...>, rvariant> &&
-            (!std::disjunction_v<std::is_same<rvariant<Us...>, unwrap_recursive_t<Ts>>...>) &&
-            std::conjunction_v<std::is_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>
+            (!std::is_same_v<rvariant<Us...>, unwrap_recursive_t<Ts>> && ...) &&
+            (std::is_constructible_v<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&> && ...)
     constexpr rvariant(rvariant<Us...>&& w)
         noexcept(std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>)
     {
@@ -837,12 +832,12 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         requires
             (!std::is_same_v<rvariant<Us...>, rvariant>) &&
             rvariant_set::subset_of<rvariant<Us...>, rvariant> &&
-            (!std::disjunction_v<std::is_same<rvariant<Us...>, unwrap_recursive_t<Ts>>...>) &&
-            std::conjunction_v<detail::variant_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>
+            (!std::is_same_v<rvariant<Us...>, unwrap_recursive_t<Ts>> && ...) &&
+            (detail::rvariant_alternative_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&> && ...)
     constexpr rvariant& operator=(rvariant<Us...> const& rhs)
-        noexcept(std::conjunction_v<detail::variant_nothrow_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>)
+        noexcept((detail::rvariant_alternative_nothrow_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&> && ...))
     {
-        constexpr bool is_noexcept = std::conjunction_v<detail::variant_nothrow_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>;
+        constexpr bool is_noexcept = (detail::rvariant_alternative_nothrow_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&> && ...);
         rhs.template raw_visit<is_noexcept>([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj const& uj)
             noexcept(is_noexcept)
         {
@@ -882,12 +877,12 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         requires
             (!std::is_same_v<rvariant<Us...>, rvariant>) &&
             rvariant_set::subset_of<rvariant<Us...>, rvariant> &&
-            (!std::disjunction_v<std::is_same<rvariant<Us...>, unwrap_recursive_t<Ts>>...>) &&
-            std::conjunction_v<detail::variant_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>
+            (!std::is_same_v<rvariant<Us...>, unwrap_recursive_t<Ts>> && ...) &&
+            (detail::rvariant_alternative_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&> && ...)
     constexpr rvariant& operator=(rvariant<Us...>&& rhs)
-        noexcept(std::conjunction_v<detail::variant_nothrow_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>)
+        noexcept((detail::rvariant_alternative_nothrow_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&> && ...))
     {
-        constexpr bool is_noexcept = std::conjunction_v<detail::variant_nothrow_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>;
+        constexpr bool is_noexcept = (detail::rvariant_alternative_nothrow_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&> && ...);
         std::move(rhs).template raw_visit<is_noexcept>([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj&& uj)
             noexcept(is_noexcept)
         {
@@ -1070,7 +1065,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
     friend constexpr void swap(rvariant& v, rvariant& w)
         noexcept(noexcept(v.swap(w)))
-        requires (std::conjunction_v<std::conjunction<std::is_move_constructible<Ts>, std::is_swappable<Ts>>...>)
+        requires ((std::is_move_constructible_v<Ts> && std::is_swappable_v<Ts>) && ...)
     {
         v.swap(w);
     }
@@ -1241,32 +1236,32 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     friend struct detail::relops_visitor;
 
     template<class... Ts_>
-        requires std::conjunction_v<cmp::relop_bool_expr<std::equal_to<>, Ts_>...>
+        requires (cmp::relop_bool_expr_v<std::equal_to<>, Ts_> && ...)
     friend constexpr bool operator==(rvariant<Ts_...> const&, rvariant<Ts_...> const&)
         noexcept(detail::relops_visitor<bool, std::equal_to<>, Ts_...>::is_noexcept);
 
     template<class... Ts_>
-        requires std::conjunction_v<cmp::relop_bool_expr<std::not_equal_to<>, Ts_>...>
+        requires (cmp::relop_bool_expr_v<std::not_equal_to<>, Ts_> && ...)
     friend constexpr bool operator!=(rvariant<Ts_...> const&, rvariant<Ts_...> const&)
         noexcept(detail::relops_visitor<bool, std::not_equal_to<>, Ts_...>::is_noexcept);
 
     template<class... Ts_>
-        requires std::conjunction_v<cmp::relop_bool_expr<std::less<>, Ts_>...>
+        requires (cmp::relop_bool_expr_v<std::less<>, Ts_> && ...)
     friend constexpr bool operator<(rvariant<Ts_...> const&, rvariant<Ts_...> const&)
         noexcept(detail::relops_visitor<bool, std::less<>, Ts_...>::is_noexcept);
 
     template<class... Ts_>
-        requires std::conjunction_v<cmp::relop_bool_expr<std::greater<>, Ts_>...>
+        requires (cmp::relop_bool_expr_v<std::greater<>, Ts_> && ...)
     friend constexpr bool operator>(rvariant<Ts_...> const&, rvariant<Ts_...> const&)
         noexcept(detail::relops_visitor<bool, std::greater<>, Ts_...>::is_noexcept);
 
     template<class... Ts_>
-        requires std::conjunction_v<cmp::relop_bool_expr<std::less_equal<>, Ts_>...>
+        requires (cmp::relop_bool_expr_v<std::less_equal<>, Ts_> && ...)
     friend constexpr bool operator<=(rvariant<Ts_...> const&, rvariant<Ts_...> const&)
         noexcept(detail::relops_visitor<bool, std::less_equal<>, Ts_...>::is_noexcept);
 
     template<class... Ts_>
-        requires std::conjunction_v<cmp::relop_bool_expr<std::greater_equal<>, Ts_>...>
+        requires (cmp::relop_bool_expr_v<std::greater_equal<>, Ts_> && ...)
     friend constexpr bool operator>=(rvariant<Ts_...> const&, rvariant<Ts_...> const&)
         noexcept(detail::relops_visitor<bool, std::greater_equal<>, Ts_...>::is_noexcept);
 
@@ -1566,7 +1561,7 @@ struct relops_visitor
 
 
 template<class... Ts>
-    requires std::conjunction_v<cmp::relop_bool_expr<std::equal_to<>, Ts>...>
+    requires (cmp::relop_bool_expr_v<std::equal_to<>, Ts> && ...)
 [[nodiscard]] constexpr bool operator==(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
     noexcept(detail::relops_visitor<bool, std::equal_to<>, Ts...>::is_noexcept)
 {
@@ -1577,7 +1572,7 @@ template<class... Ts>
 }
 
 template<class... Ts>
-    requires std::conjunction_v<cmp::relop_bool_expr<std::not_equal_to<>, Ts>...>
+    requires (cmp::relop_bool_expr_v<std::not_equal_to<>, Ts> && ...)
 [[nodiscard]] constexpr bool operator!=(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
     noexcept(detail::relops_visitor<bool, std::not_equal_to<>, Ts...>::is_noexcept)
 {
@@ -1588,7 +1583,7 @@ template<class... Ts>
 }
 
 template<class... Ts>
-    requires std::conjunction_v<cmp::relop_bool_expr<std::less<>, Ts>...>
+    requires (cmp::relop_bool_expr_v<std::less<>, Ts> && ...)
 [[nodiscard]] constexpr bool operator<(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
     noexcept(detail::relops_visitor<bool, std::less<>, Ts...>::is_noexcept)
 {
@@ -1629,7 +1624,7 @@ template<class... Ts>
 }
 
 template<class... Ts>
-    requires std::conjunction_v<cmp::relop_bool_expr<std::greater<>, Ts>...>
+    requires (cmp::relop_bool_expr_v<std::greater<>, Ts> && ...)
 [[nodiscard]] constexpr bool operator>(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
     noexcept(detail::relops_visitor<bool, std::greater<>, Ts...>::is_noexcept)
 {
@@ -1641,7 +1636,7 @@ template<class... Ts>
 }
 
 template<class... Ts>
-    requires std::conjunction_v<cmp::relop_bool_expr<std::less_equal<>, Ts>...>
+    requires (cmp::relop_bool_expr_v<std::less_equal<>, Ts> && ...)
 [[nodiscard]] constexpr bool operator<=(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
     noexcept(detail::relops_visitor<bool, std::less_equal<>, Ts...>::is_noexcept)
 {
@@ -1653,7 +1648,7 @@ template<class... Ts>
 }
 
 template<class... Ts>
-    requires std::conjunction_v<cmp::relop_bool_expr<std::greater_equal<>, Ts>...>
+    requires (cmp::relop_bool_expr_v<std::greater_equal<>, Ts> && ...)
 [[nodiscard]] constexpr bool operator>=(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
     noexcept(detail::relops_visitor<bool, std::greater_equal<>, Ts...>::is_noexcept)
 {
@@ -1693,7 +1688,7 @@ namespace std {
 
 // https://eel.is/c++draft/variant.hash
 template<class... Ts>
-    requires std::conjunction_v<::iris::is_hash_enabled<std::remove_const_t<Ts>>...>
+    requires (::iris::is_hash_enabled_v<std::remove_const_t<Ts>> && ...)
 struct hash<::iris::rvariant<Ts...>>  // NOLINT(cert-dcl58-cpp)
 {
     [[nodiscard]] static /* constexpr */ std::size_t operator()(::iris::rvariant<Ts...> const& v)
@@ -1770,7 +1765,7 @@ struct hash<::iris::rvariant<Ts...>>  // NOLINT(cert-dcl58-cpp)
 namespace iris {
 
 template<class... Ts>
-    requires std::conjunction_v<is_hash_enabled<std::remove_const_t<Ts>>...>
+    requires (is_hash_enabled_v<std::remove_const_t<Ts>> && ...)
 [[nodiscard]] std::size_t hash_value(rvariant<Ts...> const& v)
     noexcept(std::conjunction_v<is_nothrow_hashable<std::remove_const_t<Ts>>...>)
 {

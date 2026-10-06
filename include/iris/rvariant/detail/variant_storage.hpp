@@ -184,10 +184,10 @@ struct variadic_union<true, T, Ts...>
     // Although it should work only by the "= default" declaration, some compilers
     // (e.g. ReSharper's "Code Inspection") fail to detect such traits,
     // resulting in red squiggles everywhere.
-    variadic_union(variadic_union const&)            requires((!std::conjunction_v<std::is_trivially_copy_constructible<T>, std::is_trivially_copy_constructible<Ts>...>)) = delete;
-    variadic_union(variadic_union&&)                 requires((!std::conjunction_v<std::is_trivially_move_constructible<T>, std::is_trivially_move_constructible<Ts>...>)) = delete;
-    variadic_union& operator=(variadic_union const&) requires((!std::conjunction_v<std::is_trivially_copy_assignable<T>, std::is_trivially_copy_assignable<Ts>...>)) = delete;
-    variadic_union& operator=(variadic_union&&)      requires((!std::conjunction_v<std::is_trivially_move_assignable<T>, std::is_trivially_move_assignable<Ts>...>)) = delete;
+    variadic_union(variadic_union const&)            requires(!std::is_trivially_copy_constructible_v<T> || (!std::is_trivially_copy_constructible_v<Ts> || ...)) = delete;
+    variadic_union(variadic_union&&)                 requires(!std::is_trivially_move_constructible_v<T> || (!std::is_trivially_move_constructible_v<Ts> || ...)) = delete;
+    variadic_union& operator=(variadic_union const&) requires(!std::is_trivially_copy_assignable_v<T> || (!std::is_trivially_copy_assignable_v<Ts> || ...)) = delete;
+    variadic_union& operator=(variadic_union&&)      requires(!std::is_trivially_move_assignable_v<T> || (!std::is_trivially_move_assignable_v<Ts> || ...)) = delete;
 #endif
 
     union {
@@ -218,10 +218,10 @@ struct variadic_union<false, T, Ts...>
     variadic_union& operator=(variadic_union&&) = default;
 
 #ifdef __RESHARPER__
-    variadic_union(variadic_union const&)            requires((!std::conjunction_v<std::is_trivially_copy_constructible<T>, std::is_trivially_copy_constructible<Ts>...>)) = delete;
-    variadic_union(variadic_union&&)                 requires((!std::conjunction_v<std::is_trivially_move_constructible<T>, std::is_trivially_move_constructible<Ts>...>)) = delete;
-    variadic_union& operator=(variadic_union const&) requires((!std::conjunction_v<std::is_trivially_copy_assignable<T>, std::is_trivially_copy_assignable<Ts>...>)) = delete;
-    variadic_union& operator=(variadic_union&&)      requires((!std::conjunction_v<std::is_trivially_move_assignable<T>, std::is_trivially_move_assignable<Ts>...>)) = delete;
+    variadic_union(variadic_union const&)            requires(!std::is_trivially_copy_constructible_v<T> || (!std::is_trivially_copy_constructible_v<Ts> || ...)) = delete;
+    variadic_union(variadic_union&&)                 requires(!std::is_trivially_move_constructible_v<T> || (!std::is_trivially_move_constructible_v<Ts> || ...)) = delete;
+    variadic_union& operator=(variadic_union const&) requires(!std::is_trivially_copy_assignable_v<T> || (!std::is_trivially_copy_assignable_v<Ts> || ...)) = delete;
+    variadic_union& operator=(variadic_union&&)      requires(!std::is_trivially_move_assignable_v<T> || (!std::is_trivially_move_assignable_v<Ts> || ...)) = delete;
 #endif
 
     union {
