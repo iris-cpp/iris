@@ -77,6 +77,10 @@ struct MC_Thrower : detail::Thrower_base
 public:
     using MC_Thrower::Thrower_base::Thrower_base;
 
+#ifdef _MSC_VER
+# pragma warning(push)
+# pragma warning(disable: 4702)
+#endif
     // Not `using Thrower_base::operator=;` because IntelliSense/ReSharper's `std::is_assignable`
     // does not see assignment operators brought in by a using-declaration
     template<class Tag>
@@ -86,6 +90,9 @@ public:
         Thrower_base::operator=(tag);
         return *this;
     }
+#ifdef _MSC_VER
+# pragma warning(pop)
+#endif
 
     MC_Thrower() noexcept : Thrower_base() {}
     MC_Thrower(MC_Thrower const&) noexcept : Thrower_base() {}
