@@ -795,13 +795,13 @@ where `_I_` is the zero-based index of `T` in [.underline]#`{unwrap_recursive_t}
 +
 *_Returns:_* [.underline]#Let `o` denote# a reference to the new contained value. [.underline]#Returns `{unwrap_recursive}(o)`.#
 +
-*_Remarks:_* [.underline]#If `T~_I_~` is a specialization of `{recursive_wrapper}` or `{recursive_wrapper_alloca}`, this function is permitted to construct an intermediate variable `tmp` as if by passing `std::forward<Args>(args)\...` to ``T~_I_~``'s constructor. Then `rvariant` direct-non-list-initializes the contained value of `T~_I_~` with the argument `std::move(tmp)`. (_Note:_ This allows optimization where `rvariant` can be assumed to become never valueless on certain cases.)#
+*_Remarks:_* [.underline]#If `T~_I_~` is a specialization of `{recursive_wrapper}` or `{recursive_wrapper_alloca}`, this function is permitted to construct an intermediate variable `tmp` as if by passing `std::forward<Args>(args)\...` to ``T~_I_~``'s constructor. Then `rvariant` direct-non-list-initializes the contained value of `T~_I_~` with the argument `std::move(tmp)`. Additionally, if `*this` holds a value of a specialization of `{recursive_wrapper}` or `{recursive_wrapper_alloca}`, this function is permitted to destroy that value after constructing such an intermediate variable, for any `T~_I_~`. (_Note:_ This allows optimization where `rvariant` can be assumed to become never valueless on certain cases.)#
 
 * [.candidate]#4)# Equivalent to the `std::variant` counterpart, ^https://eel.is/c++draft/variant.mod[[spec\]]^ except:
 +
 *_Returns:_* [.underline]#Let `o` denote# a reference to the new contained value. [.underline]#Returns `{unwrap_recursive}(o)`.#
 +
-*_Remarks:_* [.underline]#If `T~_I_~` is a specialization of `{recursive_wrapper}` or `{recursive_wrapper_alloca}`, this function is permitted to construct an intermediate variable `tmp` as if by passing `il, std::forward<Args>(args)\...` to ``T~_I_~``'s constructor. Then `rvariant` direct-non-list-initializes the contained value of `T~_I_~` with the argument `std::move(tmp)`. (_Note:_ This allows optimization where `rvariant` can be assumed to become never valueless on certain cases.)#
+*_Remarks:_* [.underline]#If `T~_I_~` is a specialization of `{recursive_wrapper}` or `{recursive_wrapper_alloca}`, this function is permitted to construct an intermediate variable `tmp` as if by passing `il, std::forward<Args>(args)\...` to ``T~_I_~``'s constructor. Then `rvariant` direct-non-list-initializes the contained value of `T~_I_~` with the argument `std::move(tmp)`. Additionally, if `*this` holds a value of a specialization of `{recursive_wrapper}` or `{recursive_wrapper_alloca}`, this function is permitted to destroy that value after constructing such an intermediate variable, for any `T~_I_~`. (_Note:_ This allows optimization where `rvariant` can be assumed to become never valueless on certain cases.)#
 
 [[rvariant.status]]
 === Value status [.slug]##<<rvariant.status,[rvariant.status]>>##
@@ -1449,6 +1449,29 @@ _Note 2:_ It is currently unknown whether the recursive instantiation scenario d
 --
 +
 *_Effects:_* Equivalent to the `std::indirect` counterpart. ^link:pass:[https://eel.is/c++draft/indirect.ctor#lib:indirect,constructor______][[spec\]]^
+
+
+[[rvariant.recursive.relops]]
+=== Comparisons
+Effectively overrides only the ones listed below; rest are the same as `std::indirect` counterparts. ^https://eel.is/c++draft/indirect.relops[[spec\]]^ ^https://eel.is/c++draft/indirect.comp.with.t[[spec\]]^
+
+[,cpp,subs="+macros,+attributes"]
+----
+template<class T, class A, class U, class AA>
+constexpr bool operator==(recursive_wrapper_alloca<T, A> const& lhs, recursive_wrapper_alloca<U, AA> const& rhs)
+  pass:quotes[[.underline\]#/* no noexcept-specifier */#];pass:quotes[[.candidate\]#// 1#]
+
+template<class T, class A, class U>
+constexpr bool operator==(recursive_wrapper_alloca<T, A> const& lhs, U const& rhs)
+  pass:quotes[[.underline\]#/* no noexcept-specifier */#];pass:quotes[[.candidate\]#// 2#]
+----
+
+[.candidates]
+* [.candidate]#1-2)# Equivalent to the `std::indirect` counterparts, except that [.underline]#they have no _noexcept-specifier_#.
++
+*_Note:_* The _noexcept-specifier_ of the `std::indirect` counterparts depends on the comparison of `T`. Since an exception specification is needed whenever the function is selected by overload resolution, such a _noexcept-specifier_ makes the comparison of a recursive type depend on itself; for example, if a class `X` has a defaulted `operator==` and contains `rvariant<..., recursive_wrapper<X>>`, checking the constraints of ``rvariant``'s `operator==` requires the comparison of `X`, which in turn requires checking the same constraints. Some compilers (e.g. GCC) reject such a program. The _noexcept-specifier_ is omitted to break this recursion.
+
+WARNING: [.underline]#Recursive types must implement their own *non-defaulted* `operatorpass:quotes[&lt;=&gt;]`.# For a class `X` that contains `rvariant<..., recursive_wrapper<X>>`, a defaulted `operatorpass:quotes[&lt;=&gt;]` of `X` requires the result of ``rvariant``'s `operatorpass:quotes[&lt;=&gt;]`, whose constraints and return type in turn require the result of comparing `X` through `recursive_wrapper<X>`. This leads to infinite recursive instantiation, regardless of whether the return type of the defaulted `operatorpass:quotes[&lt;=&gt;]` is `auto` or a specific comparison category type. This is a limitation of the language itself; standard containers have a similar limitation (e.g. a class `X` that contains `std::vector<X>` cannot have a defaulted `operatorpass:quotes[&lt;=&gt;]` whose return type is `auto`).
 
 
 [[rvariant.recursive.helper]]

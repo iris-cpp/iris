@@ -103,10 +103,10 @@ constexpr bool raw_visit_noexcept_all<Visitor, Storage, std::index_sequence<Is..
 >;
 
 
-template<std::size_t I, class Visitor, class Storage>
+template<std::size_t I, class Visitor, class Storage, bool IsNoexcept = raw_visit_noexcept<I, Visitor, Storage>::value>
 constexpr raw_visit_result_t<Visitor, Storage>
 do_raw_visit(Visitor&& vis, Storage&& storage)  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
-    noexcept(raw_visit_noexcept<I, Visitor, Storage>::value)
+    noexcept(IsNoexcept)
 {
     if constexpr (!std::remove_cvref_t<Storage>::never_valueless && I == 0) {
         return static_cast<Visitor&&>(vis)(std::in_place_index<std::variant_npos>, static_cast<Storage&&>(storage));
@@ -118,18 +118,21 @@ do_raw_visit(Visitor&& vis, Storage&& storage)  // NOLINT(cppcoreguidelines-rval
 }
 
 
-template<class Visitor, class Storage>
+template<class Visitor, class Storage, bool IsNoexcept = raw_visit_noexcept_all<Visitor, Storage>>
 using raw_visit_function_ptr = raw_visit_result_t<Visitor, Storage>(*) (Visitor&&, Storage&&)
-    noexcept(raw_visit_noexcept_all<Visitor, Storage>);
+    noexcept(IsNoexcept);
 
-template<class Visitor, class Storage, class Seq = std::make_index_sequence<detail::valueless_bias<Storage>(std::remove_cvref_t<Storage>::size)>>
+template<
+    class Visitor, class Storage, bool IsNoexcept = raw_visit_noexcept_all<Visitor, Storage>,
+    class Seq = std::make_index_sequence<detail::valueless_bias<Storage>(std::remove_cvref_t<Storage>::size)>
+>
 struct raw_visit_table;
 
-template<class Visitor, class Storage, std::size_t... Is>
-struct raw_visit_table<Visitor, Storage, std::index_sequence<Is...>>
+template<class Visitor, class Storage, bool IsNoexcept, std::size_t... Is>
+struct raw_visit_table<Visitor, Storage, IsNoexcept, std::index_sequence<Is...>>
 {
-    static constexpr raw_visit_function_ptr<Visitor, Storage> table[] = {
-        &do_raw_visit<Is, Visitor, Storage>...
+    static constexpr raw_visit_function_ptr<Visitor, Storage, IsNoexcept> table[] = {
+        &do_raw_visit<Is, Visitor, Storage, IsNoexcept>...
     };
 };
 
@@ -164,12 +167,12 @@ struct raw_visit_dispatch;
 template<bool NeverValueless>
 struct raw_visit_dispatch<NeverValueless, -1>
 {
-    template<std::size_t N, class Visitor, class Storage>
+    template<std::size_t N, class Visitor, class Storage, bool IsNoexcept = raw_visit_noexcept_all<Visitor, Storage>>
     [[nodiscard]] IRIS_FORCEINLINE static constexpr raw_visit_result_t<Visitor, Storage>
     apply(std::size_t const i, [[maybe_unused]] Visitor&& vis, [[maybe_unused]] Storage&& storage)
-        noexcept(raw_visit_noexcept_all<Visitor, Storage>)
+        noexcept(IsNoexcept)
     {
-        constexpr auto const& table = raw_visit_table<Visitor, Storage>::table;
+        constexpr auto const& table = raw_visit_table<Visitor, Storage, IsNoexcept>::table;
         auto const& f = table[i];
         return f(static_cast<Visitor&&>(vis), static_cast<Storage&&>(storage));
     }
@@ -199,10 +202,10 @@ struct raw_visit_dispatch<NeverValueless, -1>
     template<> \
     struct raw_visit_dispatch<true, (strategy)> \
     { \
-        template<std::size_t N, class Visitor, class Storage> \
+        template<std::size_t N, class Visitor, class Storage, bool IsNoexcept = detail::raw_visit_noexcept_all<Visitor, Storage>> \
         [[nodiscard]] IRIS_FORCEINLINE static constexpr detail::raw_visit_result_t<Visitor, Storage> \
         apply(std::size_t const i, [[maybe_unused]] Visitor&& vis, [[maybe_unused]] Storage&& storage) \
-            noexcept(detail::raw_visit_noexcept_all<Visitor, Storage>) \
+            noexcept(IsNoexcept) \
         { \
             IRIS_RAW_VISIT_ASSERT(!!, strategy) \
             switch (i) { \
@@ -214,10 +217,10 @@ struct raw_visit_dispatch<NeverValueless, -1>
     template<> \
     struct raw_visit_dispatch<false, (strategy)> \
     { \
-        template<std::size_t N, class Visitor, class Storage> \
+        template<std::size_t N, class Visitor, class Storage, bool IsNoexcept = detail::raw_visit_noexcept_all<Visitor, Storage>> \
         [[nodiscard]] IRIS_FORCEINLINE static constexpr detail::raw_visit_result_t<Visitor, Storage> \
         apply(std::size_t const i, [[maybe_unused]] Visitor&& vis, [[maybe_unused]] Storage&& storage) \
-            noexcept(detail::raw_visit_noexcept_all<Visitor, Storage>) \
+            noexcept(IsNoexcept) \
         { \
             IRIS_RAW_VISIT_ASSERT(!, strategy) \
             switch (i) { \
@@ -253,14 +256,19 @@ raw_visit(Variant&& v, Visitor&& vis)  // NOLINT(cppcoreguidelines-missing-std-f
     );
 }
 
-template<class Variant, class Visitor>
+// The caller passes the exception specification it already knows,
+// because deducing it from every alternative of the visitor is costly
+template<bool IsNoexcept, class Variant, class Visitor>
 IRIS_FORCEINLINE constexpr raw_visit_result_t<Visitor, forward_storage_t<Variant>>
 raw_visit_i(std::size_t const biased_i, Variant&& v, Visitor&& vis)  // NOLINT(cppcoreguidelines-missing-std-forward)
-    noexcept(raw_visit_noexcept_all<Visitor, forward_storage_t<Variant>>)
+    noexcept(IsNoexcept)
 {
+#if IRIS_CI
+    static_assert(IsNoexcept == raw_visit_noexcept_all<Visitor, forward_storage_t<Variant>>);
+#endif
     constexpr std::size_t N = detail::valueless_bias<Variant>(iris::variant_size_v<std::remove_reference_t<Variant>>);
-    return raw_visit_dispatch<std::remove_cvref_t<Variant>::never_valueless, visit_strategy<N>>::template apply<
-        N, Visitor, forward_storage_t<Variant>
+    return raw_visit_dispatch<std::remove_cvref_t<forward_storage_t<Variant>>::never_valueless, visit_strategy<N>>::template apply<
+        N, Visitor, forward_storage_t<Variant>, IsNoexcept
     >(
         biased_i,
         static_cast<Visitor&&>(vis),

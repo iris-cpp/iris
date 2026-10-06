@@ -107,7 +107,9 @@ TEST_CASE("never_valueless", "[detail]")
 
         STATIC_REQUIRE(iris::detail::is_never_valueless_v<S>);
         STATIC_REQUIRE(is_never_valueless<iris::rvariant<S>>);
-        STATIC_REQUIRE(!iris::detail::is_never_valueless_v<iris::rvariant<S>>); // wow https://eel.is/c++draft/variant.assign#5
+        STATIC_CHECK(!std::is_copy_assignable_v<iris::rvariant<S>>); // wow https://eel.is/c++draft/variant.assign#5
+        STATIC_CHECK(!std::is_move_assignable_v<iris::rvariant<S>>);
+        STATIC_CHECK(iris::detail::is_never_valueless_v<iris::rvariant<S>>); // assignment is not required
         STATIC_REQUIRE(!is_never_valueless<iris::rvariant<S, BadType>>);
     }
 }
@@ -142,24 +144,10 @@ TEST_CASE("storage", "[detail]")
 
             STATIC_REQUIRE(std::is_trivially_copyable_v<VD>);
             STATIC_REQUIRE(std::is_standard_layout_v<VD>);
-
-            STATIC_REQUIRE(std::is_nothrow_constructible_v<VD, std::in_place_index_t<0>>); // default construct
-            STATIC_REQUIRE(std::is_constructible_v<VD, std::in_place_index_t<0>, T>);
-            STATIC_REQUIRE(!std::is_constructible_v<VD, std::in_place_index_t<0>, NonExistent>);
         }
 
         using V = iris::rvariant<T>;
 
-        using Base = iris::detail::rvariant_base<T>;
-        {
-            STATIC_REQUIRE(std::is_trivially_copy_constructible_v<Base>);
-            STATIC_REQUIRE(std::is_trivially_move_constructible_v<Base>);
-            STATIC_REQUIRE(std::is_trivially_copy_assignable_v<Base>);
-            STATIC_REQUIRE(std::is_trivially_move_assignable_v<Base>);
-            STATIC_REQUIRE(std::is_trivially_destructible_v<Base>);
-            STATIC_REQUIRE(std::is_trivially_copyable_v<Base>);
-            STATIC_REQUIRE(std::is_standard_layout_v<Base>);
-        }
         {
             STATIC_REQUIRE(std::is_trivially_copy_constructible_v<V>);
             STATIC_REQUIRE(std::is_trivially_move_constructible_v<V>);
@@ -219,17 +207,6 @@ TEST_CASE("storage", "[detail]")
 
         using V = iris::rvariant<T>;
 
-        using Base = iris::detail::rvariant_base_t<T>;
-        static_assert(std::is_base_of_v<Base, V>);
-        {
-            STATIC_REQUIRE(!std::is_trivially_copy_constructible_v<Base>);
-            STATIC_REQUIRE(std::is_trivially_move_constructible_v<Base>);
-            STATIC_REQUIRE(!std::is_trivially_copy_assignable_v<Base>); // variant requires TCC && TCA && TD
-            STATIC_REQUIRE(std::is_trivially_move_assignable_v<Base>);
-            STATIC_REQUIRE(std::is_trivially_destructible_v<Base>);
-            STATIC_REQUIRE(!std::is_trivially_copyable_v<Base>);
-            STATIC_REQUIRE(std::is_standard_layout_v<Base>);
-        }
         {
             STATIC_REQUIRE(!std::is_trivially_copy_constructible_v<V>);
             STATIC_REQUIRE(std::is_trivially_move_constructible_v<V>);
@@ -301,11 +278,6 @@ TEST_CASE("storage", "[detail]")
 
         STATIC_REQUIRE(std::is_trivially_copyable_v<VD>);
         STATIC_REQUIRE(std::is_standard_layout_v<VD>);
-
-        STATIC_REQUIRE(std::is_nothrow_constructible_v<VD, std::in_place_index_t<0>>); // default construct
-        STATIC_REQUIRE( std::is_constructible_v<VD, std::in_place_index_t<0>, S>);
-        STATIC_REQUIRE( std::is_constructible_v<VD, std::in_place_index_t<0>, int>);
-        STATIC_REQUIRE(!std::is_constructible_v<VD, std::in_place_index_t<0>, NonExistent>);
     }
     // `int` on the right side
     {
@@ -335,18 +307,6 @@ TEST_CASE("storage", "[detail]")
 
         STATIC_REQUIRE(std::is_trivially_copyable_v<VD>);
         STATIC_REQUIRE(std::is_standard_layout_v<VD>);
-
-        // for VD[0] aka `S`
-        STATIC_REQUIRE(std::is_nothrow_constructible_v<VD, std::in_place_index_t<0>>); // default construct
-        STATIC_REQUIRE( std::is_constructible_v<VD, std::in_place_index_t<0>, S>);
-        STATIC_REQUIRE( std::is_constructible_v<VD, std::in_place_index_t<0>, int>);
-        STATIC_REQUIRE(!std::is_constructible_v<VD, std::in_place_index_t<0>, NonExistent>);
-
-        // for VD[1] aka `int`
-        STATIC_REQUIRE(std::is_nothrow_constructible_v<VD, std::in_place_index_t<1>>); // default construct
-        STATIC_REQUIRE( std::is_constructible_v<VD, std::in_place_index_t<1>, int>);
-        STATIC_REQUIRE(!std::is_constructible_v<VD, std::in_place_index_t<1>, S>);
-        STATIC_REQUIRE(!std::is_constructible_v<VD, std::in_place_index_t<1>, NonExistent>);
     }
     // `int` on the left side
     {
@@ -376,18 +336,6 @@ TEST_CASE("storage", "[detail]")
 
         STATIC_REQUIRE(std::is_trivially_copyable_v<VD>);
         STATIC_REQUIRE(std::is_standard_layout_v<VD>);
-
-        // for VD[0] aka `int`
-        STATIC_REQUIRE(std::is_nothrow_constructible_v<VD, std::in_place_index_t<0>>); // default construct
-        STATIC_REQUIRE( std::is_constructible_v<VD, std::in_place_index_t<0>, int>);
-        STATIC_REQUIRE(!std::is_constructible_v<VD, std::in_place_index_t<0>, S>);
-        STATIC_REQUIRE(!std::is_constructible_v<VD, std::in_place_index_t<0>, NonExistent>);
-
-        // for VD[1] aka `S`
-        STATIC_REQUIRE(std::is_nothrow_constructible_v<VD, std::in_place_index_t<1>>); // default construct
-        STATIC_REQUIRE( std::is_constructible_v<VD, std::in_place_index_t<1>, S>);
-        STATIC_REQUIRE( std::is_constructible_v<VD, std::in_place_index_t<1>, int>);
-        STATIC_REQUIRE(!std::is_constructible_v<VD, std::in_place_index_t<1>, NonExistent>);
     }
     {
         struct S
@@ -412,7 +360,6 @@ TEST_CASE("storage", "[detail]")
         STATIC_REQUIRE(!std::is_trivially_copyable_v<VD>);
         STATIC_REQUIRE(std::is_standard_layout_v<VD>);
 
-        STATIC_REQUIRE(std::is_nothrow_constructible_v<VD, std::in_place_index_t<0>>); // default construct
         STATIC_REQUIRE(std::is_nothrow_destructible_v<VD>);
     }
     // NOLINTEND(modernize-use-equals-default)
@@ -1162,6 +1109,83 @@ TEST_CASE("generic assignment")
         REQUIRE_NOTHROW(a = MC_Thrower::potentially_throwing);
         CHECK(a.valueless_by_exception() == false);
     }
+
+    {
+        struct throwing_t {};
+        struct potentially_throwing_t {};
+        struct TC_Thrower
+        {
+            struct exception {};
+            TC_Thrower(throwing_t) noexcept(false) { throw exception{}; } // NOLINT(hicpp-exception-baseclass)
+            TC_Thrower(potentially_throwing_t) noexcept(false) {}
+        };
+        STATIC_REQUIRE(std::is_trivially_destructible_v<TC_Thrower>);
+        STATIC_REQUIRE(std::is_nothrow_move_constructible_v<TC_Thrower>);
+        {
+            iris::rvariant<int, TC_Thrower> a;
+            REQUIRE_THROWS_AS(a = throwing_t{}, TC_Thrower::exception);
+            CHECK(a.index() == 0);
+        }
+        {
+            iris::rvariant<int, TC_Thrower> a;
+            REQUIRE_NOTHROW(a = potentially_throwing_t{});
+            CHECK(a.index() == 1);
+        }
+    }
+    STATIC_CHECK([] {
+        iris::rvariant<int, float> a = 42;
+        a = 3.14f;
+        a = 33;
+        return a.index() == 0 && iris::get<0>(a) == 33;
+    }());
+
+    // Alternatives that need to be destroyed
+    {
+        iris::rvariant<int, std::string> a = 42;
+        a = std::string("abc");
+        REQUIRE(a.index() == 1);
+        CHECK(iris::get<1>(a) == "abc");
+        a = 33;
+        REQUIRE(a.index() == 0);
+        CHECK(iris::get<0>(a) == 33);
+    }
+
+    // Not move constructible, but never valueless; the temporary is copied
+    {
+        struct NoMove
+        {
+            int value = 0;
+            NoMove() = default;
+            NoMove(int v) noexcept(false) : value(v)  // NOLINT(google-explicit-constructor)
+            {
+                if (v < 0) throw Thrower_base::exception{};  // NOLINT(hicpp-exception-baseclass)
+            }
+            NoMove(NoMove const&) = default;
+            NoMove(NoMove&&) = delete;
+            NoMove& operator=(NoMove const&) = default;
+            NoMove& operator=(NoMove&&) = default;
+        };
+        STATIC_CHECK(!std::is_move_constructible_v<NoMove>);
+        STATIC_CHECK(iris::detail::is_never_valueless_v<NoMove>);
+        {
+            // nothing needs to be destroyed
+            iris::rvariant<std::monostate, NoMove> a;
+            REQUIRE_THROWS_AS(a = -1, Thrower_base::exception);
+            CHECK(a.index() == 0);
+            a = 42;
+            REQUIRE(a.index() == 1);
+            CHECK(iris::get<1>(a).value == 42);
+        }
+        {
+            // the old alternative needs to be destroyed
+            iris::rvariant<iris::recursive_wrapper<std::string>, NoMove> a;
+            REQUIRE_THROWS_AS(a = -1, Thrower_base::exception);
+            CHECK(a.index() == 0);
+            a = 42;
+            REQUIRE(a.index() == 1);
+            CHECK(iris::get<1>(a).value == 42);
+        }
+    }
 }
 
 TEST_CASE("emplace")
@@ -1417,6 +1441,87 @@ TEST_CASE("emplace")
         iris::rvariant<int, MC_Thrower> a;
         REQUIRE_NOTHROW(a.emplace<1>(MC_Thrower::potentially_throwing));
         CHECK(a.valueless_by_exception() == false);
+    }
+
+    // Trivially copy constructible, but the move constructor may throw.
+    // `emplace` can copy the temporary, but type-changing assignment calls the move constructor.
+    struct TCC_MC_Thrower : Thrower_base
+    {
+        TCC_MC_Thrower() = default;
+        TCC_MC_Thrower(TCC_MC_Thrower const&) = default;
+        TCC_MC_Thrower(TCC_MC_Thrower&&) noexcept(false) : Thrower_base() { throw exception{}; }  // NOLINT(hicpp-exception-baseclass)
+        TCC_MC_Thrower& operator=(TCC_MC_Thrower const&) = default;
+        TCC_MC_Thrower& operator=(TCC_MC_Thrower&&) = default;
+    };
+    STATIC_CHECK(std::is_trivially_copy_constructible_v<TCC_MC_Thrower>);
+    STATIC_CHECK(!std::is_nothrow_move_constructible_v<TCC_MC_Thrower>);
+    STATIC_CHECK(!iris::detail::is_never_valueless_v<TCC_MC_Thrower>);
+    STATIC_CHECK(!is_never_valueless<iris::rvariant<int, TCC_MC_Thrower>>);
+    {
+        iris::rvariant<int, TCC_MC_Thrower> a;
+        iris::rvariant<int, TCC_MC_Thrower> b(std::in_place_index<1>);
+        REQUIRE_THROWS_AS(a = std::move(b), TCC_MC_Thrower::exception);
+        CHECK(a.valueless_by_exception() == true);
+    }
+
+    // The temporary must not be constructed before destroying the old alternative
+    // if the destruction is observable ([variant.mod]: destroy, then construct)
+    {
+        struct Logger
+        {
+            std::string* log;
+            explicit Logger(std::string& out) noexcept : log(&out) {}
+            Logger(std::string& out, int) noexcept(false) : log(&out) { *log += "C"; }
+            Logger(Logger const&) = default;
+            Logger& operator=(Logger const&) = default;
+            ~Logger() { *log += "D"; }
+        };
+        struct IntSource
+        {
+            std::string* log;
+            operator int() const noexcept(false) { *log += "C"; return 42; }  // NOLINT(google-explicit-constructor)
+        };
+        STATIC_CHECK(std::is_trivially_move_assignable_v<Logger>);
+        STATIC_CHECK(!std::is_trivially_destructible_v<Logger>);
+
+        std::string log;
+        {
+            // another alternative
+            iris::rvariant<Logger, int> a(std::in_place_index<0>, log);
+            a.emplace<1>(IntSource{&log});
+            CHECK(log == "DC");
+        }
+        log.clear();
+        {
+            // same alternative
+            iris::rvariant<Logger, int> a(std::in_place_index<0>, log);
+            a.emplace<0>(log, 0);
+            CHECK(log == "DC");
+        }
+    }
+
+    // Not assignable, but never valueless
+    {
+        struct ConstMember
+        {
+            int const value;
+            explicit ConstMember(int v) noexcept(false) : value(v)
+            {
+                if (v < 0) throw Thrower_base::exception{};  // NOLINT(hicpp-exception-baseclass)
+            }
+        };
+        STATIC_CHECK(!std::is_copy_assignable_v<ConstMember>);
+        STATIC_CHECK(!std::is_move_assignable_v<ConstMember>);
+        STATIC_CHECK(iris::detail::is_never_valueless_v<ConstMember>);
+        STATIC_CHECK(is_never_valueless<iris::rvariant<int, ConstMember>>);
+
+        iris::rvariant<int, ConstMember> a(std::in_place_index<1>, 1);
+        REQUIRE_THROWS_AS(a.emplace<1>(-1), Thrower_base::exception);
+        REQUIRE(a.index() == 1);
+        CHECK(iris::get<1>(a).value == 1);
+        a.emplace<1>(2);
+        REQUIRE(a.index() == 1);
+        CHECK(iris::get<1>(a).value == 2);
     }
 
     STATIC_REQUIRE(iris::detail::is_never_valueless_v<iris::recursive_wrapper<int>>);

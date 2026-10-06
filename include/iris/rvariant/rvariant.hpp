@@ -15,7 +15,6 @@
 #include <iris/hash/FNV_hash.hpp>
 
 #include <iris/compare.hpp>
-#include <iris/cond_trivial_smf.hpp>
 #include <iris/type_traits.hpp>
 #include <iris/type_list.hpp>
 #include <iris/hash.hpp>
@@ -87,61 +86,102 @@ template<class T, class Variant>
 inline constexpr std::size_t exactly_once_index_v = exactly_once_index<T, Variant>::value;
 
 
-template<class T, class U = T const&>
-struct variant_copy_assignable : std::conjunction<std::is_constructible<T, U>, std::is_assignable<T&, U>>
-{
-    static_assert(!std::is_reference_v<T>);
-    static_assert(std::is_lvalue_reference_v<U>);
-};
-
-template<class T, class U = T const&>
-struct variant_nothrow_copy_assignable : std::conjunction<std::is_nothrow_constructible<T, U>, std::is_nothrow_assignable<T&, U>>
-{
-    static_assert(!std::is_reference_v<T>);
-    static_assert(std::is_lvalue_reference_v<U>);
-    static_assert(variant_copy_assignable<T, U>::value);
-};
-
-template<class T, class U = T&&>
-struct variant_move_assignable : std::conjunction<std::is_constructible<T, U>, std::is_assignable<T&, U>>
-{
-    static_assert(!std::is_reference_v<T>);
-    static_assert(std::is_rvalue_reference_v<U>);
-};
-
-template<class T, class U = T&&>
-struct variant_nothrow_move_assignable : std::conjunction<std::is_nothrow_constructible<T, U>, std::is_nothrow_assignable<T&, U>>
-{
-    static_assert(!std::is_reference_v<T>);
-    static_assert(std::is_rvalue_reference_v<U>);
-    static_assert(variant_move_assignable<T, U>::value);
-};
+// The alternative `T` can be both constructed and assigned from `U`
+// https://eel.is/c++draft/variant.assign
+template<class T, class U>
+concept rvariant_alternative_assignable = std::is_constructible_v<T, U> && std::is_assignable_v<T&, U>;
 
 template<class T, class U>
-struct variant_assignable : std::conjunction<std::is_constructible<T, U>, std::is_assignable<T&, U>>
-{
-    static_assert(!std::is_reference_v<T>);
-};
-
-template<class T, class U>
-struct variant_nothrow_assignable : std::conjunction<std::is_nothrow_constructible<T, U>, std::is_nothrow_assignable<T&, U>>
-{
-    static_assert(!std::is_reference_v<T>);
-    static_assert(variant_assignable<T, U>::value);
-};
+concept rvariant_alternative_nothrow_assignable = std::is_nothrow_constructible_v<T, U> && std::is_nothrow_assignable_v<T&, U>;
 
 
 template<class R, class Compare, class... Ts>
 struct relops_visitor;
 
+// https://eel.is/c++draft/variant.ctor
+// https://eel.is/c++draft/variant.dtor
+// https://eel.is/c++draft/variant.assign
 template<class... Ts>
-struct rvariant_base
+concept rvariant_trivially_copy_constructible = (std::is_trivially_copy_constructible_v<Ts> && ...);
+
+template<class... Ts>
+concept rvariant_copy_constructible = (std::is_copy_constructible_v<Ts> && ...);
+
+template<class... Ts>
+concept rvariant_trivially_move_constructible = (std::is_trivially_move_constructible_v<Ts> && ...);
+
+template<class... Ts>
+concept rvariant_move_constructible = (std::is_move_constructible_v<Ts> && ...);
+
+template<class... Ts>
+concept rvariant_trivially_copy_assignable = ((std::is_trivially_destructible_v<Ts> && std::is_trivially_copy_constructible_v<Ts> && std::is_trivially_copy_assignable_v<Ts>) && ...);
+
+template<class... Ts>
+concept rvariant_copy_assignable = ((std::is_copy_constructible_v<Ts> && std::is_copy_assignable_v<Ts>) && ...);
+
+template<class... Ts>
+concept rvariant_trivially_move_assignable = ((std::is_trivially_destructible_v<Ts> && std::is_trivially_move_constructible_v<Ts> && std::is_trivially_move_assignable_v<Ts>) && ...);
+
+template<class... Ts>
+concept rvariant_move_assignable = ((std::is_move_constructible_v<Ts> && std::is_move_assignable_v<Ts>) && ...);
+
+template<class... Ts>
+concept rvariant_nothrow_copy_assignable = ((std::is_nothrow_copy_constructible_v<Ts> && std::is_nothrow_copy_assignable_v<Ts>) && ...);
+
+template<class... Ts>
+concept rvariant_nothrow_move_assignable = ((std::is_nothrow_move_constructible_v<Ts> && std::is_nothrow_move_assignable_v<Ts>) && ...);
+
+template<class... Ts>
+concept rvariant_trivially_destructible = (std::is_trivially_destructible_v<Ts> && ...);
+
+// Selects the private constructor that every other constructor delegates to
+struct primary_construct_t
 {
-private:
+    constexpr explicit primary_construct_t() = default;
+};
+
+inline constexpr primary_construct_t primary_construct{};
+
+#if defined(__INTELLISENSE__) || defined(__RESHARPER__)
+// IntelliSense and ReSharper ignore the constraints of assignment operators in some places:
+//   - A user-provided assignment operator is counted as eligible even when its constraints are not
+//     satisfied, so `std::is_trivially_copyable` evaluates to false even when every alternative is
+//     trivial. Swapping the parameter type for these placeholders makes such a declaration stop
+//     being an assignment operator at all ([class.copy.assign]/1).
+//   - A `= default` assignment operator whose constraints are not satisfied makes them declare an
+//     implicit move assignment, and the implicit assignment operators of a derived class are
+//     computed from it. An additional declaration that is selected exactly when neither of the
+//     other two is prevents this: a deleted copy assignment, and a move assignment that forwards to
+//     the copy assignment (or a deleted one if the copy assignment is not usable either), because
+//     a move assignment that does not participate must fall back to the copy assignment.
+// Constructors and destructors are not affected.
+struct rvariant_not_copy_assignable { rvariant_not_copy_assignable() = delete; };
+struct rvariant_not_move_assignable { rvariant_not_move_assignable() = delete; };
+struct rvariant_not_move_assignable_fallback { rvariant_not_move_assignable_fallback() = delete; };
+#endif
+
+template<class... Ts>
+[[nodiscard]] constexpr rvariant<Ts...> make_valueless() noexcept
+{
+    static_assert(!is_never_valueless_v<Ts...>);
+    return rvariant<Ts...>{valueless};
+}
+
+}  // detail
+
+
+template<class... Ts>
+class rvariant
+{
+    static_assert(std::conjunction_v<detail::check_recursive_wrapper_duplicate<Ts, Ts...>...>);
+    static_assert((req::Cpp17Destructible<Ts> && ...), "All types shall meet the Cpp17Destructible requirements ([variant.variant.general]).");
+    static_assert(sizeof...(Ts) > 0, "A variant with no template arguments shall not be instantiated ([variant.variant.general]).");
+
+    using unwrapped_types = type_list<unwrap_recursive_t<Ts>...>;
+
     static constexpr bool need_destructor_call = !std::conjunction_v<std::is_trivially_destructible<Ts>...>;
 
-protected:
-    using storage_type = make_variadic_union_t<Ts...>;
+    using storage_type = detail::make_variadic_union_t<Ts...>;
     static constexpr bool never_valueless = storage_type::never_valueless;
 
     template<class Self>
@@ -159,69 +199,96 @@ protected:
         >&
     >;
 
-    // internal constructor; this is not the same as the most derived class' default constructor (which uses T0)
-    constexpr rvariant_base() noexcept
-        : storage_{} // valueless
-    {}
-
 IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
-    // Primary constructor called from derived class
+    // Primary constructor; every other constructor that holds a value delegates to this
     template<std::size_t I, class... Args>
         requires std::is_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>
-    constexpr explicit rvariant_base(std::in_place_index_t<I>, Args&&... args)
+    constexpr explicit rvariant(detail::primary_construct_t, std::in_place_index_t<I>, Args&&... args)
         noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>)
-        : storage_(std::in_place_index<I>, std::forward<Args>(args)...)
-        , index_{static_cast<variant_index_t<sizeof...(Ts)>>(I)}
+        : storage_{} // valueless
+        // Constructing the alternative inside this initializer stores the index only after the construction succeeds.
+        // This sequential guarantee enables some important optimizations on certain compilers.
+        , index_{(detail::alternative_constructor<I>::construct(storage_, std::forward<Args>(args)...), static_cast<detail::variant_index_t<sizeof...(Ts)>>(I))}
     {}
 IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
-    // Primary constructor called from derived class
-    constexpr explicit rvariant_base(valueless_t) noexcept
-        : storage_{} // valueless
-    {}
+public:
+    constexpr rvariant(rvariant const&) = default;
 
-    // Copy constructor
-    constexpr void _copy_construct(rvariant_base const& w)
+    constexpr rvariant(rvariant const& w)
         noexcept(std::conjunction_v<std::is_nothrow_copy_constructible<Ts>...>)
+        requires
+            (!detail::rvariant_trivially_copy_constructible<Ts...>) &&
+            detail::rvariant_copy_constructible<Ts...>
     {
-        w.raw_visit([this]<std::size_t j, class T>(std::in_place_index_t<j>, [[maybe_unused]] T const& alt)
-            noexcept(std::conjunction_v<std::is_nothrow_copy_constructible<Ts>...>)
+    IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
+        constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_copy_constructible<Ts>...>;
+        w.template raw_visit<is_noexcept>([this]<std::size_t j, class T>(std::in_place_index_t<j>, [[maybe_unused]] T const& alt)
+            noexcept(is_noexcept)
         {
             if constexpr (j != std::variant_npos) {
             IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
-                construct_on_valueless<j>(alt);
+                detail::alternative_constructor<j>::construct(storage_, alt);
             IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
+                index_ = static_cast<detail::variant_index_t<sizeof...(Ts)>>(j);
             } else {
-                (void)this;
+                index_ = detail::variant_npos<sizeof...(Ts)>;
             }
         });
+    IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     }
 
-    // Move constructor
-    constexpr void _move_construct(rvariant_base&& w)
+    constexpr rvariant(rvariant&&) = default;
+
+    constexpr rvariant(rvariant&& w)
         noexcept(std::conjunction_v<std::is_nothrow_move_constructible<Ts>...>)
+        requires
+            (!detail::rvariant_trivially_move_constructible<Ts...>) &&
+            detail::rvariant_move_constructible<Ts...>
     {
-        std::move(w).raw_visit([this]<std::size_t j, class T>(std::in_place_index_t<j>, [[maybe_unused]] T&& alt)
-            noexcept(std::conjunction_v<std::is_nothrow_move_constructible<Ts>...>)
+    IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
+        constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_move_constructible<Ts>...>;
+        std::move(w).template raw_visit<is_noexcept>([this]<std::size_t j, class T>(std::in_place_index_t<j>, [[maybe_unused]] T&& alt)
+            noexcept(is_noexcept)
         {
             if constexpr (j != std::variant_npos) {
                 static_assert(std::is_rvalue_reference_v<T&&>);
             IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
-                construct_on_valueless<j>(std::move(alt)); // NOLINT(bugprone-move-forwarding-reference)
+                detail::alternative_constructor<j>::construct(storage_, std::move(alt)); // NOLINT(bugprone-move-forwarding-reference)
             IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
+                index_ = static_cast<detail::variant_index_t<sizeof...(Ts)>>(j);
             } else {
-                (void)this;
+                index_ = detail::variant_npos<sizeof...(Ts)>;
             }
         });
+    IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     }
 
-    // Copy assignment
-    constexpr void _copy_assign(rvariant_base const& rhs)
-        noexcept(std::conjunction_v<variant_nothrow_copy_assignable<Ts>...>)
+    constexpr rvariant& operator=(rvariant const&)
+        requires detail::rvariant_trivially_copy_assignable<Ts...>
+        = default;
+
+    constexpr rvariant& operator=(
+#if defined(__INTELLISENSE__) || defined(__RESHARPER__)
+        std::conditional_t<
+            (!detail::rvariant_trivially_copy_assignable<Ts...>) &&
+            detail::rvariant_copy_assignable<Ts...>,
+            rvariant,
+            detail::rvariant_not_copy_assignable
+        > const& rhs
+#else
+        rvariant const& rhs
+#endif
+    )
+        noexcept(detail::rvariant_nothrow_copy_assignable<Ts...>)
+        requires
+            (!detail::rvariant_trivially_copy_assignable<Ts...>) &&
+            detail::rvariant_copy_assignable<Ts...>
     {
     IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
-        rhs.raw_visit([this]<std::size_t j, class T>(std::in_place_index_t<j>, T const& rhs_alt)
-            noexcept(std::conjunction_v<variant_nothrow_copy_assignable<Ts>...>)
+        constexpr bool is_noexcept = detail::rvariant_nothrow_copy_assignable<Ts...>;
+        rhs.template raw_visit<is_noexcept>([this]<std::size_t j, class T>(std::in_place_index_t<j>, T const& rhs_alt)
+            noexcept(is_noexcept)
         {
             if constexpr (j == std::variant_npos) {
                 (void)rhs_alt;
@@ -229,7 +296,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
             } else {
             IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
                 if (index_ == j) {
-                    raw_get<j>(storage()) = rhs_alt;
+                    detail::raw_get<j>(storage()) = rhs_alt;
                 } else {
                     // CC(noexcept) && MC(throw)    => A
                     // CC(noexcept) && MC(noexcept) => A
@@ -246,14 +313,41 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
             }
         });
     IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
+        return *this;
     }
 
-    // Move assignment
-    constexpr void _move_assign(rvariant_base&& rhs)
-        noexcept(std::conjunction_v<variant_nothrow_move_assignable<Ts>...>)
+#if defined(__INTELLISENSE__) || defined(__RESHARPER__)
+    constexpr rvariant& operator=(rvariant const&)
+        requires
+            (!detail::rvariant_trivially_copy_assignable<Ts...>) &&
+            (!detail::rvariant_copy_assignable<Ts...>)
+        = delete;
+#endif
+
+    constexpr rvariant& operator=(rvariant&&)
+        requires detail::rvariant_trivially_move_assignable<Ts...>
+        = default;
+
+    constexpr rvariant& operator=(
+#if defined(__INTELLISENSE__) || defined(__RESHARPER__)
+        std::conditional_t<
+            (!detail::rvariant_trivially_move_assignable<Ts...>) &&
+            detail::rvariant_move_assignable<Ts...>,
+            rvariant,
+            detail::rvariant_not_move_assignable
+        >&& rhs
+#else
+        rvariant&& rhs
+#endif
+    )
+        noexcept(detail::rvariant_nothrow_move_assignable<Ts...>)
+        requires
+            (!detail::rvariant_trivially_move_assignable<Ts...>) &&
+            detail::rvariant_move_assignable<Ts...>
     {
-        std::move(rhs).raw_visit([this]<std::size_t j, class T>(std::in_place_index_t<j>, [[maybe_unused]] T&& rhs_alt)
-            noexcept(std::conjunction_v<variant_nothrow_move_assignable<Ts>...>)
+        constexpr bool is_noexcept = detail::rvariant_nothrow_move_assignable<Ts...>;
+        std::move(rhs).template raw_visit<is_noexcept>([this]<std::size_t j, class T>(std::in_place_index_t<j>, [[maybe_unused]] T&& rhs_alt)
+            noexcept(is_noexcept)
         {
             if constexpr (j == std::variant_npos) {
                 (void)rhs_alt;
@@ -263,16 +357,50 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
             IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
                 if (index_ == j) {
-                    raw_get<j>(storage()) = std::move(rhs_alt); // NOLINT(bugprone-move-forwarding-reference)
+                    detail::raw_get<j>(storage()) = std::move(rhs_alt); // NOLINT(bugprone-move-forwarding-reference)
                 } else {
                     reset_construct<j>(std::move(rhs_alt)); // NOLINT(bugprone-move-forwarding-reference)
                 }
             IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
             }
         });
+        return *this;
     }
 
-    // -------------------------------------------------------
+#if defined(__INTELLISENSE__) || defined(__RESHARPER__)
+    constexpr rvariant& operator=(
+        std::conditional_t<
+            (!detail::rvariant_trivially_move_assignable<Ts...>) &&
+            (!detail::rvariant_move_assignable<Ts...>) &&
+            detail::rvariant_copy_assignable<Ts...>,
+            rvariant,
+            detail::rvariant_not_move_assignable_fallback
+        >&& rhs
+    )
+        noexcept(detail::rvariant_nothrow_copy_assignable<Ts...>)
+        requires
+            (!detail::rvariant_trivially_move_assignable<Ts...>) &&
+            (!detail::rvariant_move_assignable<Ts...>) &&
+            detail::rvariant_copy_assignable<Ts...>
+    {
+        return *this = static_cast<rvariant const&>(rhs);
+    }
+
+    constexpr rvariant& operator=(rvariant&&)
+        requires
+            (!detail::rvariant_trivially_move_assignable<Ts...>) &&
+            (!detail::rvariant_move_assignable<Ts...>) &&
+            (!detail::rvariant_copy_assignable<Ts...>)
+        = delete;
+#endif
+
+    constexpr ~rvariant() = default;
+
+    constexpr ~rvariant() noexcept
+        requires (!detail::rvariant_trivially_destructible<Ts...>)
+    {
+        visit_destroy();
+    }
 
     [[nodiscard]] constexpr bool valueless_by_exception() const noexcept
     {
@@ -285,6 +413,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     }
     [[nodiscard]] constexpr std::size_t index() const noexcept { return static_cast<std::size_t>(index_); }
 
+private:
     // internal
     template<std::size_t I>
     constexpr void destroy() noexcept
@@ -292,7 +421,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         if constexpr (need_destructor_call) {
             // ReSharper disable once CppTypeAliasNeverUsed
             using T = IRIS_PACK_INDEXING(I, Ts...);
-            auto&& alt = raw_get<I>(storage_);
+            auto&& alt = detail::raw_get<I>(storage_);
             alt.~T();
         }
     }
@@ -301,7 +430,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     constexpr void visit_destroy() noexcept
     {
         if constexpr (need_destructor_call) {
-            this->raw_visit([]<std::size_t i, class T>(std::in_place_index_t<i>, [[maybe_unused]] T& alt) static noexcept {
+            this->template raw_visit<true>([]<std::size_t i, class T>(std::in_place_index_t<i>, [[maybe_unused]] T& alt) static noexcept {
                 if constexpr (i != std::variant_npos) {
                     alt.~T();
                 }
@@ -313,14 +442,14 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     constexpr void visit_reset() noexcept
     {
         if constexpr (need_destructor_call) {
-            this->raw_visit([this]<std::size_t i, class T>(std::in_place_index_t<i>, [[maybe_unused]] T& alt) noexcept {
+            this->template raw_visit<true>([this]<std::size_t i, class T>(std::in_place_index_t<i>, [[maybe_unused]] T& alt) noexcept {
                 if constexpr (i != std::variant_npos) {
                     alt.~T();
-                    index_ = variant_npos<sizeof...(Ts)>;
+                    index_ = detail::variant_npos<sizeof...(Ts)>;
                 }
             });
         } else {
-            index_ = variant_npos<sizeof...(Ts)>;
+            index_ = detail::variant_npos<sizeof...(Ts)>;
         }
     }
     // internal
@@ -331,9 +460,9 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         if constexpr (I != std::variant_npos) {
             // ReSharper disable once CppTypeAliasNeverUsed
             using T = IRIS_PACK_INDEXING(I, Ts...);
-            auto&& alt = raw_get<I>(storage_);
+            auto&& alt = detail::raw_get<I>(storage_);
             alt.~T();
-            index_ = variant_npos<sizeof...(Ts)>;
+            index_ = detail::variant_npos<sizeof...(Ts)>;
         }
     }
 
@@ -343,9 +472,9 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
         noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>)
     {
         static_assert(I != std::variant_npos);
-        assert(index_ == variant_npos<sizeof...(Ts)>);
-        std::construct_at(&storage_, std::in_place_index<I>, std::forward<Args>(args)...);
-        index_ = static_cast<variant_index_t<sizeof...(Ts)>>(I);
+        assert(index_ == detail::variant_npos<sizeof...(Ts)>);
+        detail::alternative_constructor<I>::construct(storage_, std::forward<Args>(args)...);
+        index_ = static_cast<detail::variant_index_t<sizeof...(Ts)>>(I);
     }
 
     template<std::size_t I, class... Args>
@@ -353,9 +482,13 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
         noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>)
     {
         static_assert(I != std::variant_npos);
-        visit_reset();
-        std::construct_at(&storage_, std::in_place_index<I>, std::forward<Args>(args)...);
-        index_ = static_cast<variant_index_t<sizeof...(Ts)>>(I);
+        if constexpr (std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>) {
+            visit_destroy(); // the index is overwritten below without being observed
+        } else {
+            visit_reset();
+        }
+        detail::alternative_constructor<I>::construct(storage_, std::forward<Args>(args)...);
+        index_ = static_cast<detail::variant_index_t<sizeof...(Ts)>>(I);
     }
 
     template<std::size_t i, std::size_t j, class... Args>
@@ -365,12 +498,12 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
         if constexpr (i != std::variant_npos) {
             destroy<i>();
             if constexpr (!std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(j, Ts...), Args...>) {
-                index_ = variant_npos<sizeof...(Ts)>;
+                index_ = detail::variant_npos<sizeof...(Ts)>;
             }
         }
         static_assert(j != std::variant_npos);
-        std::construct_at(&storage_, std::in_place_index<j>, std::forward<Args>(args)...);
-        index_ = static_cast<variant_index_t<sizeof...(Ts)>>(j);
+        detail::alternative_constructor<j>::construct(storage_, std::forward<Args>(args)...);
+        index_ = static_cast<detail::variant_index_t<sizeof...(Ts)>>(j);
     }
 
     template<std::size_t I, class... Args>
@@ -378,22 +511,22 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
     {
         static_assert(I != std::variant_npos);
         static_assert(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>);
-        static_assert(std::is_nothrow_constructible_v<storage_type, std::in_place_index_t<I>, Args...>);
         visit_destroy();
-        std::construct_at(&storage_, std::in_place_index<I>, std::forward<Args>(args)...);
-        index_ = static_cast<variant_index_t<sizeof...(Ts)>>(I);
+        detail::alternative_constructor<I>::construct(storage_, std::forward<Args>(args)...);
+        index_ = static_cast<detail::variant_index_t<sizeof...(Ts)>>(I);
     }
 
 IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
     // used in swap operation
-    constexpr void reset_steal_from(rvariant_base&& rhs)
+    constexpr void reset_steal_from(rvariant&& rhs)
         noexcept(std::conjunction_v<std::is_nothrow_move_constructible<Ts>...>)
     {
         visit_reset();
 
-        std::move(rhs).raw_visit([this]<std::size_t i, class T>(std::in_place_index_t<i>, [[maybe_unused]] T&& alt)
-            noexcept(std::conjunction_v<std::is_nothrow_move_constructible<Ts>...>)
+        constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_move_constructible<Ts>...>;
+        std::move(rhs).template raw_visit<is_noexcept>([this]<std::size_t i, class T>(std::in_place_index_t<i>, [[maybe_unused]] T&& alt)
+            noexcept(is_noexcept)
         {
             if constexpr (i != std::variant_npos) {
                 static_assert(std::is_rvalue_reference_v<T&&>);
@@ -431,28 +564,63 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
         //   - https://github.com/cplusplus/papers/issues/592
         //   - https://cplusplus.github.io/LWG/issue3069
 
-        if constexpr (!rvariant_base::never_valueless) {
+        if constexpr (!never_valueless) {
             if (!this->valueless_by_exception()) {
                 ((assert(
                     static_cast<void const*>(std::addressof(args)) != static_cast<void const*>(this) &&
                     "Self-emplacing `variant` will lead to undefined behavior because the standard specifies `emplace` to destruct the contained object *before* emplacing the new value ([variant.mod])."
                 )), ...);
 
-                this->raw_visit([&]<std::size_t i, class Alt>(std::in_place_index_t<i>, [[maybe_unused]] Alt const& alt) {
-                    ((assert(
-                        static_cast<void const*>(std::addressof(args)) != static_cast<void const*>(std::addressof(alt)) &&
-                        "Self-emplacing `variant` will lead to undefined behavior because the standard specifies `emplace` to destruct the contained object *before* emplacing the new value ([variant.mod])."
-                    )), ...);
-                });
+                ((assert(
+                    static_cast<void const*>(std::addressof(args)) != static_cast<void const*>(std::addressof(this->storage_)) &&
+                    "Self-emplacing `variant` will lead to undefined behavior because the standard specifies `emplace` to destruct the contained object *before* emplacing the new value ([variant.mod])."
+                )), ...);
             }
         }
 #endif
 
+        // The paths below that construct a temporary first provide the strong exception-safety guarantee.
+        // They are taken only when the difference from the specification is not observable.
+        // See the comments on `detail::is_never_valueless_impl` for details.
+        constexpr bool is_tmp_trivial =
+            sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_destructible_v<T>;
+
         if constexpr (std::is_nothrow_constructible_v<T, Args...>) {
             this->template reset_construct_never_valueless<I>(std::forward<Args>(args)...);
 
+        } else if constexpr (!need_destructor_call) {
+            // Nothing needs to be destroyed, so neither the old alternative nor the valueless state matters
+            // and no visit is needed. For the same alternative, the assignment of the temporary is replaced
+            // by the construction, which is not observable because T is trivial.
+            if constexpr (is_tmp_trivial && std::is_trivially_move_constructible_v<T>) {
+                static_assert(std::is_nothrow_constructible_v<T, T&&>);
+                if constexpr (sizeof...(Args) == 0) {
+                    T tmp = T(); // may throw
+                    detail::alternative_constructor<I>::construct(this->storage_, std::move(tmp)); // never throws
+                } else {
+                    T tmp(std::forward<Args>(args)...); // may throw
+                    detail::alternative_constructor<I>::construct(this->storage_, std::move(tmp)); // never throws
+                }
+
+            } else if constexpr (is_tmp_trivial && std::is_trivially_copy_constructible_v<T>) { // strange type...
+                static_assert(std::is_nothrow_constructible_v<T, T const&>);
+                if constexpr (sizeof...(Args) == 0) {
+                    T const tmp = T(); // may throw
+                    detail::alternative_constructor<I>::construct(this->storage_, tmp); // never throws
+                } else {
+                    T const tmp(std::forward<Args>(args)...); // may throw
+                    detail::alternative_constructor<I>::construct(this->storage_, tmp); // never throws
+                }
+
+            } else {
+                static_assert(!never_valueless);
+                this->index_ = detail::variant_npos<sizeof...(Ts)>;
+                detail::alternative_constructor<I>::construct(this->storage_, std::forward<Args>(args)...); // may throw
+            }
+            this->index_ = I;
+
         } else {
-            this->raw_visit([&, this]<std::size_t old_i, class T_old_i>(std::in_place_index_t<old_i>, T_old_i& t_old_i) {
+            this->template raw_visit<false>([&, this]<std::size_t old_i, class T_old_i>(std::in_place_index_t<old_i>, T_old_i& t_old_i) {
                 static_assert(!std::is_reference_v<T_old_i>);
                 static_assert(!std::is_const_v<T_old_i>);
 
@@ -461,10 +629,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                     this->template construct_on_valueless<I>(std::forward<Args>(args)...);
 
                 } else if constexpr (old_i == I) { // same alternative
-                    if constexpr (
-                        (sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_move_assignable_v<T>) ||
-                        is_recursive_wrapper_v<T>
-                    ) {
+                    if constexpr (is_recursive_wrapper_v<T> || (is_tmp_trivial && std::is_trivially_move_assignable_v<T>)) {
                         static_assert(noexcept(t_old_i = std::declval<T&&>()));
                         if constexpr (sizeof...(Args) == 0) {
                             T tmp = T(); // may throw
@@ -474,9 +639,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                             t_old_i = std::move(tmp);
                         }
 
-                    } else if constexpr (
-                        sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_copy_assignable_v<T>
-                    ) { // strange type...
+                    } else if constexpr (is_tmp_trivial && std::is_trivially_copy_assignable_v<T>) { // strange type...
                         static_assert(noexcept(t_old_i = std::declval<T const&>()));
                         if constexpr (sizeof...(Args) == 0) {
                             T const tmp = T(); // may throw
@@ -486,44 +649,72 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                             t_old_i = tmp;
                         }
 
+                    } else if constexpr (is_tmp_trivial && std::is_trivially_move_constructible_v<T>) { // not assignable
+                        static_assert(std::is_nothrow_constructible_v<T, T&&>);
+                        if constexpr (sizeof...(Args) == 0) {
+                            T tmp = T(); // may throw
+                            t_old_i.~T_old_i();
+                            detail::alternative_constructor<I>::construct(this->storage_, std::move(tmp)); // never throws
+                        } else {
+                            T tmp(std::forward<Args>(args)...); // may throw
+                            t_old_i.~T_old_i();
+                            detail::alternative_constructor<I>::construct(this->storage_, std::move(tmp)); // never throws
+                        }
+
+                    } else if constexpr (is_tmp_trivial && std::is_trivially_copy_constructible_v<T>) { // not assignable, strange type...
+                        static_assert(std::is_nothrow_constructible_v<T, T const&>);
+                        if constexpr (sizeof...(Args) == 0) {
+                            T const tmp = T(); // may throw
+                            t_old_i.~T_old_i();
+                            detail::alternative_constructor<I>::construct(this->storage_, tmp); // never throws
+                        } else {
+                            T const tmp(std::forward<Args>(args)...); // may throw
+                            t_old_i.~T_old_i();
+                            detail::alternative_constructor<I>::construct(this->storage_, tmp); // never throws
+                        }
+
                     } else {
                         static_assert(!never_valueless);
                         t_old_i.~T_old_i();
                         this->index_ = detail::variant_npos<sizeof...(Ts)>;
-                        static_assert(!noexcept(std::construct_at(&this->storage(), std::in_place_index<I>, std::forward<Args>(args)...)));
-                        std::construct_at(&this->storage_, std::in_place_index<I>, std::forward<Args>(args)...); // may throw
+                        static_assert(!std::is_nothrow_constructible_v<T, Args...>);
+                        detail::alternative_constructor<I>::construct(this->storage_, std::forward<Args>(args)...); // may throw
                         this->index_ = I;
                     }
 
                 } else { // another alternative, possibly of the same type
+                    // The old alternative is destroyed after the temporary is constructed
+                    constexpr bool is_old_destruction_delayable =
+                        std::is_trivially_destructible_v<T_old_i> || is_recursive_wrapper_v<T_old_i>;
+
                     if constexpr (
-                        (sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_move_constructible_v<T>) ||
-                        is_recursive_wrapper_v<T>
+                        is_recursive_wrapper_v<T> ||
+                        (is_tmp_trivial && is_old_destruction_delayable && std::is_trivially_move_constructible_v<T>)
                     ) {
-                        static_assert(std::is_nothrow_constructible_v<storage_type, std::in_place_index_t<I>, T&&>);
+                        static_assert(std::is_nothrow_constructible_v<T, T&&>);
                         if constexpr (sizeof...(Args) == 0) {
                             T tmp = T(); // may throw
                             t_old_i.~T_old_i();
-                            std::construct_at(&this->storage_, std::in_place_index<I>, std::move(tmp)); // never throws
+                            detail::alternative_constructor<I>::construct(this->storage_, std::move(tmp)); // never throws
                         } else {
                             T tmp(std::forward<Args>(args)...); // may throw
                             t_old_i.~T_old_i();
-                            std::construct_at(&this->storage_, std::in_place_index<I>, std::move(tmp)); // never throws
+                            detail::alternative_constructor<I>::construct(this->storage_, std::move(tmp)); // never throws
                         }
                         this->index_ = I;
 
                     } else if constexpr (
-                        sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_copy_constructible_v<T>
+                        is_tmp_trivial && is_old_destruction_delayable && std::is_trivially_copy_constructible_v<T>
                     ) { // strange type...
-                        static_assert(std::is_nothrow_constructible_v<storage_type, std::in_place_index_t<I>, T const&>);
+                        static_assert(std::is_nothrow_constructible_v<T, T const&>);
                         if constexpr (sizeof...(Args) == 0) {
                             T const tmp = T(); // may throw
                             t_old_i.~T_old_i();
-                            std::construct_at(&this->storage_, std::in_place_index<I>, tmp); // never throws
+                            detail::alternative_constructor<I>::construct(this->storage_, tmp); // never throws
                         } else {
                             T const tmp(std::forward<Args>(args)...); // may throw
                             t_old_i.~T_old_i();
-                            std::construct_at(&this->storage_, std::in_place_index<I>, tmp); // never throws
+                            detail::alternative_constructor<I>::construct(this->storage_, tmp); // never throws
                         }
                         this->index_ = I;
 
@@ -531,8 +722,8 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                         static_assert(!never_valueless);
                         t_old_i.~T_old_i();
                         this->index_ = detail::variant_npos<sizeof...(Ts)>;
-                        static_assert(!noexcept(std::construct_at(&this->storage(), std::in_place_index<I>, std::forward<Args>(args)...)));
-                        std::construct_at(&this->storage_, std::in_place_index<I>, std::forward<Args>(args)...); // may throw
+                        static_assert(!std::is_nothrow_constructible_v<T, Args...>);
+                        detail::alternative_constructor<I>::construct(this->storage_, std::forward<Args>(args)...); // may throw
                         this->index_ = I;
                     }
                 }
@@ -549,15 +740,19 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     [[nodiscard]] constexpr storage_type &&      storage() &&      noexcept { return std::move(storage_); }
     [[nodiscard]] constexpr storage_type const&& storage() const&& noexcept { return std::move(storage_); }
 
-    template<class Self, class Visitor>
+    // The caller passes the exception specification it already knows,
+    // because deducing it from every alternative of the visitor is costly
+    template<bool Noexcept, class Self, class Visitor>
     IRIS_FORCEINLINE constexpr auto
-    raw_visit(this Self&& self, Visitor&& vis)  // NOLINT(cppcoreguidelines-missing-std-forward)
-        noexcept(detail::raw_visit_noexcept_all<Visitor, decltype(std::forward_like<Self>(self.storage_))>)
+    raw_visit(this Self&& self, Visitor&& vis) noexcept(Noexcept)  // NOLINT(cppcoreguidelines-missing-std-forward)
         -> detail::raw_visit_result_t<Visitor, decltype(std::forward_like<Self>(self.storage_))>
     {
+#if IRIS_CI
+        static_assert(Noexcept == detail::raw_visit_noexcept_all<Visitor, decltype(std::forward_like<Self>(self.storage_))>);
+#endif
         constexpr std::size_t N = detail::valueless_bias<never_valueless>(sizeof...(Ts));
-        return raw_visit_dispatch<never_valueless, visit_strategy<N>>::template apply<
-            N, Visitor, decltype(std::forward_like<Self>(self.storage_))
+        return detail::raw_visit_dispatch<never_valueless, detail::visit_strategy<N>>::template apply<
+            N, Visitor, decltype(std::forward_like<Self>(self.storage_)), Noexcept
         >(
             detail::valueless_bias<never_valueless>(self.index_),
             std::forward<Visitor>(vis),
@@ -566,72 +761,15 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     }
 
     storage_type storage_{}; // valueless
-    variant_index_t<sizeof...(Ts)> index_ = variant_npos<sizeof...(Ts)>;
-};
-
-
-template<class... Ts>
-struct rvariant_non_trivial_destructor : rvariant_base<Ts...>
-{
-    constexpr ~rvariant_non_trivial_destructor() noexcept
-    {
-        rvariant_non_trivial_destructor::rvariant_base::visit_destroy();
-    }
-
-    using rvariant_non_trivial_destructor::rvariant_base::rvariant_base;
-    rvariant_non_trivial_destructor() = default;
-    rvariant_non_trivial_destructor(rvariant_non_trivial_destructor const&) = default;
-    rvariant_non_trivial_destructor(rvariant_non_trivial_destructor&&) = default;
-    rvariant_non_trivial_destructor& operator=(rvariant_non_trivial_destructor const&) = default;
-    rvariant_non_trivial_destructor& operator=(rvariant_non_trivial_destructor&&) = default;
-};
-
-template<class... Ts>
-using rvariant_destructor_base_t = std::conditional_t<
-    std::conjunction_v<std::is_trivially_destructible<Ts>...>,
-    rvariant_base<Ts...>,
-    rvariant_non_trivial_destructor<Ts...>
->;
-
-template<class... Ts>
-using rvariant_base_t = cond_trivial_smf<rvariant_destructor_base_t<Ts...>, Ts...>;
-
-template<class... Ts>
-[[nodiscard]] constexpr rvariant<Ts...> make_valueless() noexcept
-{
-    static_assert(!is_never_valueless_v<Ts...>);
-    return rvariant<Ts...>{valueless};
-}
-
-}  // detail
-
-
-template<class... Ts>
-class rvariant : private detail::rvariant_base_t<Ts...>
-{
-    static_assert(std::conjunction_v<detail::check_recursive_wrapper_duplicate<Ts, Ts...>...>);
-    static_assert((req::Cpp17Destructible<Ts> && ...), "All types shall meet the Cpp17Destructible requirements ([variant.variant.general]).");
-    static_assert(sizeof...(Ts) > 0, "A variant with no template arguments shall not be instantiated ([variant.variant.general]).");
-
-    using unwrapped_types = type_list<unwrap_recursive_t<Ts>...>;
-
-    using base_type = detail::rvariant_base_t<Ts...>;
-    friend struct detail::rvariant_base<Ts...>;
-
-    using base_type::storage;
-    using base_type::index_;
-    using base_type::raw_visit;
-    using base_type::visit_reset;
-    using base_type::reset;
+    // No default member initializer; every constructor initializes this exactly once,
+    // so that the copy/move constructors do not store `variant_npos` before storing the actual index
+    detail::variant_index_t<sizeof...(Ts)> index_;
 
 public:
-    using base_type::valueless_by_exception;
-    using base_type::index;
-
     // Default constructor
     constexpr rvariant() noexcept(std::is_nothrow_default_constructible_v<IRIS_PACK_INDEXING(0, Ts...)>)
         requires std::is_default_constructible_v<IRIS_PACK_INDEXING(0, Ts...)>
-        : base_type(std::in_place_index<0>) // value-initialized
+        : rvariant(detail::primary_construct, std::in_place_index<0>) // value-initialized
     {}
 
     // --------------------------------------
@@ -647,7 +785,7 @@ public:
             std::is_constructible_v<typename no_narrowing_resolution<T, Ts...>::type, T>
     constexpr /* not explicit */ rvariant(T&& t)
         noexcept(std::is_nothrow_constructible_v<typename no_narrowing_resolution<T, Ts...>::type, T>)
-        : base_type(std::in_place_index<no_narrowing_resolution<T, Ts...>::index>, std::forward<T>(t))
+        : rvariant(detail::primary_construct, std::in_place_index<no_narrowing_resolution<T, Ts...>::index>, std::forward<T>(t))
     {}
 
 IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
@@ -656,25 +794,76 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
     template<class T>
         requires
             (!std::is_same_v<std::remove_cvref_t<T>, rvariant>) &&
-            detail::variant_assignable<typename no_narrowing_resolution<T, Ts...>::type, T>::value
+            detail::rvariant_alternative_assignable<typename no_narrowing_resolution<T, Ts...>::type, T>
     constexpr rvariant& operator=(T&& t)
-        noexcept(detail::variant_nothrow_assignable<typename no_narrowing_resolution<T, Ts...>::type, T>::value)
+        noexcept(detail::rvariant_alternative_nothrow_assignable<typename no_narrowing_resolution<T, Ts...>::type, T>)
     {
         using Tj = no_narrowing_resolution<T, Ts...>::type; // either plain type or wrapped with recursive_wrapper
         constexpr std::size_t j = no_narrowing_resolution<T, Ts...>::index;
         static_assert(j != std::variant_npos);
 
-        this->raw_visit([this, &t]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti& ti)
-            noexcept(detail::variant_nothrow_assignable<Tj, T>::value)
+        // TC(noexcept) && MC(throw)    => A maybe valueless if | never |
+        // TC(noexcept) && MC(noexcept) => A maybe valueless if | never |
+        // TC(throw)    && MC(throw)    => A maybe valueless if | TC throws => yes | MC throws => yes |
+        // TC(throw)    && MC(noexcept) => B maybe valueless if | never |
+        //
+        // If the variant is never valueless, "TC(throw) && MC(throw)" implies that Tj is not move constructible
+        // (see `detail::is_never_valueless_impl`). In that case, Tj is trivially copy constructible, so a temporary
+        // is copied instead => C maybe valueless if | never |
+        constexpr bool is_tmp_copied =
+            never_valueless && !std::is_nothrow_constructible_v<Tj, T> && !std::is_nothrow_move_constructible_v<Tj>;
+
+        if constexpr (!need_destructor_call) {
+            // Nothing needs to be destroyed, so a comparison of the index replaces the visit
+            if (this->index_ == j) {
+                detail::raw_get<j>(this->storage_) = std::forward<T>(t);
+
+            } else if constexpr (is_tmp_copied) {
+                static_assert(std::is_nothrow_constructible_v<Tj, Tj const&>);
+                Tj const tmp(std::forward<T>(t)); // may throw
+                detail::alternative_constructor<j>::construct(this->storage_, tmp); // C
+                this->index_ = j;
+
+            } else if constexpr (std::is_nothrow_constructible_v<Tj, T> || !std::is_nothrow_move_constructible_v<Tj>) {
+#ifndef NDEBUG
+                // Self-assign on non-valueless instance ALWAYS leads to UB.
+                // For details, see the comments on `emplace`.
+                assert(
+                    (this->index_ == detail::variant_npos<sizeof...(Ts)> || (
+                        static_cast<void const*>(std::addressof(t)) != static_cast<void const*>(this) &&
+                        static_cast<void const*>(std::addressof(t)) != static_cast<void const*>(std::addressof(this->storage_))
+                    )) &&
+                    "Self-assigning `variant` will lead to undefined behavior because the standard specifies `emplace` to destruct the contained object *before* emplacing the new value ([variant.mod])."
+                );
+#endif
+                static_assert(std::is_nothrow_constructible_v<Tj, T> || !never_valueless);
+                if constexpr (!std::is_nothrow_constructible_v<Tj, T>) {
+                    this->index_ = detail::variant_npos<sizeof...(Ts)>;
+                }
+                detail::alternative_constructor<j>::construct(this->storage_, std::forward<T>(t));
+                this->index_ = j;
+
+            } else {
+                Tj tmp(std::forward<T>(t));
+                detail::alternative_constructor<j>::construct(this->storage_, std::move(tmp)); // B
+                this->index_ = j;
+            }
+            return *this;
+        }
+
+        constexpr bool is_noexcept = detail::rvariant_alternative_nothrow_assignable<Tj, T>;
+        this->template raw_visit<is_noexcept>([this, &t]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti& ti)
+            noexcept(is_noexcept)
         {
             if constexpr (i == j) {
                 ti = std::forward<T>(t);
             } else {
-                // TC(noexcept) && MC(throw)    => A maybe valueless if | never |
-                // TC(noexcept) && MC(noexcept) => A maybe valueless if | never |
-                // TC(throw)    && MC(throw)    => A maybe valueless if | TC throws => yes | MC throws => yes |
-                // TC(throw)    && MC(noexcept) => B maybe valueless if | never |
-                if constexpr (std::is_nothrow_constructible_v<Tj, T> || !std::is_nothrow_move_constructible_v<Tj>) {
+                if constexpr (is_tmp_copied) {
+                    static_assert(std::is_nothrow_constructible_v<Tj, Tj const&>);
+                    Tj const tmp(std::forward<T>(t)); // may throw
+                    this->template reset_construct<i, j>(tmp); // C
+
+                } else if constexpr (std::is_nothrow_constructible_v<Tj, T> || !std::is_nothrow_move_constructible_v<Tj>) {
 #ifndef NDEBUG
                     // Self-assign on non-valueless instance ALWAYS leads to UB.
                     // For details, see the comments on `emplace`.
@@ -686,12 +875,12 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                         );
                     }
 #endif
-                    static_assert(std::is_nothrow_constructible_v<Tj, T> || !base_type::never_valueless);
-                    base_type::template reset_construct<i, j>(std::forward<T>(t));
+                    static_assert(std::is_nothrow_constructible_v<Tj, T> || !never_valueless);
+                    this->template reset_construct<i, j>(std::forward<T>(t));
 
                 } else {
                     Tj tmp(std::forward<T>(t));
-                    base_type::template reset_construct<i, j>(std::move(tmp)); // B
+                    this->template reset_construct<i, j>(std::move(tmp)); // B
                 }
             }
         });
@@ -706,19 +895,23 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         requires
             (!std::is_same_v<rvariant<Us...>, rvariant>) &&
             rvariant_set::subset_of<rvariant<Us...>, rvariant> &&
-            (!std::disjunction_v<std::is_same<rvariant<Us...>, unwrap_recursive_t<Ts>>...>) &&
-            std::conjunction_v<std::is_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>
+            (!std::is_same_v<rvariant<Us...>, unwrap_recursive_t<Ts>> && ...) &&
+            (std::is_constructible_v<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&> && ...)
     constexpr rvariant(rvariant<Us...> const& w)
         noexcept(std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>)
     {
-        w.raw_visit([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj const& uj)
-            noexcept(std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>)
+        constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>;
+        w.template raw_visit<is_noexcept>([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj const& uj)
+            noexcept(is_noexcept)
         {
             if constexpr (j != std::variant_npos) {
                 using maybe_wrapped = detail::select_maybe_wrapped<unwrap_recursive_t<Uj>, Ts...>;
                 using VT = maybe_wrapped::type;
                 static_assert(std::is_same_v<unwrap_recursive_t<VT>, unwrap_recursive_t<Uj>>);
-                base_type::template construct_on_valueless<maybe_wrapped::index>(uj);
+                detail::alternative_constructor<maybe_wrapped::index>::construct(this->storage_, uj);
+                this->index_ = static_cast<detail::variant_index_t<sizeof...(Ts)>>(maybe_wrapped::index);
+            } else {
+                this->index_ = detail::variant_npos<sizeof...(Ts)>;
             }
         });
     }
@@ -728,22 +921,28 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         requires
             (!std::is_same_v<rvariant<Us...>, rvariant>) &&
             rvariant_set::subset_of<rvariant<Us...>, rvariant> &&
-            (!std::disjunction_v<std::is_same<rvariant<Us...>, unwrap_recursive_t<Ts>>...>) &&
-            std::conjunction_v<std::is_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>
+            (!std::is_same_v<rvariant<Us...>, unwrap_recursive_t<Ts>> && ...) &&
+            (std::is_constructible_v<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&> && ...)
     constexpr rvariant(rvariant<Us...>&& w)
         noexcept(std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>)
     {
-        std::move(w).raw_visit([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj&& uj)
-            noexcept(std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>)
+    IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
+        constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>;
+        std::move(w).template raw_visit<is_noexcept>([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj&& uj)
+            noexcept(is_noexcept)
         {
             if constexpr (j != std::variant_npos) {
                 using maybe_wrapped = detail::select_maybe_wrapped<unwrap_recursive_t<Uj>, Ts...>;
                 using VT = maybe_wrapped::type;
                 static_assert(std::is_same_v<unwrap_recursive_t<VT>, unwrap_recursive_t<Uj>>);
                 static_assert(std::is_rvalue_reference_v<Uj&&>);
-                base_type::template construct_on_valueless<maybe_wrapped::index>(std::move(uj)); // NOLINT(bugprone-move-forwarding-reference)
+                detail::alternative_constructor<maybe_wrapped::index>::construct(this->storage_, std::move(uj)); // NOLINT(bugprone-move-forwarding-reference)
+                this->index_ = static_cast<detail::variant_index_t<sizeof...(Ts)>>(maybe_wrapped::index);
+            } else {
+                this->index_ = detail::variant_npos<sizeof...(Ts)>;
             }
         });
+    IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     }
 
     // --------------------------------------
@@ -753,13 +952,14 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         requires
             (!std::is_same_v<rvariant<Us...>, rvariant>) &&
             rvariant_set::subset_of<rvariant<Us...>, rvariant> &&
-            (!std::disjunction_v<std::is_same<rvariant<Us...>, unwrap_recursive_t<Ts>>...>) &&
-            std::conjunction_v<detail::variant_copy_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>
+            (!std::is_same_v<rvariant<Us...>, unwrap_recursive_t<Ts>> && ...) &&
+            (detail::rvariant_alternative_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&> && ...)
     constexpr rvariant& operator=(rvariant<Us...> const& rhs)
-        noexcept(std::conjunction_v<detail::variant_nothrow_copy_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>)
+        noexcept((detail::rvariant_alternative_nothrow_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&> && ...))
     {
-        rhs.raw_visit([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj const& uj)
-            noexcept(std::conjunction_v<detail::variant_nothrow_copy_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>)
+        constexpr bool is_noexcept = (detail::rvariant_alternative_nothrow_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&> && ...);
+        rhs.template raw_visit<is_noexcept>([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj const& uj)
+            noexcept(is_noexcept)
         {
             if constexpr (j == std::variant_npos) {
                 this->visit_reset();
@@ -769,22 +969,22 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
                 using VT = maybe_wrapped::type;
                 static_assert(std::is_same_v<unwrap_recursive_t<VT>, unwrap_recursive_t<Uj>>);
 
-                this->raw_visit([this, &uj]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti& ti)
-                    noexcept(std::conjunction_v<detail::variant_nothrow_copy_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>)
+                this->template raw_visit<is_noexcept>([this, &uj]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti& ti)
+                    noexcept(is_noexcept)
                 {
                     constexpr std::size_t VTi = maybe_wrapped::index;
                     if constexpr (i == std::variant_npos) { // this is valueless, rhs holds value
-                        base_type::template construct_on_valueless<VTi>(uj);
+                        this->template construct_on_valueless<VTi>(uj);
 
                     } else if constexpr (std::is_same_v<unwrap_recursive_t<Ti>, unwrap_recursive_t<Uj>>) {
                         ti = uj;
 
                     } else if constexpr (std::is_nothrow_constructible_v<VT, Uj const&> || !std::is_nothrow_move_constructible_v<VT>) {
-                        base_type::template reset_construct<i, VTi>(uj);
+                        this->template reset_construct<i, VTi>(uj);
 
                     } else {
                         VT tmp(uj); // may throw
-                        base_type::template reset_construct<i, VTi>(std::move(tmp));
+                        this->template reset_construct<i, VTi>(std::move(tmp));
                     }
                 });
             }
@@ -797,13 +997,14 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         requires
             (!std::is_same_v<rvariant<Us...>, rvariant>) &&
             rvariant_set::subset_of<rvariant<Us...>, rvariant> &&
-            (!std::disjunction_v<std::is_same<rvariant<Us...>, unwrap_recursive_t<Ts>>...>) &&
-            std::conjunction_v<detail::variant_move_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>
+            (!std::is_same_v<rvariant<Us...>, unwrap_recursive_t<Ts>> && ...) &&
+            (detail::rvariant_alternative_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&> && ...)
     constexpr rvariant& operator=(rvariant<Us...>&& rhs)
-        noexcept(std::conjunction_v<detail::variant_nothrow_move_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>)
+        noexcept((detail::rvariant_alternative_nothrow_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&> && ...))
     {
-        std::move(rhs).raw_visit([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj&& uj)
-            noexcept(std::conjunction_v<detail::variant_nothrow_move_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>)
+        constexpr bool is_noexcept = (detail::rvariant_alternative_nothrow_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&> && ...);
+        std::move(rhs).template raw_visit<is_noexcept>([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj&& uj)
+            noexcept(is_noexcept)
         {
             if constexpr (j == std::variant_npos) {
                 this->visit_reset();
@@ -813,19 +1014,19 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
                 using VT = maybe_wrapped::type;
                 static_assert(std::is_same_v<unwrap_recursive_t<VT>, unwrap_recursive_t<Uj>>);
 
-                this->raw_visit([this, &uj]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti& ti)
-                    noexcept(std::conjunction_v<detail::variant_nothrow_move_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>)
+                this->template raw_visit<is_noexcept>([this, &uj]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti& ti)
+                    noexcept(is_noexcept)
                 {
                     static_assert(std::is_rvalue_reference_v<Uj&&>);
                     constexpr std::size_t VTi = maybe_wrapped::index;
                     if constexpr (i == std::variant_npos) { // this is valueless, rhs holds value
-                        base_type::template construct_on_valueless<VTi>(std::move(uj));  // NOLINT(bugprone-move-forwarding-reference)
+                        this->template construct_on_valueless<VTi>(std::move(uj));  // NOLINT(bugprone-move-forwarding-reference)
 
                     } else if constexpr (std::is_same_v<unwrap_recursive_t<Ti>, unwrap_recursive_t<Uj>>) {
                         ti = std::move(uj); // NOLINT(bugprone-move-forwarding-reference)
 
                     } else {
-                        base_type::template reset_construct<i, VTi>(std::move(uj));  // NOLINT(bugprone-move-forwarding-reference)
+                        this->template reset_construct<i, VTi>(std::move(uj));  // NOLINT(bugprone-move-forwarding-reference)
                     }
                 });
             }
@@ -842,7 +1043,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
             std::is_constructible_v<detail::select_maybe_wrapped_t<T, Ts...>, Args...>
     constexpr explicit rvariant(std::in_place_type_t<T>, Args&&... args)
         noexcept(std::is_nothrow_constructible_v<detail::select_maybe_wrapped_t<T, Ts...>, Args...>)
-        : base_type(std::in_place_index<detail::select_maybe_wrapped_index<T, Ts...>>, std::forward<Args>(args)...)
+        : rvariant(detail::primary_construct, std::in_place_index<detail::select_maybe_wrapped_index<T, Ts...>>, std::forward<Args>(args)...)
     {}
 
     // in_place_type<T>, il, args...
@@ -852,7 +1053,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
             std::is_constructible_v<detail::select_maybe_wrapped_t<T, Ts...>, std::initializer_list<U>&, Args...>
     constexpr explicit rvariant(std::in_place_type_t<T>, std::initializer_list<U> il, Args&&... args)
         noexcept(std::is_nothrow_constructible_v<detail::select_maybe_wrapped_t<T, Ts...>, std::initializer_list<U>&, Args...>)
-        : base_type(std::in_place_index<detail::select_maybe_wrapped_index<T, Ts...>>, il, std::forward<Args>(args)...)
+        : rvariant(detail::primary_construct, std::in_place_index<detail::select_maybe_wrapped_index<T, Ts...>>, il, std::forward<Args>(args)...)
     {}
 
     // in_place_index<I>, args...
@@ -862,7 +1063,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
             std::is_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>
     constexpr explicit rvariant(std::in_place_index_t<I>, Args&&... args) // NOLINT
         noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>)
-        : base_type(std::in_place_index<I>, std::forward<Args>(args)...)
+        : rvariant(detail::primary_construct, std::in_place_index<I>, std::forward<Args>(args)...)
     {}
 
     // in_place_index<I>, il, args...
@@ -872,7 +1073,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
             std::is_constructible_v<IRIS_PACK_INDEXING(I, Ts...), std::initializer_list<U>&, Args...>
     constexpr explicit rvariant(std::in_place_index_t<I>, std::initializer_list<U> il, Args&&... args) // NOLINT
         noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), std::initializer_list<U>&, Args...>)
-        : base_type(std::in_place_index<I>, il, std::forward<Args>(args)...)
+        : rvariant(detail::primary_construct, std::in_place_index<I>, il, std::forward<Args>(args)...)
     {}
 
     // -------------------------------------------
@@ -884,7 +1085,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     constexpr T& emplace(Args&&... args)
         noexcept(std::is_nothrow_constructible_v<detail::select_maybe_wrapped_t<T, Ts...>, Args...>) IRIS_LIFETIMEBOUND
     {
-        return base_type::template emplace_impl<detail::select_maybe_wrapped_index<T, Ts...>>(std::forward<Args>(args)...);
+        return this->template emplace_impl<detail::select_maybe_wrapped_index<T, Ts...>>(std::forward<Args>(args)...);
     }
 
     template<class T, class U, class... Args>
@@ -894,7 +1095,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     constexpr T& emplace(std::initializer_list<U> il, Args&&... args)
         noexcept(std::is_nothrow_constructible_v<detail::select_maybe_wrapped_t<T, Ts...>, std::initializer_list<U>&, Args...>) IRIS_LIFETIMEBOUND
     {
-        return base_type::template emplace_impl<detail::select_maybe_wrapped_index<T, Ts...>>(il, std::forward<Args>(args)...);
+        return this->template emplace_impl<detail::select_maybe_wrapped_index<T, Ts...>>(il, std::forward<Args>(args)...);
     }
 
     template<std::size_t I, class... Args>
@@ -904,7 +1105,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>) IRIS_LIFETIMEBOUND
     {
         static_assert(I < sizeof...(Ts));
-        return base_type::template emplace_impl<I>(std::forward<Args>(args)...);
+        return this->template emplace_impl<I>(std::forward<Args>(args)...);
     }
 
     template<std::size_t I, class U, class... Args>
@@ -914,7 +1115,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), std::initializer_list<U>&, Args...>) IRIS_LIFETIMEBOUND
     {
         static_assert(I < sizeof...(Ts));
-        return base_type::template emplace_impl<I>(il, std::forward<Args>(args)...);
+        return this->template emplace_impl<I>(il, std::forward<Args>(args)...);
     }
 
 
@@ -932,10 +1133,10 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
         } else if constexpr (sizeof...(Ts) * sizeof...(Ts) < 1024) {
         IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
-            this->raw_visit([this, &rhs]<std::size_t i, class ThisAlt>(std::in_place_index_t<i>, [[maybe_unused]] ThisAlt& this_alt)
+            this->template raw_visit<all_nothrow_swappable>([this, &rhs]<std::size_t i, class ThisAlt>(std::in_place_index_t<i>, [[maybe_unused]] ThisAlt& this_alt)
                 noexcept(all_nothrow_swappable)
             {
-                rhs.raw_visit([this, &rhs, &this_alt]<std::size_t j, class RhsAlt>(std::in_place_index_t<j>, [[maybe_unused]] RhsAlt& rhs_alt)
+                rhs.template raw_visit<all_nothrow_swappable>([this, &rhs, &this_alt]<std::size_t j, class RhsAlt>(std::in_place_index_t<j>, [[maybe_unused]] RhsAlt& rhs_alt)
                     noexcept(all_nothrow_swappable)
                 {
                     if constexpr (i == j) {
@@ -965,8 +1166,9 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         } else {
             if (index_ == rhs.index_) {
-                rhs.raw_visit([this]<std::size_t i, class RhsAlt>(std::in_place_index_t<i>, [[maybe_unused]] RhsAlt& rhs_alt)
-                    noexcept(std::conjunction_v<std::is_nothrow_swappable<Ts>...>)
+                constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_swappable<Ts>...>;
+                rhs.template raw_visit<is_noexcept>([this]<std::size_t i, class RhsAlt>(std::in_place_index_t<i>, [[maybe_unused]] RhsAlt& rhs_alt)
+                    noexcept(is_noexcept)
                 {
                     if constexpr (i != std::variant_npos) {
                         using std::swap;
@@ -983,7 +1185,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
     friend constexpr void swap(rvariant& v, rvariant& w)
         noexcept(noexcept(v.swap(w)))
-        requires (std::conjunction_v<std::conjunction<std::is_move_constructible<Ts>, std::is_swappable<Ts>>...>)
+        requires ((std::is_move_constructible_v<Ts> && std::is_swappable_v<Ts>) && ...)
     {
         v.swap(w);
     }
@@ -1013,8 +1215,9 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         )
     {
         if constexpr (rvariant_set::equivalent_to<rvariant<Us...>, rvariant>) {
-            return this->raw_visit([]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti const& ti) static
-                noexcept(std::is_nothrow_constructible_v<rvariant<Us...>, rvariant const&>) -> rvariant<Us...>
+            constexpr bool is_noexcept = std::is_nothrow_constructible_v<rvariant<Us...>, rvariant const&>;
+            return this->template raw_visit<is_noexcept>([]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti const& ti) static
+                noexcept(is_noexcept) -> rvariant<Us...>
             {
                 if constexpr (i == std::variant_npos) {
                     return rvariant<Us...>(detail::valueless);
@@ -1025,7 +1228,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
                 }
             });
         } else {
-            return this->raw_visit([]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti const& ti) static
+            return this->template raw_visit<false>([]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti const& ti) static
                 /* not noexcept */ -> rvariant<Us...>
             {
                 if constexpr (i == std::variant_npos) {
@@ -1053,8 +1256,9 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
         )
     {
         if constexpr (rvariant_set::equivalent_to<rvariant<Us...>, rvariant>) {
-            return std::move(*this).raw_visit([]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti&& ti) static
-                noexcept(std::is_nothrow_constructible_v<rvariant<Us...>, rvariant&&>) -> rvariant<Us...>
+            constexpr bool is_noexcept = std::is_nothrow_constructible_v<rvariant<Us...>, rvariant&&>;
+            return std::move(*this).template raw_visit<is_noexcept>([]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti&& ti) static
+                noexcept(is_noexcept) -> rvariant<Us...>
             {
                 if constexpr (i == std::variant_npos) {
                     return rvariant<Us...>(detail::valueless);
@@ -1066,7 +1270,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
                 }
             });
         } else {
-            return std::move(*this).raw_visit([]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti&& ti) static
+            return std::move(*this).template raw_visit<false>([]<std::size_t i, class Ti>(std::in_place_index_t<i>, [[maybe_unused]] Ti&& ti) static
                 /* not noexcept */ -> rvariant<Us...>
             {
                 if constexpr (i == std::variant_npos) {
@@ -1093,12 +1297,12 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     constexpr decltype(auto) visit(this Self&& self, Visitor&& vis)
         noexcept(noexcept(iris::visit(
             std::forward<Visitor>(vis),
-            (typename base_type::template like_rvariant_t<Self>)self
+            (like_rvariant_t<Self>)self
         )))
     {
         return iris::visit(
             std::forward<Visitor>(vis),
-            (typename base_type::template like_rvariant_t<Self>)self
+            (like_rvariant_t<Self>)self
         );
     }
 
@@ -1108,12 +1312,12 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     constexpr R visit(this Self&& self, Visitor&& vis)
         noexcept(noexcept(iris::visit<R>(
             std::forward<Visitor>(vis),
-            (typename base_type::template like_rvariant_t<Self>)self
+            (like_rvariant_t<Self>)self
         )))
     {
         return iris::visit<R>(
             std::forward<Visitor>(vis),
-            (typename base_type::template like_rvariant_t<Self>)self
+            (like_rvariant_t<Self>)self
         );
     }
 
@@ -1148,52 +1352,48 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     detail::raw_visit(Variant&&, Visitor&&)  // NOLINT(clang-diagnostic-microsoft-exception-spec)
         noexcept(detail::raw_visit_noexcept_all<Visitor, detail::forward_storage_t<Variant>>);
 
-    template<class Variant, class Visitor>
-    friend constexpr detail::raw_visit_result_t<Visitor, detail::forward_storage_t<Variant>>
-    detail::raw_visit_i(std::size_t, Variant&&, Visitor&&)  // NOLINT(clang-diagnostic-microsoft-exception-spec)
-        noexcept(detail::raw_visit_noexcept_all<Visitor, detail::forward_storage_t<Variant>>);
-
     template<class R, class Compare, class... Ts_>
     friend struct detail::relops_visitor;
 
     template<class... Ts_>
-        requires std::conjunction_v<cmp::relop_bool_expr<std::equal_to<>, Ts_>...>
+        requires (cmp::relop_bool_expr_v<std::equal_to<>, Ts_> && ...)
     friend constexpr bool operator==(rvariant<Ts_...> const&, rvariant<Ts_...> const&)
-        noexcept(std::conjunction_v<is_nothrow_directly_invocable_r<bool, std::equal_to<>, Ts_ const&, Ts_ const&>...>);
+        noexcept(detail::relops_visitor<bool, std::equal_to<>, Ts_...>::is_noexcept);
 
     template<class... Ts_>
-        requires std::conjunction_v<cmp::relop_bool_expr<std::not_equal_to<>, Ts_>...>
+        requires (cmp::relop_bool_expr_v<std::not_equal_to<>, Ts_> && ...)
     friend constexpr bool operator!=(rvariant<Ts_...> const&, rvariant<Ts_...> const&)
-        noexcept(std::conjunction_v<is_nothrow_directly_invocable_r<bool, std::not_equal_to<>, Ts_ const&, Ts_ const&>...>);
+        noexcept(detail::relops_visitor<bool, std::not_equal_to<>, Ts_...>::is_noexcept);
 
     template<class... Ts_>
-        requires std::conjunction_v<cmp::relop_bool_expr<std::less<>, Ts_>...>
+        requires (cmp::relop_bool_expr_v<std::less<>, Ts_> && ...)
     friend constexpr bool operator<(rvariant<Ts_...> const&, rvariant<Ts_...> const&)
-        noexcept(std::conjunction_v<is_nothrow_directly_invocable_r<bool, std::less<>, Ts_ const&, Ts_ const&>...>);
+        noexcept(detail::relops_visitor<bool, std::less<>, Ts_...>::is_noexcept);
 
     template<class... Ts_>
-        requires std::conjunction_v<cmp::relop_bool_expr<std::greater<>, Ts_>...>
+        requires (cmp::relop_bool_expr_v<std::greater<>, Ts_> && ...)
     friend constexpr bool operator>(rvariant<Ts_...> const&, rvariant<Ts_...> const&)
-        noexcept(std::conjunction_v<is_nothrow_directly_invocable_r<bool, std::greater<>, Ts_ const&, Ts_ const&>...>);
+        noexcept(detail::relops_visitor<bool, std::greater<>, Ts_...>::is_noexcept);
 
     template<class... Ts_>
-        requires std::conjunction_v<cmp::relop_bool_expr<std::less_equal<>, Ts_>...>
+        requires (cmp::relop_bool_expr_v<std::less_equal<>, Ts_> && ...)
     friend constexpr bool operator<=(rvariant<Ts_...> const&, rvariant<Ts_...> const&)
-        noexcept(std::conjunction_v<is_nothrow_directly_invocable_r<bool, std::less_equal<>, Ts_ const&, Ts_ const&>...>);
+        noexcept(detail::relops_visitor<bool, std::less_equal<>, Ts_...>::is_noexcept);
 
     template<class... Ts_>
-        requires std::conjunction_v<cmp::relop_bool_expr<std::greater_equal<>, Ts_>...>
+        requires (cmp::relop_bool_expr_v<std::greater_equal<>, Ts_> && ...)
     friend constexpr bool operator>=(rvariant<Ts_...> const&, rvariant<Ts_...> const&)
-        noexcept(std::conjunction_v<is_nothrow_directly_invocable_r<bool, std::greater_equal<>, Ts_ const&, Ts_ const&>...>);
+        noexcept(detail::relops_visitor<bool, std::greater_equal<>, Ts_...>::is_noexcept);
 
     template<class... Ts_>
         requires (std::three_way_comparable<Ts_> && ...)
     friend constexpr std::common_comparison_category_t<std::compare_three_way_result_t<Ts_>...>
     operator<=>(rvariant<Ts_...> const&, rvariant<Ts_...> const&)
-        noexcept(std::conjunction_v<is_nothrow_directly_invocable_r<
+        noexcept(detail::relops_visitor<
             std::common_comparison_category_t<std::compare_three_way_result_t<Ts_>...>,
-            std::compare_three_way, Ts_ const&, Ts_ const&
-        >...>);
+            std::compare_three_way,
+            Ts_...
+        >::is_noexcept);
 
     template<class... Ts_>
     friend constexpr rvariant<Ts_...> detail::make_valueless() noexcept;
@@ -1202,7 +1402,7 @@ private:
     // hack: reduce compile error by half on unrelated overloads
     template<std::same_as<detail::valueless_t> Valueless>
     constexpr explicit rvariant(Valueless const&) noexcept
-        : base_type(detail::valueless)
+        : index_{detail::variant_npos<sizeof...(Ts)>}
     {}
 
     template<class From, class To>
@@ -1436,7 +1636,7 @@ template<class T, class... Ts>
 get_if(rvariant<Ts...>* v) noexcept
 {
     constexpr std::size_t I = detail::exactly_once_index_v<T, rvariant<Ts...>>;
-    return get_if<I>(v);
+    return iris::get_if<I>(v);
 }
 
 template<class T, class... Ts>
@@ -1444,7 +1644,7 @@ template<class T, class... Ts>
 get_if(rvariant<Ts...> const* v) noexcept
 {
     constexpr std::size_t I = detail::exactly_once_index_v<T, rvariant<Ts...>>;
-    return get_if<I>(v);
+    return iris::get_if<I>(v);
 }
 
 // -------------------------------------------
@@ -1455,6 +1655,9 @@ template<class R, class Compare, class... Ts>
 struct relops_visitor
 {
     static_assert(sizeof...(Ts) > 0);
+
+    // Exception specification of the whole visitation, shared with the comparison operators
+    static constexpr bool is_noexcept = std::conjunction_v<is_nothrow_directly_invocable_r<R, Compare, Ts const&, Ts const&>...>;
 
     using Storage = make_variadic_union_t<Ts...>;
     Storage const& v_storage;  // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
@@ -1479,30 +1682,37 @@ struct relops_visitor
 
 
 template<class... Ts>
-    requires std::conjunction_v<cmp::relop_bool_expr<std::equal_to<>, Ts>...>
+    requires (cmp::relop_bool_expr_v<std::equal_to<>, Ts> && ...)
 [[nodiscard]] constexpr bool operator==(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
-    noexcept(std::conjunction_v<is_nothrow_directly_invocable_r<bool, std::equal_to<>, Ts const&, Ts const&>...>)
+    noexcept(detail::relops_visitor<bool, std::equal_to<>, Ts...>::is_noexcept)
 {
+    using Visitor = detail::relops_visitor<bool, std::equal_to<>, Ts...>;
     auto const vi = detail::valueless_bias<rvariant<Ts...>>(v.index_);
     auto const wi = detail::valueless_bias<rvariant<Ts...>>(w.index_);
-    return vi == wi && detail::raw_visit_i(wi, w, detail::relops_visitor<bool, std::equal_to<>, Ts...>{v.storage_});
+    // Not `vi == wi && ...`; MSVC normalizes the result of `&&` to 0 or 1 once again
+    if (vi != wi) return false;
+    return detail::raw_visit_i<Visitor::is_noexcept>(wi, w, Visitor{v.storage_});
 }
 
 template<class... Ts>
-    requires std::conjunction_v<cmp::relop_bool_expr<std::not_equal_to<>, Ts>...>
+    requires (cmp::relop_bool_expr_v<std::not_equal_to<>, Ts> && ...)
 [[nodiscard]] constexpr bool operator!=(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
-    noexcept(std::conjunction_v<is_nothrow_directly_invocable_r<bool, std::not_equal_to<>, Ts const&, Ts const&>...>)
+    noexcept(detail::relops_visitor<bool, std::not_equal_to<>, Ts...>::is_noexcept)
 {
+    using Visitor = detail::relops_visitor<bool, std::not_equal_to<>, Ts...>;
     auto const vi = detail::valueless_bias<rvariant<Ts...>>(v.index_);
     auto const wi = detail::valueless_bias<rvariant<Ts...>>(w.index_);
-    return vi != wi || detail::raw_visit_i(wi, w, detail::relops_visitor<bool, std::not_equal_to<>, Ts...>{v.storage_});
+    // Not `vi != wi || ...`; MSVC normalizes the result of `||` to 0 or 1 once again
+    if (vi != wi) return true;
+    return detail::raw_visit_i<Visitor::is_noexcept>(wi, w, Visitor{v.storage_});
 }
 
 template<class... Ts>
-    requires std::conjunction_v<cmp::relop_bool_expr<std::less<>, Ts>...>
+    requires (cmp::relop_bool_expr_v<std::less<>, Ts> && ...)
 [[nodiscard]] constexpr bool operator<(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
-    noexcept(std::conjunction_v<is_nothrow_directly_invocable_r<bool, std::less<>, Ts const&, Ts const&>...>)
+    noexcept(detail::relops_visitor<bool, std::less<>, Ts...>::is_noexcept)
 {
+    using Visitor = detail::relops_visitor<bool, std::less<>, Ts...>;
     auto const vi = detail::valueless_bias<rvariant<Ts...>>(v.index_);
     auto const wi = detail::valueless_bias<rvariant<Ts...>>(w.index_);
 
@@ -1535,40 +1745,43 @@ template<class... Ts>
     // enabling more aggressive optimization, which actually
     // introduces extra branch (unfortunately).
     return (vi < wi) |
-        ((vi == wi) && detail::raw_visit_i(wi, w, detail::relops_visitor<bool, std::less<>, Ts...>{v.storage_}));
+        ((vi == wi) && detail::raw_visit_i<Visitor::is_noexcept>(wi, w, Visitor{v.storage_}));
 }
 
 template<class... Ts>
-    requires std::conjunction_v<cmp::relop_bool_expr<std::greater<>, Ts>...>
+    requires (cmp::relop_bool_expr_v<std::greater<>, Ts> && ...)
 [[nodiscard]] constexpr bool operator>(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
-    noexcept(std::conjunction_v<is_nothrow_directly_invocable_r<bool, std::greater<>, Ts const&, Ts const&>...>)
+    noexcept(detail::relops_visitor<bool, std::greater<>, Ts...>::is_noexcept)
 {
+    using Visitor = detail::relops_visitor<bool, std::greater<>, Ts...>;
     auto const vi = detail::valueless_bias<rvariant<Ts...>>(v.index_);
     auto const wi = detail::valueless_bias<rvariant<Ts...>>(w.index_);
     return (vi > wi) |
-        ((vi == wi) && detail::raw_visit_i(wi, w, detail::relops_visitor<bool, std::greater<>, Ts...>{v.storage_}));
+        ((vi == wi) && detail::raw_visit_i<Visitor::is_noexcept>(wi, w, Visitor{v.storage_}));
 }
 
 template<class... Ts>
-    requires std::conjunction_v<cmp::relop_bool_expr<std::less_equal<>, Ts>...>
+    requires (cmp::relop_bool_expr_v<std::less_equal<>, Ts> && ...)
 [[nodiscard]] constexpr bool operator<=(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
-    noexcept(std::conjunction_v<is_nothrow_directly_invocable_r<bool, std::less_equal<>, Ts const&, Ts const&>...>)
+    noexcept(detail::relops_visitor<bool, std::less_equal<>, Ts...>::is_noexcept)
 {
+    using Visitor = detail::relops_visitor<bool, std::less_equal<>, Ts...>;
     auto const vi = detail::valueless_bias<rvariant<Ts...>>(v.index_);
     auto const wi = detail::valueless_bias<rvariant<Ts...>>(w.index_);
     return (vi < wi) |
-        ((vi == wi) && detail::raw_visit_i(wi, w, detail::relops_visitor<bool, std::less_equal<>, Ts...>{v.storage_}));
+        ((vi == wi) && detail::raw_visit_i<Visitor::is_noexcept>(wi, w, Visitor{v.storage_}));
 }
 
 template<class... Ts>
-    requires std::conjunction_v<cmp::relop_bool_expr<std::greater_equal<>, Ts>...>
+    requires (cmp::relop_bool_expr_v<std::greater_equal<>, Ts> && ...)
 [[nodiscard]] constexpr bool operator>=(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
-    noexcept(std::conjunction_v<is_nothrow_directly_invocable_r<bool, std::greater_equal<>, Ts const&, Ts const&>...>)
+    noexcept(detail::relops_visitor<bool, std::greater_equal<>, Ts...>::is_noexcept)
 {
+    using Visitor = detail::relops_visitor<bool, std::greater_equal<>, Ts...>;
     auto const vi = detail::valueless_bias<rvariant<Ts...>>(v.index_);
     auto const wi = detail::valueless_bias<rvariant<Ts...>>(w.index_);
     return (vi > wi) |
-        ((vi == wi) && detail::raw_visit_i(wi, w, detail::relops_visitor<bool, std::greater_equal<>, Ts...>{v.storage_}));
+        ((vi == wi) && detail::raw_visit_i<Visitor::is_noexcept>(wi, w, Visitor{v.storage_}));
 }
 
 
@@ -1576,23 +1789,21 @@ template<class... Ts>
     requires (std::three_way_comparable<Ts> && ...)
 [[nodiscard]] IRIS_FORCEINLINE constexpr std::common_comparison_category_t<std::compare_three_way_result_t<Ts>...>
 operator<=>(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
-    noexcept(std::conjunction_v<is_nothrow_directly_invocable_r<
+    noexcept(detail::relops_visitor<
         std::common_comparison_category_t<std::compare_three_way_result_t<Ts>...>,
-        std::compare_three_way, Ts const&, Ts const&
-    >...>)
+        std::compare_three_way,
+        Ts...
+    >::is_noexcept)
 {
+    using Visitor = detail::relops_visitor<
+        std::common_comparison_category_t<std::compare_three_way_result_t<Ts>...>,
+        std::compare_three_way,
+        Ts...
+    >;
     auto const vi = detail::valueless_bias<rvariant<Ts...>>(v.index_);
     auto const wi = detail::valueless_bias<rvariant<Ts...>>(w.index_);
     auto const comp = vi <=> wi;
-    return comp != 0 ? comp :
-        detail::raw_visit_i(
-            wi, w,
-            detail::relops_visitor<
-                std::common_comparison_category_t<std::compare_three_way_result_t<Ts>...>,
-                std::compare_three_way,
-                Ts...
-            >{v.storage_}
-        );
+    return comp != 0 ? comp : detail::raw_visit_i<Visitor::is_noexcept>(wi, w, Visitor{v.storage_});
 }
 
 }  // iris
@@ -1602,7 +1813,7 @@ namespace std {
 
 // https://eel.is/c++draft/variant.hash
 template<class... Ts>
-    requires std::conjunction_v<::iris::is_hash_enabled<std::remove_const_t<Ts>>...>
+    requires (::iris::is_hash_enabled_v<std::remove_const_t<Ts>> && ...)
 struct hash<::iris::rvariant<Ts...>>  // NOLINT(cert-dcl58-cpp)
 {
     [[nodiscard]] static /* constexpr */ std::size_t operator()(::iris::rvariant<Ts...> const& v)
@@ -1679,7 +1890,7 @@ struct hash<::iris::rvariant<Ts...>>  // NOLINT(cert-dcl58-cpp)
 namespace iris {
 
 template<class... Ts>
-    requires std::conjunction_v<is_hash_enabled<std::remove_const_t<Ts>>...>
+    requires (is_hash_enabled_v<std::remove_const_t<Ts>> && ...)
 [[nodiscard]] std::size_t hash_value(rvariant<Ts...> const& v)
     noexcept(std::conjunction_v<is_nothrow_hashable<std::remove_const_t<Ts>>...>)
 {

@@ -276,7 +276,7 @@ recursive_wrapper(Value)
 
 template<class T, class U>
 [[nodiscard]] constexpr bool operator==(recursive_wrapper<T> const& lhs, recursive_wrapper<U> const& rhs)
-    noexcept(noexcept(*lhs == *rhs))
+    // cannot be noexcept for recursive types
 {
     if (lhs.valueless_after_move() || rhs.valueless_after_move()) [[unlikely]] {
         return lhs.valueless_after_move() == rhs.valueless_after_move();
@@ -287,7 +287,7 @@ template<class T, class U>
 
 template<class T, class U>
 [[nodiscard]] constexpr bool operator==(recursive_wrapper<T> const& lhs, U const& rhs)
-    noexcept(noexcept(*lhs == rhs))
+    // cannot be noexcept for recursive types
 {
     if (lhs.valueless_after_move()) [[unlikely]] {
         return false;
@@ -309,7 +309,7 @@ recursive_wrapper_alloca(std::allocator_arg_t, Allocator, Value)
 
 template<class T, class TA, class U, class UA>
 [[nodiscard]] constexpr bool operator==(recursive_wrapper_alloca<T, TA> const& lhs, recursive_wrapper_alloca<U, UA> const& rhs)
-    noexcept(noexcept(*lhs == *rhs))
+    // cannot be noexcept for recursive types
 {
     if (lhs.valueless_after_move() || rhs.valueless_after_move()) [[unlikely]] {
         return lhs.valueless_after_move() == rhs.valueless_after_move();
@@ -320,7 +320,7 @@ template<class T, class TA, class U, class UA>
 
 template<class T, class A, class U>
 [[nodiscard]] constexpr bool operator==(recursive_wrapper_alloca<T, A> const& lhs, U const& rhs)
-    noexcept(noexcept(*lhs == rhs))
+    // cannot be noexcept for recursive types
 {
     if (lhs.valueless_after_move()) [[unlikely]] {
         return false;
@@ -390,6 +390,7 @@ template<class T, class A, class U>
 // ---------------------------------------------------
 // recursive_wrapper
 
+// recursive types must implement their own *non-defaulted* operator<=>; otherwise this leads to infinite recursive instantiation
 template<class T, class U>
 [[nodiscard]] constexpr auto operator<=>(recursive_wrapper<T> const& lhs, recursive_wrapper<U> const& rhs)
     // no explicit return type
@@ -397,6 +398,7 @@ template<class T, class U>
     return detail::rw_three_way_impl_00(lhs, rhs);
 }
 
+// recursive types must implement their own *non-defaulted* operator<=>; otherwise this leads to infinite recursive instantiation
 template<class T, class U>
 [[nodiscard]] constexpr auto operator<=>(recursive_wrapper<T> const& lhs, U const& rhs)
     // no explicit return type
@@ -407,6 +409,7 @@ template<class T, class U>
 // ---------------------------------------------------
 // recursive_wrapper_alloca
 
+// recursive types must implement their own *non-defaulted* operator<=>; otherwise this leads to infinite recursive instantiation
 template<class T, class TA, class U, class UA>
 [[nodiscard]] constexpr auto operator<=>(recursive_wrapper_alloca<T, TA> const& lhs, recursive_wrapper_alloca<U, UA> const& rhs)
     // no explicit return type
@@ -414,6 +417,7 @@ template<class T, class TA, class U, class UA>
     return detail::rw_three_way_impl_00(lhs, rhs);
 }
 
+// recursive types must implement their own *non-defaulted* operator<=>; otherwise this leads to infinite recursive instantiation
 template<class T, class A, class U>
 [[nodiscard]] constexpr auto operator<=>(recursive_wrapper_alloca<T, A> const& lhs, U const& rhs)
     // no explicit return type
