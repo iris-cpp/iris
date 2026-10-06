@@ -569,16 +569,47 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
         }
 #endif
 
+        // The paths below that construct a temporary first provide the strong exception-safety guarantee.
+        // They are taken only when the difference from the specification is not observable.
+        // See the comments on `detail::is_never_valueless_impl` for details.
+        constexpr bool is_tmp_trivial =
+            sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_destructible_v<T>;
+
         if constexpr (std::is_nothrow_constructible_v<T, Args...>) {
             this->template reset_construct_never_valueless<I>(std::forward<Args>(args)...);
 
-        } else {
-            // The paths below construct a temporary first, which provides the strong exception-safety guarantee.
-            // They are taken only when the difference from the specification is not observable.
-            // See the comments on `detail::is_never_valueless_impl` for details.
-            constexpr bool is_tmp_trivial =
-                sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_destructible_v<T>;
+        } else if constexpr (!need_destructor_call) {
+            // Nothing needs to be destroyed, so neither the old alternative nor the valueless state matters
+            // and no visit is needed. For the same alternative, the assignment of the temporary is replaced
+            // by the construction, which is not observable because T is trivial.
+            if constexpr (is_tmp_trivial && std::is_trivially_move_constructible_v<T>) {
+                static_assert(std::is_nothrow_constructible_v<T, T&&>);
+                if constexpr (sizeof...(Args) == 0) {
+                    T tmp = T(); // may throw
+                    detail::alternative_constructor<I>::construct(this->storage_, std::move(tmp)); // never throws
+                } else {
+                    T tmp(std::forward<Args>(args)...); // may throw
+                    detail::alternative_constructor<I>::construct(this->storage_, std::move(tmp)); // never throws
+                }
 
+            } else if constexpr (is_tmp_trivial && std::is_trivially_copy_constructible_v<T>) { // strange type...
+                static_assert(std::is_nothrow_constructible_v<T, T const&>);
+                if constexpr (sizeof...(Args) == 0) {
+                    T const tmp = T(); // may throw
+                    detail::alternative_constructor<I>::construct(this->storage_, tmp); // never throws
+                } else {
+                    T const tmp(std::forward<Args>(args)...); // may throw
+                    detail::alternative_constructor<I>::construct(this->storage_, tmp); // never throws
+                }
+
+            } else {
+                static_assert(!never_valueless);
+                this->index_ = detail::variant_npos<sizeof...(Ts)>;
+                detail::alternative_constructor<I>::construct(this->storage_, std::forward<Args>(args)...); // may throw
+            }
+            this->index_ = I;
+
+        } else {
             this->template raw_visit<false>([&, this]<std::size_t old_i, class T_old_i>(std::in_place_index_t<old_i>, T_old_i& t_old_i) {
                 static_assert(!std::is_reference_v<T_old_i>);
                 static_assert(!std::is_const_v<T_old_i>);
