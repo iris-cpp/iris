@@ -1683,7 +1683,9 @@ template<class... Ts>
     using Visitor = detail::relops_visitor<bool, std::equal_to<>, Ts...>;
     auto const vi = detail::valueless_bias<rvariant<Ts...>>(v.index_);
     auto const wi = detail::valueless_bias<rvariant<Ts...>>(w.index_);
-    return vi == wi && detail::raw_visit_i<Visitor::is_noexcept>(wi, w, Visitor{v.storage_});
+    // Not `vi == wi && ...`; MSVC normalizes the result of `&&` to 0 or 1 once again
+    if (vi != wi) return false;
+    return detail::raw_visit_i<Visitor::is_noexcept>(wi, w, Visitor{v.storage_});
 }
 
 template<class... Ts>
@@ -1694,7 +1696,9 @@ template<class... Ts>
     using Visitor = detail::relops_visitor<bool, std::not_equal_to<>, Ts...>;
     auto const vi = detail::valueless_bias<rvariant<Ts...>>(v.index_);
     auto const wi = detail::valueless_bias<rvariant<Ts...>>(w.index_);
-    return vi != wi || detail::raw_visit_i<Visitor::is_noexcept>(wi, w, Visitor{v.storage_});
+    // Not `vi != wi || ...`; MSVC normalizes the result of `||` to 0 or 1 once again
+    if (vi != wi) return true;
+    return detail::raw_visit_i<Visitor::is_noexcept>(wi, w, Visitor{v.storage_});
 }
 
 template<class... Ts>
