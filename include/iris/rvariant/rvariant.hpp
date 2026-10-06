@@ -478,7 +478,11 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
         noexcept(std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>)
     {
         static_assert(I != std::variant_npos);
-        visit_reset();
+        if constexpr (std::is_nothrow_constructible_v<IRIS_PACK_INDEXING(I, Ts...), Args...>) {
+            visit_destroy(); // the index is overwritten below without being observed
+        } else {
+            visit_reset();
+        }
         detail::alternative_constructor<I>::construct(storage_, std::forward<Args>(args)...);
         index_ = static_cast<detail::variant_index_t<sizeof...(Ts)>>(I);
     }
