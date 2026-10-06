@@ -221,6 +221,7 @@ public:
             (!detail::rvariant_trivially_copy_constructible<Ts...>) &&
             detail::rvariant_copy_constructible<Ts...>
     {
+    IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
         constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_copy_constructible<Ts>...>;
         w.template raw_visit<is_noexcept>([this]<std::size_t j, class T>(std::in_place_index_t<j>, [[maybe_unused]] T const& alt)
             noexcept(is_noexcept)
@@ -234,6 +235,7 @@ public:
                 index_ = detail::variant_npos<sizeof...(Ts)>;
             }
         });
+    IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     }
 
     constexpr rvariant(rvariant&&) = default;
@@ -244,6 +246,7 @@ public:
             (!detail::rvariant_trivially_move_constructible<Ts...>) &&
             detail::rvariant_move_constructible<Ts...>
     {
+    IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
         constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_move_constructible<Ts>...>;
         std::move(w).template raw_visit<is_noexcept>([this]<std::size_t j, class T>(std::in_place_index_t<j>, [[maybe_unused]] T&& alt)
             noexcept(is_noexcept)
@@ -258,6 +261,7 @@ public:
                 index_ = detail::variant_npos<sizeof...(Ts)>;
             }
         });
+    IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     }
 
     constexpr rvariant& operator=(rvariant const&)
@@ -922,6 +926,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     constexpr rvariant(rvariant<Us...>&& w)
         noexcept(std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>)
     {
+    IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
         constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_constructible<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>;
         std::move(w).template raw_visit<is_noexcept>([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj&& uj)
             noexcept(is_noexcept)
@@ -937,6 +942,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
                 this->index_ = detail::variant_npos<sizeof...(Ts)>;
             }
         });
+    IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     }
 
     // --------------------------------------
