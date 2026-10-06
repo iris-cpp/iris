@@ -76,7 +76,16 @@ struct MC_Thrower : detail::Thrower_base
 {
 public:
     using MC_Thrower::Thrower_base::Thrower_base;
-    using MC_Thrower::Thrower_base::operator=;
+
+    // Not `using Thrower_base::operator=;` because IntelliSense/ReSharper's `std::is_assignable`
+    // does not see assignment operators brought in by a using-declaration
+    template<class Tag>
+        requires (!std::is_same_v<Tag, MC_Thrower>) && std::is_assignable_v<Thrower_base&, Tag const&>
+    MC_Thrower& operator=(Tag const& tag) noexcept(std::is_nothrow_assignable_v<Thrower_base&, Tag const&>)
+    {
+        Thrower_base::operator=(tag);
+        return *this;
+    }
 
     MC_Thrower() noexcept : Thrower_base() {}
     MC_Thrower(MC_Thrower const&) noexcept : Thrower_base() {}
@@ -130,21 +139,19 @@ struct HashForwarded
 }  // unit_test
 
 
-namespace std {
-
 template<class T>
-struct hash<::unit_test::HashForwarded<T>>
+struct std::hash<::unit_test::HashForwarded<T>>  // NOLINT(bugprone-std-namespace-modification)
 {
-    size_t operator()(::unit_test::HashForwarded<T> const& v) const
+    std::size_t operator()(::unit_test::HashForwarded<T> const& v) const
     {
         return std::hash<T>{}(v.value);
     }
 };
 
 template<class charT>
-struct formatter<::unit_test::MC_Thrower, charT>  // NOLINT(cert-dcl58-cpp)
+struct std::formatter<::unit_test::MC_Thrower, charT>  // NOLINT(cert-dcl58-cpp)
 {
-    static constexpr typename std::basic_format_parse_context<charT>::const_iterator
+    static constexpr std::basic_format_parse_context<charT>::const_iterator
     parse(std::basic_format_parse_context<charT>& ctx)
     {
         if (ctx.begin() == ctx.end()) return ctx.begin();
@@ -158,7 +165,5 @@ struct formatter<::unit_test::MC_Thrower, charT>  // NOLINT(cert-dcl58-cpp)
         return ctx.out();
     }
 };
-
-} // std
 
 #endif

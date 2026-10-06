@@ -150,11 +150,14 @@ inline constexpr primary_construct_t primary_construct{};
 //     being an assignment operator at all ([class.copy.assign]/1).
 //   - A `= default` assignment operator whose constraints are not satisfied makes them declare an
 //     implicit move assignment, and the implicit assignment operators of a derived class are
-//     computed from it. A deleted declaration that is selected exactly when neither of the other two
-//     is prevents this.
+//     computed from it. An additional declaration that is selected exactly when neither of the
+//     other two is prevents this: a deleted copy assignment, and a move assignment that forwards to
+//     the copy assignment (or a deleted one if the copy assignment is not usable either), because
+//     a move assignment that does not participate must fall back to the copy assignment.
 // Constructors and destructors are not affected.
 struct rvariant_not_copy_assignable { rvariant_not_copy_assignable() = delete; };
 struct rvariant_not_move_assignable { rvariant_not_move_assignable() = delete; };
+struct rvariant_not_move_assignable_fallback { rvariant_not_move_assignable_fallback() = delete; };
 #endif
 
 template<class... Ts>
@@ -359,10 +362,29 @@ public:
     }
 
 #if defined(__INTELLISENSE__) || defined(__RESHARPER__)
+    constexpr rvariant& operator=(
+        std::conditional_t<
+            (!detail::rvariant_trivially_move_assignable<Ts...>) &&
+            (!detail::rvariant_move_assignable<Ts...>) &&
+            detail::rvariant_copy_assignable<Ts...>,
+            rvariant,
+            detail::rvariant_not_move_assignable_fallback
+        >&& rhs
+    )
+        noexcept(detail::rvariant_nothrow_copy_assignable<Ts...>)
+        requires
+            (!detail::rvariant_trivially_move_assignable<Ts...>) &&
+            (!detail::rvariant_move_assignable<Ts...>) &&
+            detail::rvariant_copy_assignable<Ts...>
+    {
+        return *this = static_cast<rvariant const&>(rhs);
+    }
+
     constexpr rvariant& operator=(rvariant&&)
         requires
             (!detail::rvariant_trivially_move_assignable<Ts...>) &&
-            (!detail::rvariant_move_assignable<Ts...>)
+            (!detail::rvariant_move_assignable<Ts...>) &&
+            (!detail::rvariant_copy_assignable<Ts...>)
         = delete;
 #endif
 
