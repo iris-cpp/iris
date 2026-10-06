@@ -133,6 +133,36 @@ struct variant_nothrow_assignable : std::conjunction<std::is_nothrow_constructib
 template<class R, class Compare, class... Ts>
 struct relops_visitor;
 
+// https://eel.is/c++draft/variant.ctor
+// https://eel.is/c++draft/variant.dtor
+// https://eel.is/c++draft/variant.assign
+template<class... Ts>
+concept rvariant_trivially_copy_constructible = (std::is_trivially_copy_constructible_v<Ts> && ...);
+
+template<class... Ts>
+concept rvariant_copy_constructible = (std::is_copy_constructible_v<Ts> && ...);
+
+template<class... Ts>
+concept rvariant_trivially_move_constructible = (std::is_trivially_move_constructible_v<Ts> && ...);
+
+template<class... Ts>
+concept rvariant_move_constructible = (std::is_move_constructible_v<Ts> && ...);
+
+template<class... Ts>
+concept rvariant_trivially_copy_assignable = ((std::is_trivially_destructible_v<Ts> && std::is_trivially_copy_constructible_v<Ts> && std::is_trivially_copy_assignable_v<Ts>) && ...);
+
+template<class... Ts>
+concept rvariant_copy_assignable = ((std::is_copy_constructible_v<Ts> && std::is_copy_assignable_v<Ts>) && ...);
+
+template<class... Ts>
+concept rvariant_trivially_move_assignable = ((std::is_trivially_destructible_v<Ts> && std::is_trivially_move_constructible_v<Ts> && std::is_trivially_move_assignable_v<Ts>) && ...);
+
+template<class... Ts>
+concept rvariant_move_assignable = ((std::is_move_constructible_v<Ts> && std::is_move_assignable_v<Ts>) && ...);
+
+template<class... Ts>
+concept rvariant_trivially_destructible = (std::is_trivially_destructible_v<Ts> && ...);
+
 // Selects the private constructor that every other constructor delegates to
 struct primary_construct_t
 {
@@ -209,18 +239,13 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
 IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
 
 public:
-    // Conditionally trivial special member functions
-    // https://eel.is/c++draft/variant.ctor, https://eel.is/c++draft/variant.dtor, https://eel.is/c++draft/variant.assign
-
-    rvariant(rvariant const&)
-        requires std::conjunction_v<std::is_trivially_copy_constructible<Ts>...>
-        = default;
+    constexpr rvariant(rvariant const&) = default;
 
     constexpr rvariant(rvariant const& w)
         noexcept(std::conjunction_v<std::is_nothrow_copy_constructible<Ts>...>)
         requires
-            (!std::conjunction_v<std::is_trivially_copy_constructible<Ts>...>) &&
-            std::conjunction_v<std::is_copy_constructible<Ts>...>
+            (!detail::rvariant_trivially_copy_constructible<Ts...>) &&
+            detail::rvariant_copy_constructible<Ts...>
     {
         constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_copy_constructible<Ts>...>;
         w.template raw_visit<is_noexcept>([this]<std::size_t j, class T>(std::in_place_index_t<j>, [[maybe_unused]] T const& alt)
@@ -236,15 +261,13 @@ public:
         });
     }
 
-    rvariant(rvariant&&)
-        requires std::conjunction_v<std::is_trivially_move_constructible<Ts>...>
-        = default;
+    constexpr rvariant(rvariant&&) = default;
 
     constexpr rvariant(rvariant&& w)
         noexcept(std::conjunction_v<std::is_nothrow_move_constructible<Ts>...>)
         requires
-            (!std::conjunction_v<std::is_trivially_move_constructible<Ts>...>) &&
-            std::conjunction_v<std::is_move_constructible<Ts>...>
+            (!detail::rvariant_trivially_move_constructible<Ts...>) &&
+            detail::rvariant_move_constructible<Ts...>
     {
         constexpr bool is_noexcept = std::conjunction_v<std::is_nothrow_move_constructible<Ts>...>;
         std::move(w).template raw_visit<is_noexcept>([this]<std::size_t j, class T>(std::in_place_index_t<j>, [[maybe_unused]] T&& alt)
@@ -261,23 +284,15 @@ public:
         });
     }
 
-    rvariant& operator=(rvariant const&)
-        requires std::conjunction_v<
-            std::is_trivially_destructible<Ts>...,
-            std::is_trivially_copy_constructible<Ts>...,
-            std::is_trivially_copy_assignable<Ts>...
-        >
+    constexpr rvariant& operator=(rvariant const&)
+        requires detail::rvariant_trivially_copy_assignable<Ts...>
         = default;
 
     constexpr rvariant& operator=(
 #if defined(__INTELLISENSE__) || defined(__RESHARPER__)
         std::conditional_t<
-            (!std::conjunction_v<
-                std::is_trivially_destructible<Ts>...,
-                std::is_trivially_copy_constructible<Ts>...,
-                std::is_trivially_copy_assignable<Ts>...
-            >) &&
-            std::conjunction_v<std::is_copy_constructible<Ts>..., std::is_copy_assignable<Ts>...>,
+            (!detail::rvariant_trivially_copy_assignable<Ts...>) &&
+            detail::rvariant_copy_assignable<Ts...>,
             rvariant,
             detail::rvariant_not_copy_assignable
         > const& rhs
@@ -287,12 +302,8 @@ public:
     )
         noexcept(std::conjunction_v<detail::variant_nothrow_copy_assignable<Ts>...>)
         requires
-            (!std::conjunction_v<
-                std::is_trivially_destructible<Ts>...,
-                std::is_trivially_copy_constructible<Ts>...,
-                std::is_trivially_copy_assignable<Ts>...
-            >) &&
-            std::conjunction_v<std::is_copy_constructible<Ts>..., std::is_copy_assignable<Ts>...>
+            (!detail::rvariant_trivially_copy_assignable<Ts...>) &&
+            detail::rvariant_copy_assignable<Ts...>
     {
     IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
         constexpr bool is_noexcept = std::conjunction_v<detail::variant_nothrow_copy_assignable<Ts>...>;
@@ -326,34 +337,22 @@ public:
     }
 
 #if defined(__INTELLISENSE__) || defined(__RESHARPER__)
-    rvariant& operator=(rvariant const&)
+    constexpr rvariant& operator=(rvariant const&)
         requires
-            (!std::conjunction_v<
-                std::is_trivially_destructible<Ts>...,
-                std::is_trivially_copy_constructible<Ts>...,
-                std::is_trivially_copy_assignable<Ts>...
-            >) &&
-            (!std::conjunction_v<std::is_copy_constructible<Ts>..., std::is_copy_assignable<Ts>...>)
+            (!detail::rvariant_trivially_copy_assignable<Ts...>) &&
+            (!detail::rvariant_copy_assignable<Ts...>)
         = delete;
 #endif
 
-    rvariant& operator=(rvariant&&)
-        requires std::conjunction_v<
-            std::is_trivially_destructible<Ts>...,
-            std::is_trivially_move_constructible<Ts>...,
-            std::is_trivially_move_assignable<Ts>...
-        >
+    constexpr rvariant& operator=(rvariant&&)
+        requires detail::rvariant_trivially_move_assignable<Ts...>
         = default;
 
     constexpr rvariant& operator=(
 #if defined(__INTELLISENSE__) || defined(__RESHARPER__)
         std::conditional_t<
-            (!std::conjunction_v<
-                std::is_trivially_destructible<Ts>...,
-                std::is_trivially_move_constructible<Ts>...,
-                std::is_trivially_move_assignable<Ts>...
-            >) &&
-            std::conjunction_v<std::is_move_constructible<Ts>..., std::is_move_assignable<Ts>...>,
+            (!detail::rvariant_trivially_move_assignable<Ts...>) &&
+            detail::rvariant_move_assignable<Ts...>,
             rvariant,
             detail::rvariant_not_move_assignable
         >&& rhs
@@ -363,12 +362,8 @@ public:
     )
         noexcept(std::conjunction_v<detail::variant_nothrow_move_assignable<Ts>...>)
         requires
-            (!std::conjunction_v<
-                std::is_trivially_destructible<Ts>...,
-                std::is_trivially_move_constructible<Ts>...,
-                std::is_trivially_move_assignable<Ts>...
-            >) &&
-            std::conjunction_v<std::is_move_constructible<Ts>..., std::is_move_assignable<Ts>...>
+            (!detail::rvariant_trivially_move_assignable<Ts...>) &&
+            detail::rvariant_move_assignable<Ts...>
     {
         constexpr bool is_noexcept = std::conjunction_v<detail::variant_nothrow_move_assignable<Ts>...>;
         std::move(rhs).template raw_visit<is_noexcept>([this]<std::size_t j, class T>(std::in_place_index_t<j>, [[maybe_unused]] T&& rhs_alt)
@@ -393,23 +388,17 @@ public:
     }
 
 #if defined(__INTELLISENSE__) || defined(__RESHARPER__)
-    rvariant& operator=(rvariant&&)
+    constexpr rvariant& operator=(rvariant&&)
         requires
-            (!std::conjunction_v<
-                std::is_trivially_destructible<Ts>...,
-                std::is_trivially_move_constructible<Ts>...,
-                std::is_trivially_move_assignable<Ts>...
-            >) &&
-            (!std::conjunction_v<std::is_move_constructible<Ts>..., std::is_move_assignable<Ts>...>)
+            (!detail::rvariant_trivially_move_assignable<Ts...>) &&
+            (!detail::rvariant_move_assignable<Ts...>)
         = delete;
 #endif
 
-    ~rvariant()
-        requires std::conjunction_v<std::is_trivially_destructible<Ts>...>
-        = default;
+    constexpr ~rvariant() = default;
 
     constexpr ~rvariant() noexcept
-        requires (!std::conjunction_v<std::is_trivially_destructible<Ts>...>)
+        requires (!detail::rvariant_trivially_destructible<Ts...>)
     {
         visit_destroy();
     }
