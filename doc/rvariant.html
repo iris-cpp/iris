@@ -902,6 +902,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 <ul class="sectlevel2">
 <li><a href="#rvariant.recursive.general">General <span class="slug">[rvariant.recursive.general]</span></a></li>
 <li><a href="#rvariant.recursive.ctor">Constructors</a></li>
+<li><a href="#rvariant.recursive.relops">Comparisons</a></li>
 </ul>
 </li>
 <li><a href="#rvariant.recursive.helper"><code>recursive_wrapper</code> helper utilities <span class="slug">[rvariant.recursive.helper]</span></a></li>
@@ -2818,6 +2819,45 @@ constexpr <span class="underline">/* not explicit */</span> recursive_wrapper_al
 </div>
 </li>
 </ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="rvariant.recursive.relops"><a class="anchor" href="#rvariant.recursive.relops"></a>Comparisons</h3>
+<div class="paragraph">
+<p>Effectively overrides only the ones listed below; rest are the same as <code>std::indirect</code> counterparts. <sup><a href="https://eel.is/cdraft/indirect.relops[[spec\]]^ ^https://eel.is/cdraft/indirect.comp.with.t">[spec]</a></sup></p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-cpp hljs" data-lang="cpp">template&lt;class T, class A, class U, class AA&gt;
+constexpr bool operator==(recursive_wrapper_alloca&lt;T, A&gt; const&amp; lhs, recursive_wrapper_alloca&lt;U, AA&gt; const&amp; rhs)
+  <span class="underline">/* no noexcept-specifier */</span>;<span class="candidate">// 1</span>
+
+template&lt;class T, class A, class U&gt;
+constexpr bool operator==(recursive_wrapper_alloca&lt;T, A&gt; const&amp; lhs, U const&amp; rhs)
+  <span class="underline">/* no noexcept-specifier */</span>;<span class="candidate">// 2</span></code></pre>
+</div>
+</div>
+<div class="ulist candidates">
+<ul>
+<li>
+<p><span class="candidate">1-2)</span> Equivalent to the <code>std::indirect</code> counterparts, except that <span class="underline">they have no <em>noexcept-specifier</em></span>.</p>
+<div class="paragraph">
+<p><strong><em>Note:</em></strong> The <em>noexcept-specifier</em> of the <code>std::indirect</code> counterparts depends on the comparison of <code>T</code>. Since an exception specification is needed whenever the function is selected by overload resolution, such a <em>noexcept-specifier</em> makes the comparison of a recursive type depend on itself; for example, if a class <code>X</code> has a defaulted <code>operator==</code> and contains <code>rvariant&lt;&#8230;&#8203;, recursive_wrapper&lt;X&gt;&gt;</code>, checking the constraints of <code>rvariant</code>'s <code>operator==</code> requires the comparison of <code>X</code>, which in turn requires checking the same constraints. Some compilers (e.g. GCC) reject such a program. The <em>noexcept-specifier</em> is omitted to break this recursion.</p>
+</div>
+</li>
+</ul>
+</div>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-warning" title="Warning"></i>
+</td>
+<td class="content">
+<span class="underline">Recursive types must implement their own <strong>non-defaulted</strong> <code>operator&lt;=&gt;</code>.</span> For a class <code>X</code> that contains <code>rvariant&lt;&#8230;&#8203;, recursive_wrapper&lt;X&gt;&gt;</code>, a defaulted <code>operator&lt;=&gt;</code> of <code>X</code> requires the result of <code>rvariant</code>'s <code>operator&lt;=&gt;</code>, whose constraints and return type in turn require the result of comparing <code>X</code> through <code>recursive_wrapper&lt;X&gt;</code>. This leads to infinite recursive instantiation, regardless of whether the return type of the defaulted <code>operator&lt;=&gt;</code> is <code>auto</code> or a specific comparison category type. This is a limitation of the language itself; standard containers have a similar limitation (e.g. a class <code>X</code> that contains <code>std::vector&lt;X&gt;</code> cannot have a defaulted <code>operator&lt;=&gt;</code> whose return type is <code>auto</code>).
+</td>
+</tr>
+</table>
 </div>
 </div>
 </div>
