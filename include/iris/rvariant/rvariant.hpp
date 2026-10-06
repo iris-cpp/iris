@@ -86,36 +86,6 @@ template<class T, class Variant>
 inline constexpr std::size_t exactly_once_index_v = exactly_once_index<T, Variant>::value;
 
 
-template<class T, class U = T const&>
-struct variant_copy_assignable : std::conjunction<std::is_constructible<T, U>, std::is_assignable<T&, U>>
-{
-    static_assert(!std::is_reference_v<T>);
-    static_assert(std::is_lvalue_reference_v<U>);
-};
-
-template<class T, class U = T const&>
-struct variant_nothrow_copy_assignable : std::conjunction<std::is_nothrow_constructible<T, U>, std::is_nothrow_assignable<T&, U>>
-{
-    static_assert(!std::is_reference_v<T>);
-    static_assert(std::is_lvalue_reference_v<U>);
-    static_assert(variant_copy_assignable<T, U>::value);
-};
-
-template<class T, class U = T&&>
-struct variant_move_assignable : std::conjunction<std::is_constructible<T, U>, std::is_assignable<T&, U>>
-{
-    static_assert(!std::is_reference_v<T>);
-    static_assert(std::is_rvalue_reference_v<U>);
-};
-
-template<class T, class U = T&&>
-struct variant_nothrow_move_assignable : std::conjunction<std::is_nothrow_constructible<T, U>, std::is_nothrow_assignable<T&, U>>
-{
-    static_assert(!std::is_reference_v<T>);
-    static_assert(std::is_rvalue_reference_v<U>);
-    static_assert(variant_move_assignable<T, U>::value);
-};
-
 template<class T, class U>
 struct variant_assignable : std::conjunction<std::is_constructible<T, U>, std::is_assignable<T&, U>>
 {
@@ -159,6 +129,12 @@ concept rvariant_trivially_move_assignable = ((std::is_trivially_destructible_v<
 
 template<class... Ts>
 concept rvariant_move_assignable = ((std::is_move_constructible_v<Ts> && std::is_move_assignable_v<Ts>) && ...);
+
+template<class... Ts>
+concept rvariant_nothrow_copy_assignable = ((std::is_nothrow_copy_constructible_v<Ts> && std::is_nothrow_copy_assignable_v<Ts>) && ...);
+
+template<class... Ts>
+concept rvariant_nothrow_move_assignable = ((std::is_nothrow_move_constructible_v<Ts> && std::is_nothrow_move_assignable_v<Ts>) && ...);
 
 template<class... Ts>
 concept rvariant_trivially_destructible = (std::is_trivially_destructible_v<Ts> && ...);
@@ -300,13 +276,13 @@ public:
         rvariant const& rhs
 #endif
     )
-        noexcept(std::conjunction_v<detail::variant_nothrow_copy_assignable<Ts>...>)
+        noexcept(detail::rvariant_nothrow_copy_assignable<Ts...>)
         requires
             (!detail::rvariant_trivially_copy_assignable<Ts...>) &&
             detail::rvariant_copy_assignable<Ts...>
     {
     IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
-        constexpr bool is_noexcept = std::conjunction_v<detail::variant_nothrow_copy_assignable<Ts>...>;
+        constexpr bool is_noexcept = detail::rvariant_nothrow_copy_assignable<Ts...>;
         rhs.template raw_visit<is_noexcept>([this]<std::size_t j, class T>(std::in_place_index_t<j>, T const& rhs_alt)
             noexcept(is_noexcept)
         {
@@ -360,12 +336,12 @@ public:
         rvariant&& rhs
 #endif
     )
-        noexcept(std::conjunction_v<detail::variant_nothrow_move_assignable<Ts>...>)
+        noexcept(detail::rvariant_nothrow_move_assignable<Ts...>)
         requires
             (!detail::rvariant_trivially_move_assignable<Ts...>) &&
             detail::rvariant_move_assignable<Ts...>
     {
-        constexpr bool is_noexcept = std::conjunction_v<detail::variant_nothrow_move_assignable<Ts>...>;
+        constexpr bool is_noexcept = detail::rvariant_nothrow_move_assignable<Ts...>;
         std::move(rhs).template raw_visit<is_noexcept>([this]<std::size_t j, class T>(std::in_place_index_t<j>, [[maybe_unused]] T&& rhs_alt)
             noexcept(is_noexcept)
         {
@@ -862,11 +838,11 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
             (!std::is_same_v<rvariant<Us...>, rvariant>) &&
             rvariant_set::subset_of<rvariant<Us...>, rvariant> &&
             (!std::disjunction_v<std::is_same<rvariant<Us...>, unwrap_recursive_t<Ts>>...>) &&
-            std::conjunction_v<detail::variant_copy_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>
+            std::conjunction_v<detail::variant_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>
     constexpr rvariant& operator=(rvariant<Us...> const& rhs)
-        noexcept(std::conjunction_v<detail::variant_nothrow_copy_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>)
+        noexcept(std::conjunction_v<detail::variant_nothrow_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>)
     {
-        constexpr bool is_noexcept = std::conjunction_v<detail::variant_nothrow_copy_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>;
+        constexpr bool is_noexcept = std::conjunction_v<detail::variant_nothrow_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us const&>...>;
         rhs.template raw_visit<is_noexcept>([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj const& uj)
             noexcept(is_noexcept)
         {
@@ -907,11 +883,11 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
             (!std::is_same_v<rvariant<Us...>, rvariant>) &&
             rvariant_set::subset_of<rvariant<Us...>, rvariant> &&
             (!std::disjunction_v<std::is_same<rvariant<Us...>, unwrap_recursive_t<Ts>>...>) &&
-            std::conjunction_v<detail::variant_move_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>
+            std::conjunction_v<detail::variant_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>
     constexpr rvariant& operator=(rvariant<Us...>&& rhs)
-        noexcept(std::conjunction_v<detail::variant_nothrow_move_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>)
+        noexcept(std::conjunction_v<detail::variant_nothrow_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>)
     {
-        constexpr bool is_noexcept = std::conjunction_v<detail::variant_nothrow_move_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>;
+        constexpr bool is_noexcept = std::conjunction_v<detail::variant_nothrow_assignable<detail::select_maybe_wrapped_t<unwrap_recursive_t<Us>, Ts...>, Us&&>...>;
         std::move(rhs).template raw_visit<is_noexcept>([this]<std::size_t j, class Uj>(std::in_place_index_t<j>, [[maybe_unused]] Uj&& uj)
             noexcept(is_noexcept)
         {
