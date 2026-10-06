@@ -573,6 +573,12 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
             this->template reset_construct_never_valueless<I>(std::forward<Args>(args)...);
 
         } else {
+            // The paths below construct a temporary first, which provides the strong exception-safety guarantee.
+            // They are taken only when the difference from the specification is not observable.
+            // See the comments on `detail::is_never_valueless_impl` for details.
+            constexpr bool is_tmp_trivial =
+                sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_destructible_v<T>;
+
             this->template raw_visit<false>([&, this]<std::size_t old_i, class T_old_i>(std::in_place_index_t<old_i>, T_old_i& t_old_i) {
                 static_assert(!std::is_reference_v<T_old_i>);
                 static_assert(!std::is_const_v<T_old_i>);
@@ -582,10 +588,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                     this->template construct_on_valueless<I>(std::forward<Args>(args)...);
 
                 } else if constexpr (old_i == I) { // same alternative
-                    if constexpr (
-                        (sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_move_assignable_v<T>) ||
-                        is_recursive_wrapper_v<T>
-                    ) {
+                    if constexpr (is_recursive_wrapper_v<T> || (is_tmp_trivial && std::is_trivially_move_assignable_v<T>)) {
                         static_assert(noexcept(t_old_i = std::declval<T&&>()));
                         if constexpr (sizeof...(Args) == 0) {
                             T tmp = T(); // may throw
@@ -595,9 +598,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                             t_old_i = std::move(tmp);
                         }
 
-                    } else if constexpr (
-                        sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_copy_assignable_v<T>
-                    ) { // strange type...
+                    } else if constexpr (is_tmp_trivial && std::is_trivially_copy_assignable_v<T>) { // strange type...
                         static_assert(noexcept(t_old_i = std::declval<T const&>()));
                         if constexpr (sizeof...(Args) == 0) {
                             T const tmp = T(); // may throw
@@ -605,6 +606,30 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                         } else {
                             T const tmp(std::forward<Args>(args)...); // may throw
                             t_old_i = tmp;
+                        }
+
+                    } else if constexpr (is_tmp_trivial && std::is_trivially_move_constructible_v<T>) { // not assignable
+                        static_assert(std::is_nothrow_constructible_v<T, T&&>);
+                        if constexpr (sizeof...(Args) == 0) {
+                            T tmp = T(); // may throw
+                            t_old_i.~T_old_i();
+                            detail::alternative_constructor<I>::construct(this->storage_, std::move(tmp)); // never throws
+                        } else {
+                            T tmp(std::forward<Args>(args)...); // may throw
+                            t_old_i.~T_old_i();
+                            detail::alternative_constructor<I>::construct(this->storage_, std::move(tmp)); // never throws
+                        }
+
+                    } else if constexpr (is_tmp_trivial && std::is_trivially_copy_constructible_v<T>) { // not assignable, strange type...
+                        static_assert(std::is_nothrow_constructible_v<T, T const&>);
+                        if constexpr (sizeof...(Args) == 0) {
+                            T const tmp = T(); // may throw
+                            t_old_i.~T_old_i();
+                            detail::alternative_constructor<I>::construct(this->storage_, tmp); // never throws
+                        } else {
+                            T const tmp(std::forward<Args>(args)...); // may throw
+                            t_old_i.~T_old_i();
+                            detail::alternative_constructor<I>::construct(this->storage_, tmp); // never throws
                         }
 
                     } else {
@@ -617,9 +642,13 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                     }
 
                 } else { // another alternative, possibly of the same type
+                    // The old alternative is destroyed after the temporary is constructed
+                    constexpr bool is_old_destruction_delayable =
+                        std::is_trivially_destructible_v<T_old_i> || is_recursive_wrapper_v<T_old_i>;
+
                     if constexpr (
-                        (sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_move_constructible_v<T>) ||
-                        is_recursive_wrapper_v<T>
+                        is_recursive_wrapper_v<T> ||
+                        (is_tmp_trivial && is_old_destruction_delayable && std::is_trivially_move_constructible_v<T>)
                     ) {
                         static_assert(std::is_nothrow_constructible_v<T, T&&>);
                         if constexpr (sizeof...(Args) == 0) {
@@ -634,7 +663,7 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
                         this->index_ = I;
 
                     } else if constexpr (
-                        sizeof(T) <= detail::never_valueless_trivial_size_limit && std::is_trivially_copy_constructible_v<T>
+                        is_tmp_trivial && is_old_destruction_delayable && std::is_trivially_copy_constructible_v<T>
                     ) { // strange type...
                         static_assert(std::is_nothrow_constructible_v<T, T const&>);
                         if constexpr (sizeof...(Args) == 0) {
@@ -734,10 +763,23 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
         // TC(noexcept) && MC(noexcept) => A maybe valueless if | never |
         // TC(throw)    && MC(throw)    => A maybe valueless if | TC throws => yes | MC throws => yes |
         // TC(throw)    && MC(noexcept) => B maybe valueless if | never |
+        //
+        // If the variant is never valueless, "TC(throw) && MC(throw)" implies that Tj is not move constructible
+        // (see `detail::is_never_valueless_impl`). In that case, Tj is trivially copy constructible, so a temporary
+        // is copied instead => C maybe valueless if | never |
+        constexpr bool is_tmp_copied =
+            never_valueless && !std::is_nothrow_constructible_v<Tj, T> && !std::is_nothrow_move_constructible_v<Tj>;
+
         if constexpr (!need_destructor_call) {
             // Nothing needs to be destroyed, so a comparison of the index replaces the visit
             if (this->index_ == j) {
                 detail::raw_get<j>(this->storage_) = std::forward<T>(t);
+
+            } else if constexpr (is_tmp_copied) {
+                static_assert(std::is_nothrow_constructible_v<Tj, Tj const&>);
+                Tj const tmp(std::forward<T>(t)); // may throw
+                detail::alternative_constructor<j>::construct(this->storage_, tmp); // C
+                this->index_ = j;
 
             } else if constexpr (std::is_nothrow_constructible_v<Tj, T> || !std::is_nothrow_move_constructible_v<Tj>) {
 #ifndef NDEBUG
@@ -773,7 +815,12 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_BEGIN
             if constexpr (i == j) {
                 ti = std::forward<T>(t);
             } else {
-                if constexpr (std::is_nothrow_constructible_v<Tj, T> || !std::is_nothrow_move_constructible_v<Tj>) {
+                if constexpr (is_tmp_copied) {
+                    static_assert(std::is_nothrow_constructible_v<Tj, Tj const&>);
+                    Tj const tmp(std::forward<T>(t)); // may throw
+                    this->template reset_construct<i, j>(tmp); // C
+
+                } else if constexpr (std::is_nothrow_constructible_v<Tj, T> || !std::is_nothrow_move_constructible_v<Tj>) {
 #ifndef NDEBUG
                     // Self-assign on non-valueless instance ALWAYS leads to UB.
                     // For details, see the comments on `emplace`.

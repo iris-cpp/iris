@@ -107,7 +107,9 @@ TEST_CASE("never_valueless", "[detail]")
 
         STATIC_REQUIRE(iris::detail::is_never_valueless_v<S>);
         STATIC_REQUIRE(is_never_valueless<iris::rvariant<S>>);
-        STATIC_REQUIRE(!iris::detail::is_never_valueless_v<iris::rvariant<S>>); // wow https://eel.is/c++draft/variant.assign#5
+        STATIC_CHECK(!std::is_copy_assignable_v<iris::rvariant<S>>); // wow https://eel.is/c++draft/variant.assign#5
+        STATIC_CHECK(!std::is_move_assignable_v<iris::rvariant<S>>);
+        STATIC_CHECK(iris::detail::is_never_valueless_v<iris::rvariant<S>>); // assignment is not required
         STATIC_REQUIRE(!is_never_valueless<iris::rvariant<S, BadType>>);
     }
 }
@@ -1147,6 +1149,43 @@ TEST_CASE("generic assignment")
         REQUIRE(a.index() == 0);
         CHECK(iris::get<0>(a) == 33);
     }
+
+    // Not move constructible, but never valueless; the temporary is copied
+    {
+        struct NoMove
+        {
+            int value = 0;
+            NoMove() = default;
+            NoMove(int v) noexcept(false) : value(v)  // NOLINT(google-explicit-constructor)
+            {
+                if (v < 0) throw Thrower_base::exception{};  // NOLINT(hicpp-exception-baseclass)
+            }
+            NoMove(NoMove const&) = default;
+            NoMove(NoMove&&) = delete;
+            NoMove& operator=(NoMove const&) = default;
+            NoMove& operator=(NoMove&&) = default;
+        };
+        STATIC_CHECK(!std::is_move_constructible_v<NoMove>);
+        STATIC_CHECK(iris::detail::is_never_valueless_v<NoMove>);
+        {
+            // nothing needs to be destroyed
+            iris::rvariant<std::monostate, NoMove> a;
+            REQUIRE_THROWS_AS(a = -1, Thrower_base::exception);
+            CHECK(a.index() == 0);
+            a = 42;
+            REQUIRE(a.index() == 1);
+            CHECK(iris::get<1>(a).value == 42);
+        }
+        {
+            // the old alternative needs to be destroyed
+            iris::rvariant<iris::recursive_wrapper<std::string>, NoMove> a;
+            REQUIRE_THROWS_AS(a = -1, Thrower_base::exception);
+            CHECK(a.index() == 0);
+            a = 42;
+            REQUIRE(a.index() == 1);
+            CHECK(iris::get<1>(a).value == 42);
+        }
+    }
 }
 
 TEST_CASE("emplace")
@@ -1423,6 +1462,66 @@ TEST_CASE("emplace")
         iris::rvariant<int, TCC_MC_Thrower> b(std::in_place_index<1>);
         REQUIRE_THROWS_AS(a = std::move(b), TCC_MC_Thrower::exception);
         CHECK(a.valueless_by_exception() == true);
+    }
+
+    // The temporary must not be constructed before destroying the old alternative
+    // if the destruction is observable ([variant.mod]: destroy, then construct)
+    {
+        struct Logger
+        {
+            std::string* log;
+            explicit Logger(std::string& out) noexcept : log(&out) {}
+            Logger(std::string& out, int) noexcept(false) : log(&out) { *log += "C"; }
+            Logger(Logger const&) = default;
+            Logger& operator=(Logger const&) = default;
+            ~Logger() { *log += "D"; }
+        };
+        struct IntSource
+        {
+            std::string* log;
+            operator int() const noexcept(false) { *log += "C"; return 42; }  // NOLINT(google-explicit-constructor)
+        };
+        STATIC_CHECK(std::is_trivially_move_assignable_v<Logger>);
+        STATIC_CHECK(!std::is_trivially_destructible_v<Logger>);
+
+        std::string log;
+        {
+            // another alternative
+            iris::rvariant<Logger, int> a(std::in_place_index<0>, log);
+            a.emplace<1>(IntSource{&log});
+            CHECK(log == "DC");
+        }
+        log.clear();
+        {
+            // same alternative
+            iris::rvariant<Logger, int> a(std::in_place_index<0>, log);
+            a.emplace<0>(log, 0);
+            CHECK(log == "DC");
+        }
+    }
+
+    // Not assignable, but never valueless
+    {
+        struct ConstMember
+        {
+            int const value;
+            explicit ConstMember(int v) noexcept(false) : value(v)
+            {
+                if (v < 0) throw Thrower_base::exception{};  // NOLINT(hicpp-exception-baseclass)
+            }
+        };
+        STATIC_CHECK(!std::is_copy_assignable_v<ConstMember>);
+        STATIC_CHECK(!std::is_move_assignable_v<ConstMember>);
+        STATIC_CHECK(iris::detail::is_never_valueless_v<ConstMember>);
+        STATIC_CHECK(is_never_valueless<iris::rvariant<int, ConstMember>>);
+
+        iris::rvariant<int, ConstMember> a(std::in_place_index<1>, 1);
+        REQUIRE_THROWS_AS(a.emplace<1>(-1), Thrower_base::exception);
+        REQUIRE(a.index() == 1);
+        CHECK(iris::get<1>(a).value == 1);
+        a.emplace<1>(2);
+        REQUIRE(a.index() == 1);
+        CHECK(iris::get<1>(a).value == 2);
     }
 
     STATIC_REQUIRE(iris::detail::is_never_valueless_v<iris::recursive_wrapper<int>>);

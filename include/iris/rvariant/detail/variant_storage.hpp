@@ -77,39 +77,44 @@ template<class Variant, class T>
 // Construction
 //   => no need to consider type traits, because lifetime never starts on exception
 //
-// Assignment (type-changing & RHS is not valueless)
+// Assignment (type-changing & RHS is not valueless), swap
 //   => valueless iff move constructor throws
+//      (if VT is not move constructible, assignment falls back to copy and swap is disabled)
 //
 // Emplace (if VT(Args...) is throwing)
-//   rvariant tmp(std::in_place_index<I>, static_cast<Args&&>(args)...);
-//   *this = std::move(tmp);
-//        ^^^ needs to be NOT observable on user's part, as per "Effects" https://eel.is/c++draft/variant.mod#7
-//                        ^^^^^^^^^^^^^^
-//                           if type-changing: VT is trivially move constructible
-//                       if NOT type-changing: VT is trivially move assignable
-//                                    ... and trivially destructible.
-// So the final condition is:
-//    move constructor is noexcept &&
-//    trivially move constructible &&
-//    trivially move assignable &&
-//    trivially destructible.
+//   VT tmp(static_cast<Args&&>(args)...); // may throw
+//   (destroy the old alternative)
+//   (move or copy `tmp` into the storage) // never throws
+//   (destroy `tmp`)
+//     ^^^ needs to be NOT observable on user's part, as per "Effects" https://eel.is/c++draft/variant.mod#7
+//         which destroys the old alternative BEFORE constructing VT:
+//           - the old alternative is destroyed after VT(Args...)
+//               => the old alternative is trivially destructible
+//           - `tmp` is moved or copied, and then destroyed
+//               => VT is trivially move or copy constructible, and trivially destructible
+//         If the old alternative is VT itself, `tmp` may be move- or copy-assigned
+//         instead, if the assignment is trivial.
+//         The address of the object constructed from Args differs from the final one.
+//         This cannot be detected by type traits, and we accept it (libstdc++ does the same).
 //
-// The temporary in `.emplace` may also be copied instead of moved, so
-// "trivially move constructible" can be relaxed to "trivially copy
-// constructible" (the same goes for the assignment). However, this does
-// NOT relax "move constructor is noexcept", because type-changing
-// assignment and swap always call the move constructor selected by
-// overload resolution. For example, a type with a trivial copy
-// constructor and a throwing user-provided move constructor can make
-// the variant valueless.
+// So the final condition is:
+//    trivially destructible &&
+//    (trivially move constructible || trivially copy constructible) &&
+//    (nothrow move constructible || not move constructible).
 //
 // Note that `std::is_trivially_move_constructible` already accounts for
 // the fallback to a trivial copy constructor when no move constructor is
-// declared; in that case the move constructor is trivially noexcept.
+// declared. "Trivially copy constructible" is only for `tmp` in `.emplace`;
+// it does NOT replace "nothrow move constructible", because type-changing
+// assignment and swap always call the move constructor selected by
+// overload resolution. For example, a type with a trivial copy constructor
+// and a throwing user-provided move constructor can make the variant
+// valueless.
 //
 // Furthermore, we have modified the spec for `.emplace` so that
 // `recursive_wrapper` can be always treated as never_valueless part,
-// so we include that optimization for PoC.
+// so we include that optimization for PoC. As a part of this, a contained
+// `recursive_wrapper` may be destroyed after `tmp` is constructed.
 
 // Additional size limit
 inline constexpr std::size_t never_valueless_trivial_size_limit = 256;
@@ -126,11 +131,7 @@ concept is_never_valueless_impl =
         ) &&
         (
             std::is_nothrow_move_constructible_v<T> ||
-            !std::is_move_constructible_v<T> // assignment falls back to copy, swap is disabled
-        ) &&
-        (
-            std::is_trivially_move_assignable_v<T> ||
-            std::is_trivially_copy_assignable_v<T>
+            !std::is_move_constructible_v<T>
         )
     );
 
