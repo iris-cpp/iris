@@ -227,10 +227,11 @@ public:
         {
             if constexpr (j != std::variant_npos) {
             IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
-                construct_on_valueless<j>(alt);
+                detail::alternative_constructor<j>::construct(storage_, alt);
             IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
+                index_ = static_cast<detail::variant_index_t<sizeof...(Ts)>>(j);
             } else {
-                (void)this;
+                index_ = detail::variant_npos<sizeof...(Ts)>;
             }
         });
     }
@@ -250,10 +251,11 @@ public:
             if constexpr (j != std::variant_npos) {
                 static_assert(std::is_rvalue_reference_v<T&&>);
             IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
-                construct_on_valueless<j>(std::move(alt)); // NOLINT(bugprone-move-forwarding-reference)
+                detail::alternative_constructor<j>::construct(storage_, std::move(alt)); // NOLINT(bugprone-move-forwarding-reference)
             IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END
+                index_ = static_cast<detail::variant_index_t<sizeof...(Ts)>>(j);
             } else {
-                (void)this;
+                index_ = detail::variant_npos<sizeof...(Ts)>;
             }
         });
     }
@@ -751,7 +753,9 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
     }
 
     storage_type storage_{}; // valueless
-    detail::variant_index_t<sizeof...(Ts)> index_ = detail::variant_npos<sizeof...(Ts)>;
+    // No default member initializer; every constructor initializes this exactly once,
+    // so that the copy/move constructors do not store `variant_npos` before storing the actual index
+    detail::variant_index_t<sizeof...(Ts)> index_;
 
 public:
     // Default constructor
@@ -896,7 +900,10 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
                 using maybe_wrapped = detail::select_maybe_wrapped<unwrap_recursive_t<Uj>, Ts...>;
                 using VT = maybe_wrapped::type;
                 static_assert(std::is_same_v<unwrap_recursive_t<VT>, unwrap_recursive_t<Uj>>);
-                this->template construct_on_valueless<maybe_wrapped::index>(uj);
+                detail::alternative_constructor<maybe_wrapped::index>::construct(this->storage_, uj);
+                this->index_ = static_cast<detail::variant_index_t<sizeof...(Ts)>>(maybe_wrapped::index);
+            } else {
+                this->index_ = detail::variant_npos<sizeof...(Ts)>;
             }
         });
     }
@@ -920,7 +927,10 @@ IRIS_RVARIANT_ALWAYS_THROWING_UNREACHABLE_END
                 using VT = maybe_wrapped::type;
                 static_assert(std::is_same_v<unwrap_recursive_t<VT>, unwrap_recursive_t<Uj>>);
                 static_assert(std::is_rvalue_reference_v<Uj&&>);
-                this->template construct_on_valueless<maybe_wrapped::index>(std::move(uj)); // NOLINT(bugprone-move-forwarding-reference)
+                detail::alternative_constructor<maybe_wrapped::index>::construct(this->storage_, std::move(uj)); // NOLINT(bugprone-move-forwarding-reference)
+                this->index_ = static_cast<detail::variant_index_t<sizeof...(Ts)>>(maybe_wrapped::index);
+            } else {
+                this->index_ = detail::variant_npos<sizeof...(Ts)>;
             }
         });
     }
@@ -1382,6 +1392,7 @@ private:
     // hack: reduce compile error by half on unrelated overloads
     template<std::same_as<detail::valueless_t> Valueless>
     constexpr explicit rvariant(Valueless const&) noexcept
+        : index_{detail::variant_npos<sizeof...(Ts)>}
     {}
 
     template<class From, class To>
