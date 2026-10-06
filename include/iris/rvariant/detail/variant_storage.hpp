@@ -89,13 +89,23 @@ template<class Variant, class T>
 //                       if NOT type-changing: VT is trivially move assignable
 //                                    ... and trivially destructible.
 // So the final condition is:
-//    move constructor is noexcept && (<= discarded; weaker than triviality)
+//    move constructor is noexcept &&
 //    trivially move constructible &&
 //    trivially move assignable &&
 //    trivially destructible.
 //
-// Note that "move" operation can fall back to "copy" if "move" is
-// non-trivial AND "copy" is trivial.
+// The temporary in `.emplace` may also be copied instead of moved, so
+// "trivially move constructible" can be relaxed to "trivially copy
+// constructible" (the same goes for the assignment). However, this does
+// NOT relax "move constructor is noexcept", because type-changing
+// assignment and swap always call the move constructor selected by
+// overload resolution. For example, a type with a trivial copy
+// constructor and a throwing user-provided move constructor can make
+// the variant valueless.
+//
+// Note that `std::is_trivially_move_constructible` already accounts for
+// the fallback to a trivial copy constructor when no move constructor is
+// declared; in that case the move constructor is trivially noexcept.
 //
 // Furthermore, we have modified the spec for `.emplace` so that
 // `recursive_wrapper` can be always treated as never_valueless part,
@@ -113,6 +123,10 @@ concept is_never_valueless_impl =
         (
             std::is_trivially_move_constructible_v<T> ||
             std::is_trivially_copy_constructible_v<T>
+        ) &&
+        (
+            std::is_nothrow_move_constructible_v<T> ||
+            !std::is_move_constructible_v<T> // assignment falls back to copy, swap is disabled
         ) &&
         (
             std::is_trivially_move_assignable_v<T> ||

@@ -1404,6 +1404,27 @@ TEST_CASE("emplace")
         CHECK(a.valueless_by_exception() == false);
     }
 
+    // Trivially copy constructible, but the move constructor may throw.
+    // `emplace` can copy the temporary, but type-changing assignment calls the move constructor.
+    struct TCC_MC_Thrower : Thrower_base
+    {
+        TCC_MC_Thrower() = default;
+        TCC_MC_Thrower(TCC_MC_Thrower const&) = default;
+        TCC_MC_Thrower(TCC_MC_Thrower&&) noexcept(false) : Thrower_base() { throw exception{}; }  // NOLINT(hicpp-exception-baseclass)
+        TCC_MC_Thrower& operator=(TCC_MC_Thrower const&) = default;
+        TCC_MC_Thrower& operator=(TCC_MC_Thrower&&) = default;
+    };
+    STATIC_CHECK(std::is_trivially_copy_constructible_v<TCC_MC_Thrower>);
+    STATIC_CHECK(!std::is_nothrow_move_constructible_v<TCC_MC_Thrower>);
+    STATIC_CHECK(!iris::detail::is_never_valueless_v<TCC_MC_Thrower>);
+    STATIC_CHECK(!is_never_valueless<iris::rvariant<int, TCC_MC_Thrower>>);
+    {
+        iris::rvariant<int, TCC_MC_Thrower> a;
+        iris::rvariant<int, TCC_MC_Thrower> b(std::in_place_index<1>);
+        REQUIRE_THROWS_AS(a = std::move(b), TCC_MC_Thrower::exception);
+        CHECK(a.valueless_by_exception() == true);
+    }
+
     STATIC_REQUIRE(iris::detail::is_never_valueless_v<iris::recursive_wrapper<int>>);
     STATIC_REQUIRE(is_never_valueless<iris::rvariant<iris::recursive_wrapper<int>>>);
 
