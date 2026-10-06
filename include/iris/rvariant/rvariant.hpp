@@ -1537,7 +1537,7 @@ template<class T, class... Ts>
 get_if(rvariant<Ts...>* v) noexcept
 {
     constexpr std::size_t I = detail::exactly_once_index_v<T, rvariant<Ts...>>;
-    return get_if<I>(v);
+    return iris::get_if<I>(v);
 }
 
 template<class T, class... Ts>
@@ -1545,7 +1545,7 @@ template<class T, class... Ts>
 get_if(rvariant<Ts...> const* v) noexcept
 {
     constexpr std::size_t I = detail::exactly_once_index_v<T, rvariant<Ts...>>;
-    return get_if<I>(v);
+    return iris::get_if<I>(v);
 }
 
 // -------------------------------------------
