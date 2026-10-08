@@ -101,9 +101,15 @@ function(_iris_define_test_impl test_name libs)
         ENVIRONMENT "IRIS_ROOT=${IRIS_ROOT}"
     )
     if(MSVC)
+        get_target_property(test_type ${test_name}_test TYPE)
+        set(dll_dirs "")
+        if(test_type STREQUAL "EXECUTABLE")
+            set(dll_dirs "$<TARGET_RUNTIME_DLL_DIRS:${test_name}_test>")
+        endif()
+
         set(
             VS_DEBUGGER_ENVIRONMENT_LIST
-            "PATH=$(VC_ExecutablePath_x64)\;%PATH%"
+            "PATH=$<JOIN:${dll_dirs},$<SEMICOLON>>$<SEMICOLON>$(VC_ExecutablePath_x64)\;%PATH%"
             "ASAN_SYMBOLIZER_PATH=$(VC_ExecutablePath_x64)\\llvm-symbolizer.exe"
             "IRIS_ROOT=$<SHELL_PATH:${IRIS_ROOT}>"
         )
@@ -117,6 +123,7 @@ function(_iris_define_test_impl test_name libs)
         get_property(IRIS_MSVC_ASAN_DIR GLOBAL PROPERTY IRIS_MSVC_ASAN_DIR)
         set(
             ENV_MODIFICATION
+            "$<LIST:TRANSFORM,${dll_dirs},PREPEND,PATH=path_list_prepend:>"
             "PATH=path_list_append:${IRIS_MSVC_ASAN_DIR}"
         )
         set_tests_properties(
