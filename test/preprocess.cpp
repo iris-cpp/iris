@@ -140,6 +140,16 @@ TEST_CASE("seq", "[preprocess]")
     STATIC_CHECK(IRIS_PP_STRINGIZE(IRIS_PP_SEQ_HEAD((a)(b)(c))) == "a"sv);
     STATIC_CHECK(IRIS_PP_STRINGIZE(IRIS_PP_SEQ_TAIL((a)(b)(c))) == "(b)(c)"sv);
 
+    STATIC_CHECK(IRIS_PP_STRINGIZE(IRIS_PP_SEQ_ENUM()) == ""sv);
+    STATIC_CHECK(IRIS_PP_STRINGIZE(IRIS_PP_SEQ_ENUM((a))) == "a"sv);
+    STATIC_CHECK(IRIS_PP_STRINGIZE(IRIS_PP_SEQ_ENUM((a)(b)(c))) == "a, b, c"sv);
+    STATIC_CHECK(IRIS_PP_STRINGIZE(IRIS_PP_SEQ_ENUM(((a, b))(c))) == "(a, b), c"sv);
+
+    STATIC_CHECK(IRIS_PP_STRINGIZE(IRIS_PP_VARIADIC_SEQ_TO_SEQ()) == ""sv);
+    STATIC_CHECK(IRIS_PP_STRINGIZE(IRIS_PP_VARIADIC_SEQ_TO_SEQ((a))) == "((a))"sv);
+    STATIC_CHECK(IRIS_PP_STRINGIZE(IRIS_PP_VARIADIC_SEQ_TO_SEQ((a, b)(c)(d, e, f))) == "((a, b)) ((c)) ((d, e, f))"sv);
+    STATIC_CHECK(IRIS_PP_SEQ_SIZE(IRIS_PP_VARIADIC_SEQ_TO_SEQ((a, b)(c)(d, e, f))) == 3);
+
     IRIS_PP_SEQ_FOR_EACH((a)(b)(c), IRIS_TEST_SEQ_EXEC, foo)
 
     STATIC_CHECK(fooa == "a");
