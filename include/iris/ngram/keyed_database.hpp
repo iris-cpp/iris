@@ -47,7 +47,7 @@ public:
         assert(doc_id_to_key_.size() == detail::to_index(doc_id));
         doc_id_to_key_.emplace_back(std::addressof(it->first));
 
-        addition_guard.commit();
+        addition_guard.commit(doc_id);
     }
 
     template<class KeyLikeT>
@@ -72,7 +72,6 @@ public:
 
     template<class KeyLikeT>
     void remove_document(KeyLikeT const& key_like)
-        noexcept(std::is_nothrow_constructible_v<KeyT, KeyLikeT const&>)
     {
         auto const it = key_to_doc_id_.find(key_like);
         if (it == key_to_doc_id_.end()) return;
@@ -87,7 +86,7 @@ public:
     }
 
     template<class KeyLikeT>
-    [[nodiscard]] bool has_document(KeyLikeT const& key_like) const noexcept
+    [[nodiscard]] bool has_document(KeyLikeT const& key_like) const
     {
         return key_to_doc_id_.find(key_like) != key_to_doc_id_.end();
     }
@@ -139,8 +138,9 @@ private:
             , it_(std::move(it))
         {}
 
-        void commit()
+        void commit(document_id const doc_id)
         {
+            it_->second = doc_id;
             it_ = key_to_doc_id_.end();
         }
 
