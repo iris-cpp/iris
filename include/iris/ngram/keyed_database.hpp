@@ -8,10 +8,12 @@
 #include <iris/ngram/database.hpp>
 #include <iris/ngram/id.hpp>
 
+#include <functional>
 #include <format>
 #include <unordered_map>
 #include <stdexcept>
 #include <memory>
+#include <type_traits>
 
 namespace iris::ngram {
 
@@ -28,8 +30,9 @@ public:
         requires std::is_constructible_v<KeyT, KeyLikeT>
     void add_document(KeyLikeT&& key_like, std::basic_string_view<CharT> const doc_text)
     {
-        auto const doc_id = base_type::add_document(doc_text);
-        auto const [it, inserted] = key_to_doc_id_.emplace(std::forward<KeyLikeT>(key_like), doc_id);
+        // First, insert the fake `doc_id` to check the key existence.
+        // This makes sure that the key construction and lookup only occurs once regardless of the existence of the key
+        auto const [it, inserted] = key_to_doc_id_.emplace(std::forward<KeyLikeT>(key_like), document_id::tombstone);
         if (!inserted) {
             if constexpr (std::is_pointer_v<KeyT>) {
                 throwf<std::invalid_argument>("key `{}` already exists in keyed_database", static_cast<void const*>(it->first));
@@ -39,8 +42,14 @@ public:
                 throwf<std::invalid_argument>("key `???` already exists in keyed_database");
             }
         }
+
+        key_to_doc_id_addition_guard addition_guard{key_to_doc_id_, it};
+        auto const doc_id = base_type::add_document(doc_text);
+
         assert(doc_id_to_key_.size() == detail::to_index(doc_id));
         doc_id_to_key_.emplace_back(std::addressof(it->first));
+
+        addition_guard.commit(doc_id);
     }
 
     template<class KeyLikeT>
@@ -66,7 +75,16 @@ public:
     template<class KeyLikeT>
     void remove_document(KeyLikeT const& key_like)
     {
-        base_type::remove_document(this->get_document_id(key_like));
+        auto const it = key_to_doc_id_.find(key_like);
+        if (it == key_to_doc_id_.end()) return;
+
+        auto const doc_id = it->second;
+        auto const doc_id_index = detail::to_index(doc_id);
+        assert(doc_id_index < doc_id_to_key_.size());
+        doc_id_to_key_[doc_id_index] = nullptr;
+        key_to_doc_id_.erase(it);
+
+        base_type::remove_document(doc_id);
     }
 
     template<class KeyLikeT>
@@ -94,6 +112,17 @@ public:
         doc_id_to_key_.clear();
     }
 
+    void swap(keyed_database& other) noexcept
+    {
+        static_assert(std::is_nothrow_swappable_v<HashT>);
+        static_assert(std::is_nothrow_swappable_v<EqualT>);
+
+        using std::swap;
+        swap(static_cast<base_type&>(*this), static_cast<base_type&>(other));
+        swap(key_to_doc_id_, other.key_to_doc_id_);
+        swap(doc_id_to_key_, other.doc_id_to_key_);
+    }
+
     using base_type::search;
 
 private:
@@ -112,12 +141,42 @@ private:
         return it->second;
     }
 
-    std::unordered_map<KeyT, document_id, HashT, EqualT>
-    key_to_doc_id_;
+    using key_to_doc_id_type = std::unordered_map<KeyT, document_id, HashT, EqualT>;
+    key_to_doc_id_type key_to_doc_id_;
 
-    std::vector<KeyT const*>
-    doc_id_to_key_;
+    struct key_to_doc_id_addition_guard
+    {
+        key_to_doc_id_addition_guard(key_to_doc_id_type& key_to_doc_id, key_to_doc_id_type::iterator it)
+            : key_to_doc_id_(key_to_doc_id)
+            , it_(std::move(it))
+        {}
+
+        void commit(document_id const doc_id)
+        {
+            it_->second = doc_id;
+            it_ = key_to_doc_id_.end();
+        }
+
+        ~key_to_doc_id_addition_guard()
+        {
+            if (it_ != key_to_doc_id_.end()) {
+                key_to_doc_id_.erase(it_);
+            }
+        }
+
+    private:
+        key_to_doc_id_type& key_to_doc_id_;
+        key_to_doc_id_type::iterator it_;
+    };
+
+    std::vector<KeyT const*> doc_id_to_key_;
 };
+
+template<class KeyT, class HashT, class EqualT, class CharT>
+void swap(keyed_database<KeyT, HashT, EqualT, CharT>& a, keyed_database<KeyT, HashT, EqualT, CharT>& b) noexcept
+{
+    a.swap(b);
+}
 
 } // iris::ngram
 

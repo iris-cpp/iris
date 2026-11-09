@@ -80,8 +80,13 @@ private:
         void commit()
         {
             auto const doc_id = old_slot_info_.doc_id;
-            old_slot_info_.doc_id = document_id::tombstone;
-            store_->slot_infos_.emplace_back(doc_id, old_slot_info_.is_visible);
+            auto const is_visible = old_slot_info_.is_visible;
+
+            store_->slot_infos_.emplace_back(doc_id, is_visible);
+
+            // emplace_back may invalidate `old_slot_info_`
+            store_->slot_infos_[to_index(store_->id_to_slot_[to_index(doc_id)])].doc_id = document_id::tombstone;
+
             store_->id_to_slot_[to_index(doc_id)] = new_slot_;
         }
 
@@ -112,10 +117,11 @@ public:
         };
     }
 
-    void remove_document(document_id const doc_id)
+    void remove_document(document_id const doc_id) noexcept
     {
+        assert(to_index(doc_id) < id_to_slot_.size() && "document id is beyond the range of ids issued by this database");
         if (to_index(doc_id) >= id_to_slot_.size()) {
-            throwf<std::invalid_argument>("document id #{} is beyond the range of ids issued by this database", doc_id);
+            return; // safely noop on Release build
         }
 
         document_slot& doc_slot = id_to_slot_[to_index(doc_id)];
@@ -135,7 +141,17 @@ public:
 
     [[nodiscard]] bool has_document(document_id const doc_id) const noexcept
     {
-        return detail::to_index(doc_id) < id_to_slot_.size();
+        if (doc_id == document_id::tombstone) [[unlikely]] {
+            return false;
+        }
+        if (to_index(doc_id) >= id_to_slot_.size()) [[unlikely]] {
+            // `doc_id` points to a unissued slot, perhaps due to logic error such as
+            // mixing id namespace on application side.
+            return false;
+        }
+        document_slot const doc_slot = id_to_slot_[to_index(doc_id)];
+        assert(doc_slot != document_slot::sentinel);
+        return doc_slot != document_slot::tombstone;
     }
 
     // This method is intentionally `noexcept` and invokes only assertion because
@@ -161,10 +177,10 @@ public:
         if (doc_slot == document_slot::tombstone) {
             throwf<std::invalid_argument>("cannot fetch the visibility of already-removed document");
         }
-        return get_info(doc_slot).is_visible;
+        return this->get_info(doc_slot).is_visible;
     }
 
-    void set_visible(document_id const doc_id, bool flag)
+    void set_visible(document_id const doc_id, bool const flag)
     {
         if (to_index(doc_id) >= id_to_slot_.size()) {
             throwf<std::invalid_argument>("document id #{} is beyond the namespace acquired by the database", doc_id);
@@ -174,7 +190,7 @@ public:
         if (doc_slot == document_slot::tombstone) {
             throwf<std::invalid_argument>("cannot change the visibility of already-removed document");
         }
-        get_info(doc_slot).is_visible = flag;
+        this->get_info(doc_slot).is_visible = flag;
     }
 
     void clear() noexcept
@@ -183,10 +199,22 @@ public:
         slot_infos_.clear();
     }
 
+    void swap(id_store& other) noexcept
+    {
+        using std::swap;
+        swap(id_to_slot_, other.id_to_slot_);
+        swap(slot_infos_, other.slot_infos_);
+    }
+
 private:
     std::vector<document_slot> id_to_slot_;
     std::vector<slot_info_t> slot_infos_;
 };
+
+inline void swap(id_store& a, id_store& b) noexcept
+{
+    a.swap(b);
+}
 
 } // iris::ngram::detail
 

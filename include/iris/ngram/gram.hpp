@@ -5,6 +5,9 @@
 
 #include <iris/config.hpp> // IWYU pragma: keep
 
+#include <iris/hash.hpp>
+
+#include <functional>
 #include <array>
 #include <iterator>
 #include <ranges>
@@ -15,6 +18,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <cstddef> // IWYU pragma: keep
 
 namespace iris::ngram {
 
@@ -154,6 +158,19 @@ struct gram<2, CharT>
 };
 
 } // iris::ngram
+
+template<std::size_t N, class CharT>
+struct std::hash<iris::ngram::gram<N, CharT>>
+{
+    [[nodiscard]] static std::size_t operator()(iris::ngram::gram<N, CharT> const& ng) noexcept
+    {
+        if constexpr (N == 1 || N == 2) {
+            return std::hash<decltype(ng.data)>{}(ng.data);
+        } else {
+            return iris::hash_value(ng.data);
+        }
+    }
+};
 
 namespace iris {
 
