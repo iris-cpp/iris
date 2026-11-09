@@ -11,7 +11,6 @@
 #include <iris/format.hpp>
 
 #include <format>
-#include <concepts>
 #include <type_traits>
 #include <ranges>
 #include <vector>
@@ -92,7 +91,7 @@ struct [[nodiscard]] search_result
         doc_matches_.clear();
     }
 
-    void swap(search_result& other) noexcept
+    void swap(search_result& other) noexcept(std::is_nothrow_swappable_v<map_type>)
     {
         using std::swap;
         swap(doc_matches_, other.doc_matches_);
@@ -113,7 +112,8 @@ private:
 };
 
 template<class DocumentID, class HashT, class EqualT>
-void swap(search_result<DocumentID, HashT, EqualT>& a, search_result<DocumentID, HashT, EqualT>& b) noexcept
+void swap(search_result<DocumentID, HashT, EqualT>& a, search_result<DocumentID, HashT, EqualT>& b)
+    noexcept(noexcept(a.swap(b)))
 {
     a.swap(b);
 }
