@@ -104,7 +104,10 @@ class gram_index
     static constexpr std::size_t side_merge_threshold = 2048;
 
 public:
-    [[nodiscard]] auto find_list(this auto&& self, gram<N, CharT> const ng)
+    template<class Self>
+    [[nodiscard]] auto find_list(this Self&& self, gram<N, CharT> const ng)
+        noexcept
+        -> std::conditional_t<std::is_const_v<std::remove_reference_t<Self>>, posting_list const*, posting_list*>
     {
         if (auto const it = self.gram_entries_.find(ng); it != self.gram_entries_.end()) {
             return it->second.get();
@@ -112,7 +115,7 @@ public:
         if (auto const it = self.side_entries_.find(ng); it != self.side_entries_.end()) {
             return it->second.get();
         }
-        return static_cast<posting_list*>(nullptr);
+        return nullptr;
     }
 
     template<class F>

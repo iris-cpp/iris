@@ -14,6 +14,7 @@
 #include <iris/ngram/search_result.hpp>
 #include <iris/ngram/id.hpp>
 
+#include <concepts>
 #include <span>
 #include <flat_map>
 #include <string_view>
@@ -24,8 +25,23 @@
 #include <utility>
 
 #include <cassert>
+#include <cstddef>
 
 namespace iris::ngram {
+
+namespace detail {
+
+struct [[nodiscard]] search_result_cache_guard
+{
+    search_result_cache& cache;
+
+    ~search_result_cache_guard() noexcept
+    {
+        cache.reset();
+    }
+};
+
+} // detail
 
 template<class CharT = char32_t>
 class database
@@ -33,6 +49,7 @@ class database
 public:
     using document_id_type = document_id;
 
+    // NOT thread-safe
     [[nodiscard]] document_id add_document(std::basic_string_view<CharT> const doc_text)
     {
         auto transaction = id_store_.add_document();
@@ -41,6 +58,7 @@ public:
         return transaction.new_id();
     }
 
+    // NOT thread-safe
     void update_document(document_id const doc_id, std::basic_string_view<CharT> const doc_text)
     {
         auto transaction = id_store_.update_document(doc_id);
@@ -48,60 +66,106 @@ public:
         transaction.commit();
     }
 
+    // NOT thread-safe
     void remove_document(document_id const doc_id)
     {
         id_store_.remove_document(doc_id);
     }
 
+    // Returns whether `doc_id` refers to an existing (non-erased) document.
+    // NOT thread-safe
     [[nodiscard]] bool has_document(document_id const doc_id) const
     {
         return id_store_.has_document(doc_id);
     }
 
+    // NOT thread-safe
     [[nodiscard]] bool is_visible(document_id const doc_id) const
     {
         return id_store_.is_visible(doc_id);
     }
 
+    // NOT thread-safe
     void set_visible(document_id const doc_id, bool const flag)
     {
         id_store_.set_visible(doc_id, flag);
     }
 
+    // NOT thread-safe
     void clear() noexcept
     {
         id_store_.clear();
         store_.clear();
     }
 
+    // Concurrent `search` calls are thread-safe unless other non-thread-safe functions are called at the same time
+    template<class DocumentID, class HashT, class EqualT>
+    bool search(this auto const& db, std::basic_string_view<CharT> const query, search_result<DocumentID, HashT, EqualT>& search_res)
+    {
+        return db.search(std::views::single(query), search_res);
+    }
+
+    // Concurrent `search` calls are thread-safe unless other non-thread-safe functions are called at the same time
     template<class DocumentID, class HashT, class EqualT>
     bool search(this auto const& db, search_query<CharT> const& query, search_result<DocumentID, HashT, EqualT>& search_res)
     {
+        return db.search(query.words(), search_res);
+    }
+
+    // Concurrent `search` calls are thread-safe unless other non-thread-safe functions are called at the same time
+    template<std::ranges::forward_range SearchWordRange, class DocumentID, class HashT, class EqualT>
+        requires std::convertible_to<std::ranges::range_reference_t<SearchWordRange>, std::basic_string_view<CharT>>
+    bool search(this auto const& db, SearchWordRange&& query_words, search_result<DocumentID, HashT, EqualT>& search_res)
+    {
         search_res.clear();
-        if (query.empty()) return false;
+        if (std::ranges::empty(query_words)) return false;
         if (db.store_.empty()) return false;
 
-        db.search_res_cache_.reset();
+        auto& search_res_cache = get_search_res_cache();
+        detail::search_result_cache_guard const search_res_cache_guard{search_res_cache};
+        search_res_cache.reset();
 
-        int word_id = 0;
-        auto it = query.words().begin();
-        assert(!it->empty());
-        db.template search_word<true>(word_id++, *it++);
-        if (db.search_res_cache_.empty()) {
-            db.search_res_cache_.reset(); // remove tombstones
-            return false;
-        }
+        {
+            int word_id = 0;
+            auto word_it = std::ranges::begin(query_words);
 
-        for (; it != query.words().end(); ++it) {
-            assert(!it->empty());
-            db.template search_word<false>(word_id++, *it);
-            if (db.search_res_cache_.empty()) {
-                db.search_res_cache_.reset(); // remove tombstones
+            // Find first non-empty word
+            for (; word_it != std::ranges::end(query_words); ++word_it) {
+                std::basic_string_view<CharT> const word{*word_it};
+                if (word.empty()) continue;
+
+                db.template search_word<true>(word_id++, word);
+
+                // If the first word's search yielded zero result, the entire search result shall be empty
+                // because it's AND search.
+                if (search_res_cache.empty()) {
+                    return false;
+                }
+
+                break;
+            }
+            if (word_id == 0) [[unlikely]] {
+                // If the first non-empty word never occurred, the entire search result shall be empty
+                assert(word_it == std::ranges::end(query_words));
+                assert(search_res_cache.empty());
                 return false;
             }
-        }
+            ++word_it;
 
-        assert(!db.search_res_cache_.empty());
+            for (; word_it != std::ranges::end(query_words); ++word_it) {
+                std::basic_string_view<CharT> const word{*word_it};
+                if (word.empty()) continue;
+
+                db.template search_word<false>(word_id++, word);
+
+                // If the current search word shaved off the result to zero, the entire search result
+                // shall be empty because it's AND search.
+                if (search_res_cache.empty()) {
+                    return false;
+                }
+            }
+        }
+        assert(!search_res_cache.empty());
         assert(search_res.empty());
 
         using document_id_maybe_ref_t = std::conditional_t<
@@ -111,16 +175,15 @@ public:
         >;
         // Convert cache into real result
         search_res.assign(
-            db.search_res_cache_.doc_matches() | std::views::transform([&db](auto&& kv)
-            -> std::pair<document_id_maybe_ref_t, std::vector<search_word_match>&&> {
+            search_res_cache.doc_matches() | std::views::transform([&db](auto&& kv)
+                -> std::pair<document_id_maybe_ref_t, std::vector<search_word_match>&&>
+            {
                 return std::pair<document_id_maybe_ref_t, std::vector<search_word_match>&&>{
                     db.make_document_id(db.id_store_.get_info(std::get<0>(kv)).doc_id),
                     std::move(std::get<1>(kv))
                 };
             })
         );
-        // Clear the cache (only contains the moved-from buffer though)
-        db.search_res_cache_.reset();
 
         return true;
     }
@@ -129,6 +192,13 @@ private:
     [[nodiscard]] static document_id make_document_id(document_id doc_id) noexcept
     {
         return doc_id;
+    }
+
+    // non-templated function to allow class instance wide cache
+    static detail::search_result_cache& get_search_res_cache()
+    {
+        thread_local detail::search_result_cache search_res_cache;
+        return search_res_cache;
     }
 
     template<bool IsFirstWord>
@@ -147,27 +217,30 @@ private:
     void search_word_impl(int const word_id, std::basic_string_view<CharT> const word) const
     {
         assert(word.size() >= N);
+
+        auto& search_res_cache = get_search_res_cache();
+
         auto ng = gram<N, CharT>::from_copy_n(word.begin());
 
         if constexpr (IsFirstWord) {
             store_.search(ng, [&](detail::document_slot const doc_slot, std::span<int const> const positions) {
                 auto const& slot_info = id_store_.get_info(doc_slot);
                 if (!slot_info.is_used_for_search()) return;
-                (void)search_res_cache_.init_word_matches<IsFirstWord, N>(doc_slot, word_id, positions);
+                (void)search_res_cache.init_word_matches<IsFirstWord, N>(doc_slot, word_id, positions);
             });
-            if (search_res_cache_.empty()) return;
+            if (search_res_cache.empty()) return;
 
         } else {
             std::size_t available_doc_count = 0;
             store_.search(ng, [&](detail::document_slot const doc_slot, std::span<int const> const positions) {
                 auto const& slot_info = id_store_.get_info(doc_slot);
                 if (!slot_info.is_used_for_search()) return;
-                if (search_res_cache_.init_word_matches<IsFirstWord, N>(doc_slot, word_id, positions)) {
+                if (search_res_cache.init_word_matches<IsFirstWord, N>(doc_slot, word_id, positions)) {
                     ++available_doc_count;
                 }
             });
             if (available_doc_count == 0) {
-                search_res_cache_.reset();
+                search_res_cache.reset();
                 return;
             }
         }
@@ -186,7 +259,7 @@ private:
                 // For example, when the document is "今日は晴れです" and current `ng` is "は晴",
                 //   - When previous `ng` was "昨日", `search_res` contians no matches => omit further sequence
                 //   - When previous `ng` was "今日", `search_res` contains matches => proceed with "は晴"
-                auto word_match = search_res_cache_.get_word_matches(doc_slot, word_id);
+                auto word_match = search_res_cache.get_word_matches(doc_slot, word_id);
                 if (!word_match) return detail::search_continuation::proceed;
 
                 // Prevent *resurrecting* the false-positive match on "match -> unmatch -> match" pattern.
@@ -195,8 +268,8 @@ private:
                 //   - gram{"XX"} -> no match (successful_ngrams is untouched)
                 //   - gram{"ef"} -> successful_ngrams does not match current_ngram!
                 if (word_match->successful_ngrams_ != current_ngram) {
-                    search_res_cache_.erase_document(word_match);
-                    if (search_res_cache_.empty()) return detail::search_continuation::abort;
+                    search_res_cache.erase_document(word_match);
+                    if (search_res_cache.empty()) return detail::search_continuation::abort;
                     return detail::search_continuation::proceed;
                 }
 
@@ -219,8 +292,8 @@ private:
                 // [previous ng, ...some unrelated chars..., current ng],
                 // we can always remove the entire document from the candidate pool.
                 if (word_match->spans_.empty()) {
-                    search_res_cache_.erase_document(word_match);
-                    if (search_res_cache_.empty()) return detail::search_continuation::abort;
+                    search_res_cache.erase_document(word_match);
+                    if (search_res_cache.empty()) return detail::search_continuation::abort;
                     return detail::search_continuation::proceed;
                 }
 
@@ -233,7 +306,7 @@ private:
         for (; i + N <= word.size(); i += N) {
             ng.copy_n(word.begin() + i);
             store_.search(ng, do_search(N));
-            if (search_res_cache_.empty()) return;
+            if (search_res_cache.empty()) return;
             ++current_ngram;
         }
 
@@ -257,7 +330,7 @@ private:
                 assert(remaining_chars < int(N));
                 ng.shift_copy(word.begin() + i, remaining_chars);
                 store_.search(ng, do_search(remaining_chars));
-                if (search_res_cache_.empty()) return;
+                if (search_res_cache.empty()) return;
                 ++current_ngram;
             }
         }
@@ -266,12 +339,11 @@ private:
             // A first word of exactly one n-gram runs no continuation searches
             if (current_ngram == 1) return;
         }
-        search_res_cache_.remove_stale_document_matches(word_id, current_ngram);
+        search_res_cache.remove_stale_document_matches(word_id, current_ngram);
     }
 
     detail::id_store id_store_;
     detail::index_storage<CharT> store_;
-    mutable detail::search_result_cache search_res_cache_;
 };
 
 } // iris::ngram
