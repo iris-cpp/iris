@@ -110,6 +110,14 @@ public:
         doc_id_to_key_.clear();
     }
 
+    void swap(keyed_database& other) noexcept
+    {
+        using std::swap;
+        swap(static_cast<base_type&>(*this), static_cast<base_type&>(other));
+        swap(key_to_doc_id_, other.key_to_doc_id_);
+        swap(doc_id_to_key_, other.doc_id_to_key_);
+    }
+
     using base_type::search;
 
 private:
@@ -158,6 +166,12 @@ private:
 
     std::vector<KeyT const*> doc_id_to_key_;
 };
+
+template<class KeyT, class HashT, class EqualT, class CharT>
+void swap(keyed_database<KeyT, HashT, EqualT, CharT>& a, keyed_database<KeyT, HashT, EqualT, CharT>& b) noexcept
+{
+    a.swap(b);
+}
 
 } // iris::ngram
 

@@ -199,10 +199,22 @@ public:
         slot_infos_.clear();
     }
 
+    void swap(id_store& other) noexcept
+    {
+        using std::swap;
+        swap(id_to_slot_, other.id_to_slot_);
+        swap(slot_infos_, other.slot_infos_);
+    }
+
 private:
     std::vector<document_slot> id_to_slot_;
     std::vector<slot_info_t> slot_infos_;
 };
+
+inline void swap(id_store& a, id_store& b) noexcept
+{
+    a.swap(b);
+}
 
 } // iris::ngram::detail
 

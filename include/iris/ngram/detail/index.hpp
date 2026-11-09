@@ -87,6 +87,13 @@ public:
         }
     }
 
+    void swap(posting_list& other) noexcept
+    {
+        using std::swap;
+        swap(postings_, other.postings_);
+        swap(positions_, other.positions_);
+    }
+
 private:
     struct posting_t
     {
@@ -96,6 +103,11 @@ private:
     std::vector<posting_t> postings_;
     std::vector<int> positions_;
 };
+
+inline void swap(posting_list& a, posting_list& b) noexcept
+{
+    a.swap(b);
+}
 
 template<std::size_t N, class CharT>
 class gram_index
@@ -130,6 +142,12 @@ public:
         gram_entries_.clear();
     }
 
+    void swap(gram_index& other) noexcept
+    {
+        using std::swap;
+        swap(gram_entries_, other.gram_entries_);
+    }
+
     void merge_new_entries(std::vector<std::pair<gram<N, CharT>, std::unique_ptr<posting_list>>>& pending)
     {
         for (auto& [key, pl] : pending) {
@@ -145,6 +163,12 @@ private:
 };
 
 template<std::size_t N, class CharT>
+void swap(gram_index<N, CharT>& a, gram_index<N, CharT>& b) noexcept
+{
+    a.swap(b);
+}
+
+template<std::size_t N, class CharT>
 struct gram_pos_t
 {
     gram<N, CharT> ng;
@@ -153,6 +177,40 @@ struct gram_pos_t
     [[nodiscard]] constexpr bool operator==(gram_pos_t const&) const noexcept = default;
     [[nodiscard]] constexpr std::strong_ordering operator<=>(gram_pos_t const&) const noexcept = default;
 };
+
+template<std::size_t N, class CharT>
+struct gram_index_storage
+{
+    gram_index<N, CharT> idx;
+
+    // Caches
+    std::vector<gram_pos_t<N, CharT>, default_init_allocator<gram_pos_t<N, CharT>>>
+    batch_grams;
+
+    std::vector<std::pair<gram<N, CharT>, std::unique_ptr<posting_list>>>
+    batch_pending;
+
+    void clear() noexcept
+    {
+        idx.clear();
+        batch_grams.clear();
+        batch_pending.clear();
+    }
+
+    void swap(gram_index_storage& other) noexcept
+    {
+        using std::swap;
+        swap(idx, other.idx);
+        swap(batch_grams, other.batch_grams);
+        swap(batch_pending, other.batch_pending);
+    }
+};
+
+template<std::size_t N, class CharT>
+void swap(gram_index_storage<N, CharT>& a, gram_index_storage<N, CharT>& b) noexcept
+{
+    a.swap(b);
+}
 
 template<class CharT>
 struct index_storage
@@ -167,6 +225,13 @@ struct index_storage
     {
         uni_data_.clear();
         bi_data_.clear();
+    }
+
+    void swap(index_storage& other) noexcept
+    {
+        using std::swap;
+        swap(uni_data_, other.uni_data_);
+        swap(bi_data_, other.bi_data_);
     }
 
     [[nodiscard]] bool empty() const noexcept
@@ -189,28 +254,8 @@ struct index_storage
     }
 
 private:
-    template<std::size_t N>
-    struct gram_index_storage
-    {
-        gram_index<N, CharT> idx;
-
-        // Caches
-        std::vector<gram_pos_t<N, CharT>, default_init_allocator<gram_pos_t<N, CharT>>>
-        batch_grams;
-
-        std::vector<std::pair<gram<N, CharT>, std::unique_ptr<posting_list>>>
-        batch_pending;
-
-        void clear() noexcept
-        {
-            idx.clear();
-            batch_grams.clear();
-            batch_pending.clear();
-        }
-    };
-
-    gram_index_storage<1> uni_data_;
-    gram_index_storage<2> bi_data_;
+    gram_index_storage<1, CharT> uni_data_;
+    gram_index_storage<2, CharT> bi_data_;
 
     template<std::size_t N>
     [[nodiscard]] auto& get_data(this auto& self IRIS_LIFETIMEBOUND) noexcept
@@ -231,7 +276,7 @@ private:
     )
     {
         if (input.size() < N) return;
-        gram_index_storage<N>& data = this->template get_data<N>();
+        gram_index_storage<N, CharT>& data = this->template get_data<N>();
 
         // Naive per-gram insertion into flat_map is expensive: each *new* key
         // shifts the underlying vectors, so building an index of vocabulary
@@ -287,6 +332,12 @@ private:
         data.idx.merge_new_entries(data.batch_pending);
     }
 };
+
+template<class CharT>
+void swap(index_storage<CharT>& a, index_storage<CharT>& b) noexcept
+{
+    a.swap(b);
+}
 
 } // iris::ngram::detail
 

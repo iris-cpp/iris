@@ -100,6 +100,14 @@ public:
         store_.clear();
     }
 
+    // NOT thread-safe
+    void swap(database& other) noexcept
+    {
+        using std::swap;
+        swap(id_store_, other.id_store_);
+        swap(store_, other.store_);
+    }
+
     // Concurrent `search` calls are thread-safe unless other non-thread-safe functions are called at the same time
     template<class DocumentID, class HashT, class EqualT>
     bool search(this auto const& db, std::basic_string_view<CharT> const query, search_result<DocumentID, HashT, EqualT>& search_res)
@@ -349,6 +357,12 @@ private:
     detail::id_store id_store_;
     detail::index_storage<CharT> store_;
 };
+
+template<class CharT>
+void swap(database<CharT>& a, database<CharT>& b) noexcept
+{
+    a.swap(b);
+}
 
 } // iris::ngram
 
