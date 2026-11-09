@@ -15,7 +15,7 @@
 #include <string_view>
 #include <memory>
 #include <vector>
-#include <flat_map>
+#include <unordered_map>
 #include <iterator>
 #include <span>
 #include <concepts>
@@ -100,9 +100,6 @@ private:
 template<std::size_t N, class CharT>
 class gram_index
 {
-    using gram_posting_map = std::flat_map<gram<N, CharT>, std::unique_ptr<posting_list>>;
-    static constexpr std::size_t side_merge_threshold = 2048;
-
 public:
     template<class Self>
     [[nodiscard]] auto find_list(this Self&& self, gram<N, CharT> const ng)
@@ -110,9 +107,6 @@ public:
         -> std::conditional_t<std::is_const_v<std::remove_reference_t<Self>>, posting_list const*, posting_list*>
     {
         if (auto const it = self.gram_entries_.find(ng); it != self.gram_entries_.end()) {
-            return it->second.get();
-        }
-        if (auto const it = self.side_entries_.find(ng); it != self.side_entries_.end()) {
             return it->second.get();
         }
         return nullptr;
@@ -128,69 +122,26 @@ public:
 
     [[nodiscard]] bool empty() const noexcept
     {
-        return gram_entries_.empty() && side_entries_.empty();
+        return gram_entries_.empty();
     }
 
     void clear() noexcept
     {
         gram_entries_.clear();
-        side_entries_.clear();
     }
 
     void merge_new_entries(std::vector<std::pair<gram<N, CharT>, std::unique_ptr<posting_list>>>& pending)
     {
-        if (pending.empty()) return; // vocabulary saturated
-
         for (auto& [key, pl] : pending) {
-            [[maybe_unused]] auto const it = side_entries_.try_emplace(
-                side_entries_.end(), // hint
-                key, std::move(pl)
-            );
+            [[maybe_unused]] auto const [it, inserted] = gram_entries_.try_emplace(key, std::move(pl));
+            assert(inserted);
             assert(it->second != nullptr && pl == nullptr);
-        }
-        if (side_entries_.size() >= side_merge_threshold) {
-            this->flush_side();
         }
     }
 
 private:
-    void flush_side()
-    {
-        if (side_entries_.empty()) return;
-
-        auto [skeys, svalues] = std::move(side_entries_).extract();
-        auto [keys, values] = std::move(gram_entries_).extract();
-
-        std::size_t const old_size = keys.size();
-        std::size_t const add = skeys.size();
-        keys.resize(old_size + add);
-        values.resize(old_size + add);
-
-        // Backward merge
-        std::size_t out = old_size + add;
-        std::size_t i = old_size;
-        std::size_t j = add;
-        while (j > 0) {
-            if (i > 0 && skeys[j - 1] < keys[i - 1]) {
-                --out;
-                --i;
-                keys[out] = keys[i];
-                values[out] = std::move(values[i]);
-            } else {
-                assert(i == 0 || keys[i - 1] < skeys[j - 1]);
-                --out;
-                --j;
-                keys[out] = skeys[j];
-                values[out] = std::move(svalues[j]);
-            }
-        }
-        assert(out == i);
-
-        gram_entries_.replace(std::move(keys), std::move(values));
-    }
-
-    // Double-buffered to reduce insertion cost
-    gram_posting_map gram_entries_, side_entries_;
+    std::unordered_map<gram<N, CharT>, std::unique_ptr<posting_list>>
+    gram_entries_;
 };
 
 template<std::size_t N, class CharT>
