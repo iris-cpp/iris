@@ -8,10 +8,12 @@
 #include <iris/ngram/database.hpp>
 #include <iris/ngram/id.hpp>
 
+#include <functional>
 #include <format>
 #include <unordered_map>
 #include <stdexcept>
 #include <memory>
+#include <type_traits>
 
 namespace iris::ngram {
 
@@ -112,6 +114,9 @@ public:
 
     void swap(keyed_database& other) noexcept
     {
+        static_assert(std::is_nothrow_swappable_v<HashT>);
+        static_assert(std::is_nothrow_swappable_v<EqualT>);
+
         using std::swap;
         swap(static_cast<base_type&>(*this), static_cast<base_type&>(other));
         swap(key_to_doc_id_, other.key_to_doc_id_);

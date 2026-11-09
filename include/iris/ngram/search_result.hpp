@@ -92,6 +92,12 @@ struct [[nodiscard]] search_result
         doc_matches_.clear();
     }
 
+    void swap(search_result& other) noexcept
+    {
+        using std::swap;
+        swap(doc_matches_, other.doc_matches_);
+    }
+
     [[nodiscard]] bool empty() const noexcept
     {
         return doc_matches_.empty();
@@ -105,6 +111,12 @@ struct [[nodiscard]] search_result
 private:
     map_type doc_matches_;
 };
+
+template<class DocumentID, class HashT, class EqualT>
+void swap(search_result<DocumentID, HashT, EqualT>& a, search_result<DocumentID, HashT, EqualT>& b) noexcept
+{
+    a.swap(b);
+}
 
 } // iris::ngram
 

@@ -278,20 +278,22 @@ private:
         if (input.size() < N) return;
         gram_index_storage<N, CharT>& data = this->template get_data<N>();
 
-        // Naive per-gram insertion into flat_map is expensive: each *new* key
-        // shifts the underlying vectors, so building an index of vocabulary
-        // size V costs O(V^2) overall. Instead, per document:
+        // Per document, let G be the number of n-gram occurrences,
+        // D the number of distinct n-grams, and P the number of new keys:
         //
-        //   1. Collect grams+positions --- O(G)        G = grams in this doc
-        //   2. Sort them ----------------- O(G log G)
-        //   3. Existing keys ------------- O(D log V)  D = distinct grams (D <= G)
-        //   4. New keys ------------------ O(V + P)    P = brand-new keys (P <= D)
+        //   1. Collect grams and positions: O(G).
+        //   2. Sort by gram, then position: O(G log G).
+        //   3. Group equal grams and look up each group: O(G + D) expected.
+        //   4. Append positions to posting lists: O(G) amortized.
+        //   5. Insert the P new keys into the index: O(P) expected amortized.
         //
-        // Once the vocabulary saturates (P ~ 0, typical after a few documents),
-        // step 4 is a no-op and each document costs only O(G log G + D log V).
+        // Since P <= D <= G, the overall cost is O(G log G) expected
+        // amortized. Hash-table bounds assume well-distributed hashes;
+        // individual insertions may rehash the table, and pathological
+        // collisions can make lookups and insertions linear in index size.
         //
-        // Note: initially implemented by @saki7, then the complexity math is
-        // double-checked by Claude.
+        // Sorting groups each gram's occurrences into one lookup and keeps
+        // its positions in ascending order, as required by search.
 
         data.batch_grams.clear();
         data.batch_grams.resize(input.size() - N + 1);

@@ -56,6 +56,12 @@ struct search_query
         return words_.empty();
     }
 
+    void swap(search_query& other) noexcept
+    {
+        using std::swap;
+        swap(words_, other.words_);
+    }
+
     [[nodiscard]] bool operator==(search_query const& other) const noexcept
     {
         return words_ == other.words_;
@@ -67,6 +73,12 @@ private:
 
 template<class CharT, std::size_t N>
 search_query(CharT const(&)[N]) -> search_query<CharT>;
+
+template<class CharT>
+void swap(search_query<CharT>& a, search_query<CharT>& b) noexcept
+{
+    a.swap(b);
+}
 
 } // iris::ngram
 
