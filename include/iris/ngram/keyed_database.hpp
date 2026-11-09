@@ -65,12 +65,22 @@ public:
 
     template<class KeyLikeT>
     void remove_document(KeyLikeT const& key_like)
+        noexcept(std::is_nothrow_constructible_v<KeyT, KeyLikeT const&>)
     {
-        base_type::remove_document(this->get_document_id(key_like));
+        auto const it = key_to_doc_id_.find(key_like);
+        if (it == key_to_doc_id_.end()) return;
+
+        auto const doc_id = it->second;
+        auto const doc_id_index = detail::to_index(doc_id);
+        assert(doc_id_index < doc_id_to_key_.size());
+        doc_id_to_key_[doc_id_index] = nullptr;
+        key_to_doc_id_.erase(it);
+
+        base_type::remove_document(doc_id);
     }
 
     template<class KeyLikeT>
-    [[nodiscard]] bool has_document(KeyLikeT const& key_like) const
+    [[nodiscard]] bool has_document(KeyLikeT const& key_like) const noexcept
     {
         return key_to_doc_id_.find(key_like) != key_to_doc_id_.end();
     }

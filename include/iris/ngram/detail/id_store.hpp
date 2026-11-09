@@ -117,10 +117,11 @@ public:
         };
     }
 
-    void remove_document(document_id const doc_id)
+    void remove_document(document_id const doc_id) noexcept
     {
+        assert(to_index(doc_id) < id_to_slot_.size() && "document id is beyond the range of ids issued by this database");
         if (to_index(doc_id) >= id_to_slot_.size()) {
-            throwf<std::invalid_argument>("document id #{} is beyond the range of ids issued by this database", doc_id);
+            return; // safely noop on Release build
         }
 
         document_slot& doc_slot = id_to_slot_[to_index(doc_id)];

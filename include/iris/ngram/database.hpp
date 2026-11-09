@@ -66,15 +66,17 @@ public:
         transaction.commit();
     }
 
+    // Remove the document specified by `doc_id`.
+    // Removing an already-erased document is noop.
     // NOT thread-safe
-    void remove_document(document_id const doc_id)
+    void remove_document(document_id const doc_id) noexcept
     {
         id_store_.remove_document(doc_id);
     }
 
     // Returns whether `doc_id` refers to an existing (non-erased) document.
     // NOT thread-safe
-    [[nodiscard]] bool has_document(document_id const doc_id) const
+    [[nodiscard]] bool has_document(document_id const doc_id) const noexcept
     {
         return id_store_.has_document(doc_id);
     }
@@ -131,7 +133,8 @@ public:
 
             // Find first non-empty word
             for (; word_it != std::ranges::end(query_words); ++word_it) {
-                std::basic_string_view<CharT> const word{*word_it};
+                auto&& word_value = *word_it;
+                std::basic_string_view<CharT> const word{word_value};
                 if (word.empty()) continue;
 
                 db.template search_word<true>(word_id++, word);
@@ -153,7 +156,8 @@ public:
             ++word_it;
 
             for (; word_it != std::ranges::end(query_words); ++word_it) {
-                std::basic_string_view<CharT> const word{*word_it};
+                auto&& word_value = *word_it;
+                std::basic_string_view<CharT> const word{word_value};
                 if (word.empty()) continue;
 
                 db.template search_word<false>(word_id++, word);
