@@ -28,8 +28,9 @@ public:
         requires std::is_constructible_v<KeyT, KeyLikeT>
     void add_document(KeyLikeT&& key_like, std::basic_string_view<CharT> const doc_text)
     {
-        auto const doc_id = base_type::add_document(doc_text);
-        auto const [it, inserted] = key_to_doc_id_.emplace(std::forward<KeyLikeT>(key_like), doc_id);
+        // First, insert the fake `doc_id` to check the key existence.
+        // This makes sure that the key construction and lookup only occurs once regardless of the existence of the key
+        auto const [it, inserted] = key_to_doc_id_.emplace(std::forward<KeyLikeT>(key_like), document_id::tombstone);
         if (!inserted) {
             if constexpr (std::is_pointer_v<KeyT>) {
                 throwf<std::invalid_argument>("key `{}` already exists in keyed_database", static_cast<void const*>(it->first));
@@ -39,8 +40,14 @@ public:
                 throwf<std::invalid_argument>("key `???` already exists in keyed_database");
             }
         }
+
+        key_to_doc_id_addition_guard addition_guard{key_to_doc_id_, it};
+        auto const doc_id = base_type::add_document(doc_text);
+
         assert(doc_id_to_key_.size() == detail::to_index(doc_id));
         doc_id_to_key_.emplace_back(std::addressof(it->first));
+
+        addition_guard.commit();
     }
 
     template<class KeyLikeT>
@@ -122,11 +129,34 @@ private:
         return it->second;
     }
 
-    std::unordered_map<KeyT, document_id, HashT, EqualT>
-    key_to_doc_id_;
+    using key_to_doc_id_type = std::unordered_map<KeyT, document_id, HashT, EqualT>;
+    key_to_doc_id_type key_to_doc_id_;
 
-    std::vector<KeyT const*>
-    doc_id_to_key_;
+    struct key_to_doc_id_addition_guard
+    {
+        key_to_doc_id_addition_guard(key_to_doc_id_type& key_to_doc_id, key_to_doc_id_type::iterator it)
+            : key_to_doc_id_(key_to_doc_id)
+            , it_(std::move(it))
+        {}
+
+        void commit()
+        {
+            it_ = key_to_doc_id_.end();
+        }
+
+        ~key_to_doc_id_addition_guard()
+        {
+            if (it_ != key_to_doc_id_.end()) {
+                key_to_doc_id_.erase(it_);
+            }
+        }
+
+    private:
+        key_to_doc_id_type& key_to_doc_id_;
+        key_to_doc_id_type::iterator it_;
+    };
+
+    std::vector<KeyT const*> doc_id_to_key_;
 };
 
 } // iris::ngram
