@@ -57,18 +57,6 @@ struct gram
         return ng;
     }
 
-    template<std::forward_iterator It>
-    constexpr void shift_copy(It it, int const remaining_chars)
-        noexcept(
-            noexcept(std::shift_left(data.begin(), data.end(), remaining_chars)) &&
-            noexcept(std::ranges::copy_n(it, remaining_chars, data.begin() + (N - remaining_chars)))
-        )
-    {
-        assert(remaining_chars < int(N));
-        std::shift_left(data.begin(), data.end(), remaining_chars);
-        std::ranges::copy_n(it, remaining_chars, data.begin() + (N - remaining_chars));
-    }
-
     template<std::size_t Len>
     [[nodiscard]] static constexpr gram from_c_array(CharT const (&chars)[Len]) noexcept
     {
@@ -134,15 +122,6 @@ struct gram<2, CharT>
         gram ng;
         ng.copy_n(std::move(it));
         return ng;
-    }
-
-    template<std::forward_iterator It>
-    constexpr void shift_copy(It it, int const remaining_chars)
-        noexcept(noexcept(*it))
-    {
-        assert(remaining_chars == 1);
-        (void)remaining_chars;
-        data = (data << (sizeof(CharT) * 8)) | value_type(static_cast<std::make_unsigned_t<CharT>>(*it));
     }
 
     template<std::size_t Len>

@@ -11,8 +11,13 @@
 #include <iris/exception.hpp>
 
 #include <vector>
+#include <span>
+#include <limits>
+#include <stdexcept>
 
 #include <cassert>
+#include <cstdint>
+#include <cstddef>
 
 namespace iris::ngram::detail {
 
@@ -28,93 +33,47 @@ public:
         [[nodiscard]] bool is_used_for_search() const noexcept { return doc_id != document_id::tombstone && is_visible; }
     };
 
-private:
-    struct [[nodiscard]] add_document_transaction;
-    friend add_document_transaction;
-    struct add_document_transaction
+    [[nodiscard]] document_slot slot_for_new_document() const
     {
-        add_document_transaction(id_store* store, document_id new_id, document_slot new_slot) noexcept
-            : store_(store)
-            , new_id_(new_id)
-            , new_slot_(new_slot)
-        {}
-
-        [[nodiscard]] document_id new_id() const noexcept { return new_id_; }
-        [[nodiscard]] document_slot new_slot() const noexcept { return new_slot_; }
-
-        void commit()
-        {
-            store_->id_to_slot_.emplace_back(new_slot_);
-            store_->slot_infos_.emplace_back(new_id_);
+        if (id_to_slot_.size() >= to_index(document_id::tombstone)) {
+            throw std::length_error{"no more document id can be issued"};
         }
-
-    private:
-        id_store* store_;
-        document_id new_id_;
-        document_slot new_slot_;
-    };
-
-public:
-    add_document_transaction add_document()
-    {
-        return {
-            this,
-            static_cast<document_id>(id_to_slot_.size()),
-            static_cast<document_slot>(slot_infos_.size())
-        };
+        return this->next_slot();
     }
 
-private:
-    struct [[nodiscard]] update_document_transaction;
-    friend update_document_transaction;
-    struct update_document_transaction
-    {
-        update_document_transaction(id_store* store, slot_info_t& old_slot_info, document_slot new_slot) noexcept
-            : store_(store)
-            , old_slot_info_(old_slot_info)
-            , new_slot_(new_slot)
-        {}
-
-        [[nodiscard]] document_slot new_slot() const noexcept { return new_slot_; }
-
-        void commit()
-        {
-            auto const doc_id = old_slot_info_.doc_id;
-            auto const is_visible = old_slot_info_.is_visible;
-
-            store_->slot_infos_.emplace_back(doc_id, is_visible);
-
-            // emplace_back may invalidate `old_slot_info_`
-            store_->slot_infos_[to_index(store_->id_to_slot_[to_index(doc_id)])].doc_id = document_id::tombstone;
-
-            store_->id_to_slot_[to_index(doc_id)] = new_slot_;
-        }
-
-    private:
-        id_store* store_;
-        slot_info_t& old_slot_info_;
-        document_slot new_slot_;
-    };
-
-public:
-    update_document_transaction update_document(document_id const doc_id)
+    [[nodiscard]] document_slot slot_for_update(document_id const doc_id) const
     {
         if (to_index(doc_id) >= id_to_slot_.size()) {
             throwf<std::invalid_argument>("document id #{} is beyond the range of ids issued by this database", doc_id);
         }
-
-        document_slot const& doc_slot = id_to_slot_[to_index(doc_id)];
-        if (doc_slot == document_slot::tombstone) {
+        if (id_to_slot_[to_index(doc_id)] == document_slot::tombstone) {
             throwf<std::invalid_argument>("cannot update a removed document #{}", doc_id);
         }
+        return this->next_slot();
+    }
 
-        assert(to_index(doc_slot) < slot_infos_.size());
-        auto& old_slot_info = slot_infos_[to_index(doc_slot)];
-        assert(old_slot_info.doc_id == doc_id);
+    // Requires the slot to be checked by `slot_for_new_document()`; `weight` is the length plus one
+    document_id add_document(std::size_t const weight)
+    {
+        auto const doc_id = static_cast<document_id>(id_to_slot_.size());
+        auto const doc_slot = static_cast<document_slot>(slot_infos_.size());
+        id_to_slot_.emplace_back(doc_slot);
+        slot_infos_.emplace_back(doc_id);
+        this->add_slot_weight(weight);
+        return doc_id;
+    }
 
-        return {
-            this, old_slot_info, static_cast<document_slot>(slot_infos_.size())
-        };
+    void update_document(document_id const doc_id, std::size_t const weight)
+    {
+        document_slot& doc_slot = id_to_slot_[to_index(doc_id)];
+        document_slot const old_slot = doc_slot;
+        slot_info_t const info = this->get_info(old_slot);
+        slot_infos_.emplace_back(info);
+        this->add_slot_weight(weight);
+
+        this->get_info(old_slot).doc_id = document_id::tombstone;
+        this->kill_slot_weight(old_slot);
+        doc_slot = static_cast<document_slot>(slot_infos_.size() - 1);
     }
 
     void remove_document(document_id const doc_id) noexcept
@@ -126,7 +85,6 @@ public:
 
         document_slot& doc_slot = id_to_slot_[to_index(doc_id)];
         if (doc_slot == document_slot::tombstone) {
-            // Removing an already-removed document is no-op; same semantics as STL containers
             return;
         }
 
@@ -135,18 +93,14 @@ public:
 
         assert(!slot_info.is_stale());
         slot_info.doc_id = document_id::tombstone;
+        this->kill_slot_weight(doc_slot);
 
         doc_slot = document_slot::tombstone;
     }
 
     [[nodiscard]] bool has_document(document_id const doc_id) const noexcept
     {
-        if (doc_id == document_id::tombstone) [[unlikely]] {
-            return false;
-        }
         if (to_index(doc_id) >= id_to_slot_.size()) [[unlikely]] {
-            // `doc_id` points to a unissued slot, perhaps due to logic error such as
-            // mixing id namespace on application side.
             return false;
         }
         document_slot const doc_slot = id_to_slot_[to_index(doc_id)];
@@ -154,8 +108,6 @@ public:
         return doc_slot != document_slot::tombstone;
     }
 
-    // This method is intentionally `noexcept` and invokes only assertion because
-    // it is heavily accessed via actual lookup
     [[nodiscard]] slot_info_t const& get_info(document_slot const doc_slot) const noexcept
     {
         assert(to_index(doc_slot) < slot_infos_.size());
@@ -193,10 +145,50 @@ public:
         this->get_info(doc_slot).is_visible = flag;
     }
 
+    // Compact when the stale weight dominates, which amortizes the linear cost.
+    // The minimum avoids frequent tiny rebuilds.
+    [[nodiscard]] bool needs_compaction() const noexcept
+    {
+        return stale_weight_ >= min_compaction_weight && stale_weight_ > live_weight_;
+    }
+
+    // The new slot of each slot in the same order, or `document_slot::tombstone` for a stale one
+    [[nodiscard]] std::vector<document_slot> compaction_map() const
+    {
+        std::vector<document_slot> slot_map;
+        slot_map.reserve(slot_infos_.size());
+        std::uint32_t new_slot = 0;
+        for (auto const& info : slot_infos_) {
+            slot_map.emplace_back(info.is_stale() ? document_slot::tombstone : static_cast<document_slot>(new_slot++));
+        }
+        return slot_map;
+    }
+
+    void compact(std::span<document_slot const> const slot_map) noexcept
+    {
+        assert(slot_map.size() == slot_infos_.size());
+
+        std::size_t out = 0;
+        for (std::size_t in = 0; in < slot_infos_.size(); ++in) {
+            if (slot_map[in] == document_slot::tombstone) continue;
+            assert(to_index(slot_map[in]) == out);
+            slot_infos_[out] = slot_infos_[in];
+            slot_weights_[out] = slot_weights_[in];
+            id_to_slot_[to_index(slot_infos_[out].doc_id)] = slot_map[in];
+            ++out;
+        }
+        slot_infos_.resize(out);
+        slot_weights_.resize(out);
+        stale_weight_ = 0;
+    }
+
     void clear() noexcept
     {
         id_to_slot_.clear();
         slot_infos_.clear();
+        slot_weights_.clear();
+        live_weight_ = 0;
+        stale_weight_ = 0;
     }
 
     void swap(id_store& other) noexcept
@@ -204,11 +196,45 @@ public:
         using std::swap;
         swap(id_to_slot_, other.id_to_slot_);
         swap(slot_infos_, other.slot_infos_);
+        swap(slot_weights_, other.slot_weights_);
+        swap(live_weight_, other.live_weight_);
+        swap(stale_weight_, other.stale_weight_);
     }
 
 private:
+    // Stale documents below this weight hold at most about 128 KiB of postings and positions.
+    // Below it, the fixed cost of the compaction was measured to be significant.
+    static constexpr std::size_t min_compaction_weight = 4096;
+
+    [[nodiscard]] document_slot next_slot() const
+    {
+        if (slot_infos_.size() >= to_index(document_slot::tombstone)) {
+            throw std::length_error{"no more document slot is available"};
+        }
+        return static_cast<document_slot>(slot_infos_.size());
+    }
+
+    void add_slot_weight(std::size_t const weight)
+    {
+        assert(weight <= std::numeric_limits<std::uint32_t>::max());
+        slot_weights_.emplace_back(static_cast<std::uint32_t>(weight));
+        live_weight_ += weight;
+    }
+
+    void kill_slot_weight(document_slot const doc_slot) noexcept
+    {
+        std::size_t const weight = slot_weights_[to_index(doc_slot)];
+        live_weight_ -= weight;
+        stale_weight_ += weight;
+    }
+
     std::vector<document_slot> id_to_slot_;
     std::vector<slot_info_t> slot_infos_;
+
+    // Apart from `slot_infos_`, which searches access per posting
+    std::vector<std::uint32_t> slot_weights_;
+    std::size_t live_weight_ = 0;
+    std::size_t stale_weight_ = 0;
 };
 
 inline void swap(id_store& a, id_store& b) noexcept

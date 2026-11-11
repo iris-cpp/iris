@@ -12,7 +12,7 @@ namespace iris::ngram::detail {
 
 // A monotonically increasing internal index used for bookkeeping.
 // Obsolete documents and their posting data may still refer to this index (harmlessly)
-// until `compact()` is requested on the database.
+// until the database compacts itself, which renumbers the slots.
 enum struct document_slot : std::uint32_t
 {
     sentinel = static_cast<std::uint32_t>(-1),

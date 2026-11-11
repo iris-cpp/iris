@@ -9,8 +9,8 @@
 
 #if !defined(_MSC_VER) && __cplusplus <= 202302L || \
     (defined(_MSVC_STL_UPDATE) && _MSVC_STL_UPDATE < 202504L) || \
-    (defined(__GLIBCXX__) && __GLIBCXX__ < 20241201) || \
-    (defined(_LIBCPP_STD_VER) && _LIBCPP_STD_VER < 26)
+    (defined(__GLIBCXX__) && _GLIBCXX_RELEASE < 15) || \
+    (defined(_LIBCPP_VERSION) && _LIBCPP_VERSION < 210000)
 
 # include <typeindex> // pre-C++26
 #else
