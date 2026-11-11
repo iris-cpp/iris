@@ -33,7 +33,7 @@ class search_result;
 namespace detail {
 
 template<class DocumentID>
-class word_spans
+class word_matches
 {
 public:
     class iterator
@@ -114,7 +114,7 @@ public:
         }
 
     private:
-        friend word_spans;
+        friend word_matches;
 
         iterator(search_result<DocumentID> const* const result, std::size_t const offset) noexcept
             : result_(result)
@@ -129,7 +129,7 @@ public:
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = reverse_iterator;
 
-    word_spans() = default;
+    word_matches() = default;
 
     [[nodiscard]] std::span<interval<int> const> operator[](std::size_t const word) const noexcept
     {
@@ -185,7 +185,7 @@ public:
 private:
     friend search_result<DocumentID>;
 
-    word_spans(search_result<DocumentID> const* const result, std::size_t const doc) noexcept
+    word_matches(search_result<DocumentID> const* const result, std::size_t const doc) noexcept
         : result_(result)
         , doc_(doc)
     {}
@@ -201,8 +201,8 @@ class [[nodiscard]] search_result
 {
 public:
     using document_id_type = DocumentID;
-    using word_spans = detail::word_spans<DocumentID>;
-    using value_type = std::pair<DocumentID const&, word_spans>;
+    using word_matches = detail::word_matches<DocumentID>;
+    using value_type = std::pair<DocumentID const&, word_matches>;
 
     class iterator
     {
@@ -310,7 +310,7 @@ public:
     [[nodiscard]] value_type operator[](std::size_t const doc) const noexcept IRIS_LIFETIMEBOUND
     {
         assert(doc < this->size());
-        return {doc_ids_[doc], word_spans{this, doc}};
+        return {doc_ids_[doc], word_matches{this, doc}};
     }
 
     [[nodiscard]] iterator begin() const noexcept IRIS_LIFETIMEBOUND
@@ -389,7 +389,7 @@ private:
     template<class CharT>
     friend class database;
 
-    friend word_spans;
+    friend word_matches;
 
     void reset(std::size_t const word_count) noexcept
     {

@@ -31,8 +31,8 @@ TEST_CASE("ngram: type traits")
 
     STATIC_CHECK(std::ranges::random_access_range<iris::ngram::search_result<>>);
     STATIC_CHECK(std::ranges::sized_range<iris::ngram::search_result<>>);
-    STATIC_CHECK(std::ranges::random_access_range<iris::ngram::search_result<>::word_spans>);
-    STATIC_CHECK(std::ranges::sized_range<iris::ngram::search_result<>::word_spans>);
+    STATIC_CHECK(std::ranges::random_access_range<iris::ngram::search_result<>::word_matches>);
+    STATIC_CHECK(std::ranges::sized_range<iris::ngram::search_result<>::word_matches>);
 }
 
 TEST_CASE("ngram: update document")
@@ -507,9 +507,9 @@ TEST_CASE("ngram: search_result copy")
 
     auto const matches_of = [](iris::ngram::search_result<throwing_key> const& search_res) {
         std::vector<std::pair<int, std::vector<std::vector<interval<int>>>>> matches;
-        for (auto const& [key, word_spans] : search_res) {
+        for (auto const& [key, word_matches] : search_res) {
             auto& spans = matches.emplace_back(key.value, std::vector<std::vector<interval<int>>>{}).second;
-            for (auto const& word : word_spans) {
+            for (auto const& word : word_matches) {
                 spans.emplace_back(word.begin(), word.end());
             }
         }
@@ -563,23 +563,23 @@ TEST_CASE("ngram: search_result access")
     REQUIRE(search_res.size() == 2);
     CHECK(search_res.end() - search_res.begin() == 2);
 
-    auto const [doc_id, word_spans] = search_res[1];
+    auto const [doc_id, word_matches] = search_res[1];
     CHECK(doc_id == 2_doc_id);
-    REQUIRE(word_spans.size() == 2);
-    CHECK(std::ranges::equal(word_spans[0], std::vector{interval{4, 7}, interval{8, 11}}));
-    CHECK(std::ranges::equal(word_spans[1], std::vector{interval{0, 3}}));
+    REQUIRE(word_matches.size() == 2);
+    CHECK(std::ranges::equal(word_matches[0], std::vector{interval{4, 7}, interval{8, 11}}));
+    CHECK(std::ranges::equal(word_matches[1], std::vector{interval{0, 3}}));
 
     CHECK(std::get<0>(search_res.begin()[0]) == 0_doc_id);
     CHECK(std::ranges::equal(std::get<1>(*(search_res.end() - 1)).end()[-1], std::vector{interval{0, 3}}));
 
     CHECK(search_res.rend() - search_res.rbegin() == 2);
     CHECK(std::get<0>(*search_res.rbegin()) == 2_doc_id);
-    CHECK(std::ranges::equal(*word_spans.rbegin(), std::vector{interval{0, 3}}));
-    CHECK(std::ranges::equal(word_spans.rend()[-1], std::vector{interval{4, 7}, interval{8, 11}}));
+    CHECK(std::ranges::equal(*word_matches.rbegin(), std::vector{interval{0, 3}}));
+    CHECK(std::ranges::equal(word_matches.rend()[-1], std::vector{interval{4, 7}, interval{8, 11}}));
 
     CHECK(search_res.cbegin() == search_res.begin());
     CHECK(search_res.cend() == search_res.end());
     CHECK(search_res.crend() - search_res.crbegin() == 2);
-    CHECK(word_spans.cend() - word_spans.cbegin() == 2);
-    CHECK(word_spans.crbegin() == word_spans.rbegin());
+    CHECK(word_matches.cend() - word_matches.cbegin() == 2);
+    CHECK(word_matches.crbegin() == word_matches.rbegin());
 }
