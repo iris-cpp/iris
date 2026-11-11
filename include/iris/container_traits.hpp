@@ -665,6 +665,52 @@ concept has_shrink_to_fit = requires(std::remove_cvref_t<ContainerT>& cont) {
     cont.shrink_to_fit();
 };
 
+template<class ContainerT>
+concept has_capacity = requires(std::remove_cvref_t<ContainerT> const& cont) {
+    cont.capacity();
+};
+
+template<class ContainerT>
+concept has_max_size = requires(std::remove_cvref_t<ContainerT> const& cont) {
+    cont.max_size();
+};
+
+// Reserves capacity for at least `min_capacity` elements, growing it geometrically
+// so that repeated calls with increasing sizes reallocate only a logarithmic number
+// of times.
+//
+// Throws whatever `cont.reserve()` throws.
+//
+// The standard requires amortized constant time for `push_back()`, which needs the
+// capacity to grow by at least a constant factor greater than 1. The factor 2 dates
+// back to the HP STL (1994), apparently as an arbitrary choice:
+//   - https://eel.is/c++draft/sequence.reqmts
+//   - https://www.stepanovpapers.com/butler.hpl.hp/stl/wat_stl/VECTOR.H
+//
+// Note: libstdc++ bases the growth of `std::vector` on `size()` as
+// `size() + max(size(), n)`, inherited from the code above. Inserting `n` elements at
+// once after `clear()` thus allocates exactly `n`, so clearing and inserting slightly
+// more elements each time reallocates every time, defeating the purpose of the
+// geometric growth. It is likely a historical artifact rather than a deliberate
+// design, as libstdc++'s own `std::string` grows based on the capacity.
+template<class ContainerT>
+    requires
+        has_capacity<ContainerT> &&
+        has_max_size<ContainerT> &&
+        has_reserve<ContainerT, typename ContainerT::size_type>
+constexpr void reserve_geometric(ContainerT& cont, typename ContainerT::size_type const min_capacity)
+{
+    auto const capacity = cont.capacity();
+    if (min_capacity <= capacity) return;
+
+    // libstdc++ and libc++ use the factor 2, and MSVC STL uses 1.5. A libstdc++
+    // discussion reported factors below 2 to be empirically worse:
+    //   - https://gcc.gnu.org/pipermail/libstdc++/2013-March/039011.html
+    //   - https://gcc.gnu.org/pipermail/libstdc++/2013-March/039012.html
+    auto const doubled = capacity > cont.max_size() - capacity ? min_capacity : capacity * 2;
+    cont.reserve(min_capacity > doubled ? min_capacity : doubled);
+}
+
 
 template<class It, class ElemT>
 concept compatible_iterator =

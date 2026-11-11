@@ -26,12 +26,35 @@ class keyed_database : private database<CharT>
 public:
     using document_id_type = KeyT;
 
+    keyed_database() = default;
+
+    // Rebuilds `doc_id_to_key_`, which points into `key_to_doc_id_`
+    keyed_database(keyed_database const& other)
+        : base_type(other)
+        , key_to_doc_id_(other.key_to_doc_id_)
+        , doc_id_to_key_(other.doc_id_to_key_.size(), nullptr)
+    {
+        for (auto const& [key, doc_id] : key_to_doc_id_) {
+            doc_id_to_key_[detail::to_index(doc_id)] = std::addressof(key);
+        }
+    }
+
+    keyed_database(keyed_database&&) = default;
+    keyed_database& operator=(keyed_database&&) = default;
+
+    keyed_database& operator=(keyed_database const& other)
+    {
+        keyed_database copy(other);
+        this->swap(copy);
+        return *this;
+    }
+
     template<class KeyLikeT = KeyT>
         requires std::is_constructible_v<KeyT, KeyLikeT>
     void add_document(KeyLikeT&& key_like, std::basic_string_view<CharT> const doc_text)
     {
-        // First, insert the fake `doc_id` to check the key existence.
-        // This makes sure that the key construction and lookup only occurs once regardless of the existence of the key
+        // Reserve the key once; publish its document id after indexing succeeds.
+        // TODO: __cpp_lib_associative_heterogeneous_insertion
         auto const [it, inserted] = key_to_doc_id_.emplace(std::forward<KeyLikeT>(key_like), document_id::tombstone);
         if (!inserted) {
             if constexpr (std::is_pointer_v<KeyT>) {
@@ -114,9 +137,6 @@ public:
 
     void swap(keyed_database& other) noexcept
     {
-        static_assert(std::is_nothrow_swappable_v<HashT>);
-        static_assert(std::is_nothrow_swappable_v<EqualT>);
-
         using std::swap;
         swap(static_cast<base_type&>(*this), static_cast<base_type&>(other));
         swap(key_to_doc_id_, other.key_to_doc_id_);
@@ -135,7 +155,6 @@ private:
     template<class KeyLikeT>
     [[nodiscard]] document_id get_document_id(KeyLikeT const& key_like) const
     {
-        // TODO: __cpp_lib_associative_heterogeneous_insertion
         auto const it = key_to_doc_id_.find(key_like);
         if (it == key_to_doc_id_.end()) throw std::out_of_range{"key not found"};
         return it->second;

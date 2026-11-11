@@ -5,161 +5,425 @@
 
 #include <iris/config.hpp> // IWYU pragma: keep
 
-// Make sure we don't include `ngram/id.hpp` so that we can assure the
-// internal logic never uses the external id type
+// Not including `ngram/id.hpp` keeps the external id type out of the index
+#include <iris/ngram/detail/slot.hpp>
 #include <iris/ngram/gram.hpp>
 
 #include <iris/default_init_allocator.hpp>
+#include <iris/container_traits.hpp>
 
-#include <ranges>
 #include <string_view>
-#include <memory>
 #include <vector>
-#include <unordered_map>
-#include <iterator>
 #include <span>
-#include <concepts>
+#include <numeric>
+#include <limits>
+#include <algorithm>
+#include <bit>
 #include <type_traits>
 #include <utility>
 #include <stdexcept>
-#include <compare>
 
 #include <cassert>
+#include <cstdint>
 #include <cstddef> // IWYU pragma: keep
 
 namespace iris::ngram::detail {
 
-enum struct [[nodiscard]] search_continuation : bool
+struct posting
 {
-    abort = false,
-    proceed = true,
+    document_slot doc_slot;
+    std::uint32_t pos_count;
+    int pos_or_offset; // the position if `pos_count == 1`, otherwise the offset into the pool
 };
 
-class posting_list
+// Sorted by `document_slot`; invalidated by any modification of the index
+struct posting_list
 {
-public:
-    void append(document_slot const doc_slot, int pos)
+    std::span<posting const> postings;
+    std::span<int const> pool;
+
+    [[nodiscard]] std::span<int const> positions(posting const& p IRIS_LIFETIMEBOUND) const noexcept
     {
-        assert(postings_.empty() || postings_.back().doc_slot == document_slot::sentinel);
-        assert(postings_.empty() || postings_.back().pos_offset == positions_.size());
-
-        if (postings_.empty()) {
-            postings_.emplace_back(doc_slot, 0u);
-            postings_.emplace_back(document_slot::sentinel, 0u);
-
-        } else if (auto last_posting = postings_.end() - 2; last_posting->doc_slot != doc_slot) {
-            if (last_posting->doc_slot > doc_slot) {
-                throw std::logic_error{"documents must be indexed in non-decreasing order of document_slot"};
-            }
-            assert(postings_.back().doc_slot == document_slot::sentinel);
-
-            // Promote the sentinel into a real posting
-            postings_.back().doc_slot = doc_slot;
-            postings_.emplace_back(document_slot::sentinel, static_cast<unsigned>(positions_.size()));
-        }
-
-        positions_.emplace_back(pos);
-        ++postings_.back().pos_offset;
+        if (p.pos_count == 1) return {&p.pos_or_offset, 1};
+        return pool.subspan(static_cast<std::size_t>(p.pos_or_offset), p.pos_count);
     }
-
-    template<class F>
-    void for_each_documents(F&& f) const
-    {
-        static_assert(std::invocable<F, document_slot, std::span<int const>>);
-
-        constexpr bool f_returns_continuation = std::same_as<
-            std::invoke_result_t<F, document_slot, std::span<int const>>,
-            search_continuation
-        >;
-
-        for (auto const& [posting, next] : postings_ | std::views::pairwise) {
-            std::span<int const> const posting_span{
-                std::next(positions_.begin(), posting.pos_offset),
-                static_cast<std::size_t>(next.pos_offset - posting.pos_offset)
-            };
-
-            if constexpr (f_returns_continuation) {
-                search_continuation const cont = f(posting.doc_slot, posting_span);
-                if (cont == search_continuation::abort) break;
-            } else {
-                f(posting.doc_slot, posting_span);
-            }
-        }
-    }
-
-    void swap(posting_list& other) noexcept
-    {
-        using std::swap;
-        swap(postings_, other.postings_);
-        swap(positions_, other.positions_);
-    }
-
-private:
-    struct posting_t
-    {
-        document_slot doc_slot;
-        unsigned pos_offset = 0;
-    };
-    std::vector<posting_t> postings_;
-    std::vector<int> positions_;
 };
 
-inline void swap(posting_list& a, posting_list& b) noexcept
-{
-    a.swap(b);
-}
-
+// Each n-gram owns a slot-sorted segment of a shared pool with `bit_ceil(size)` capacity.
+// Relocation leaves old segments unused until compaction.
+// Multiple positions are pooled; single positions are stored inline.
 template<std::size_t N, class CharT>
 class gram_index
 {
-public:
-    template<class Self>
-    [[nodiscard]] auto find_list(this Self&& self, gram<N, CharT> const ng)
-        noexcept
-        -> std::conditional_t<std::is_const_v<std::remove_reference_t<Self>>, posting_list const*, posting_list*>
+    static_assert(N == 1 || N == 2, "gram_index requires a gram stored as a single integer");
+
+    using key_type = std::make_unsigned_t<decltype(gram<N, CharT>::data)>;
+
+    static constexpr std::uint32_t npos = std::numeric_limits<std::uint32_t>::max();
+
+    // An empty slot has `begin == npos`
+    struct chain_slot
     {
-        if (auto const it = self.gram_entries_.find(ng); it != self.gram_entries_.end()) {
-            return it->second.get();
+        key_type key;
+        std::uint32_t begin = npos;
+        std::uint32_t size = 0;
+
+        [[nodiscard]] bool is_full() const noexcept
+        {
+            return std::has_single_bit(size) || size == 0;
         }
-        return nullptr;
+    };
+
+    // In the current document iff `serial - serial_base < keys.size()`; the difference is the run id.
+    // Slots are not cleared between documents.
+    struct run_slot
+    {
+        key_type key;
+        std::uint32_t serial = npos;
+    };
+
+    // Scratch for grouping a document by n-gram. Copies omit it; copy assignment keeps the buffers for reuse.
+    struct run_buffers
+    {
+        run_buffers() = default;
+        run_buffers(run_buffers const&) noexcept {}
+        run_buffers(run_buffers&&) = default;
+        run_buffers& operator=(run_buffers const&) noexcept { return *this; }
+        run_buffers& operator=(run_buffers&&) = default;
+
+        std::vector<run_slot> slots; // the size is zero or a power of two
+        int shift = 0;
+        std::uint32_t serial_base = 0;
+
+        std::vector<std::uint32_t, default_init_allocator<std::uint32_t>> run_of; // of each occurrence
+        std::vector<key_type> keys;
+        std::vector<std::uint32_t> begins; // into `positions`, with the end of the last run
+        std::vector<int, default_init_allocator<int>> positions;
+    };
+
+public:
+    [[nodiscard]] posting_list find(gram<N, CharT> const ng) const noexcept
+    {
+        auto const* const chain = this->find_chain(key_of(ng));
+        if (!chain) return {};
+        return {this->segment_of(*chain), positions_};
     }
 
-    template<class F>
-    void search(gram<N, CharT> const ng, F&& f) const
+    // Groups `input` by n-gram for `append()` in O(occurrences + distinct n-grams) expected time.
+    // Throws `std::length_error` if appending would exceed the limits; the index is unchanged.
+    void group(std::basic_string_view<CharT> const input)
     {
-        auto const* list = this->find_list(ng);
-        if (!list) return;
-        list->for_each_documents(f);
+        auto& runs = runs_;
+        runs.serial_base += static_cast<std::uint32_t>(runs.keys.size());
+        runs.keys.clear();
+        runs.begins.clear();
+        runs.positions.clear();
+        if (input.size() < N) return;
+
+        std::size_t const gram_count = input.size() - N + 1;
+        if (gram_count > npos - runs.serial_base) {
+            // Serial numbers are exhausted
+            std::ranges::fill(runs.slots, run_slot{});
+            runs.serial_base = 0;
+        }
+        if (runs.slots.empty()) {
+            this->grow_run_slots();
+        }
+
+        container::reserve_geometric(runs.run_of, gram_count);
+        runs.run_of.resize(gram_count);
+
+        for (std::size_t i = 0; i < gram_count; ++i) {
+            key_type const key = key_of(gram<N, CharT>::from_copy_n(input.begin() + i));
+            auto* slot = &this->run_slot_of(key);
+            std::uint32_t run = slot->serial - runs.serial_base;
+
+            if (run >= runs.keys.size()) {
+                if ((runs.keys.size() + 1) * 2 > runs.slots.size()) {
+                    this->grow_run_slots();
+                    slot = &this->run_slot_of(key);
+                }
+                run = static_cast<std::uint32_t>(runs.keys.size());
+                runs.keys.emplace_back(key);
+                runs.begins.emplace_back(0);
+                *slot = {key, runs.serial_base + run};
+            }
+            runs.run_of[i] = run;
+            ++runs.begins[run];
+        }
+
+        runs.begins.emplace_back(0);
+        std::inclusive_scan(runs.begins.begin(), runs.begins.end(), runs.begins.begin());
+
+        // Fill backwards to keep the positions ascending within each run
+        container::reserve_geometric(runs.positions, gram_count);
+        runs.positions.resize(gram_count);
+        for (std::size_t i = gram_count; i-- > 0;) {
+            runs.positions[--runs.begins[runs.run_of[i]]] = static_cast<int>(i);
+        }
+
+        std::size_t position_growth = 0;
+        for (std::size_t run = 0; run < runs.keys.size(); ++run) {
+            if (std::uint32_t const pos_count = runs.begins[run + 1] - runs.begins[run]; pos_count > 1) {
+                position_growth += pos_count;
+            }
+        }
+        if (position_growth > static_cast<std::size_t>(std::numeric_limits<int>::max()) - positions_.size()) {
+            throw std::length_error{"too many n-gram positions in the index"};
+        }
+
+        // Disjoint chains hold at most `postings_.size()` postings, so the growth is at most
+        // `postings_.size() * 2 + keys.size()`. Look up the chains for per-chain bounds only
+        // if this may exceed the limit; `npos` is reserved for empty slots.
+        std::uint64_t const posting_count = postings_.size();
+        if (posting_count * 3 + runs.keys.size() <= npos) return;
+
+        std::uint64_t posting_growth = 0;
+        for (auto const key : runs.keys) {
+            auto const* const chain = this->find_chain(key);
+            if (!chain) {
+                posting_growth += 1;
+
+            } else if (chain->is_full()) {
+                posting_growth += std::max(std::uint64_t{chain->size} * 2, std::uint64_t{1});
+            }
+        }
+        if (posting_count + posting_growth > npos) {
+            throw std::length_error{"too many postings in the index"};
+        }
     }
 
-    [[nodiscard]] bool empty() const noexcept
+    // Requires `group()` and a `doc_slot` greater than all indexed slots
+    void append(document_slot const doc_slot)
     {
-        return gram_entries_.empty();
+        auto const& runs = runs_;
+        for (std::size_t run = 0; run < runs.keys.size(); ++run) {
+            auto& chain = this->insert_chain(runs.keys[run]);
+            if (chain.is_full()) {
+                this->grow_segment(chain);
+            }
+            assert(chain.size == 0 || postings_[chain.begin + chain.size - 1].doc_slot < doc_slot);
+
+            std::uint32_t const pos_count = runs.begins[run + 1] - runs.begins[run];
+            int const* const run_pos = runs.positions.data() + runs.begins[run];
+            if (pos_count == 1) {
+                postings_[chain.begin + chain.size] = {doc_slot, pos_count, *run_pos};
+
+            } else {
+                postings_[chain.begin + chain.size] = {doc_slot, pos_count, static_cast<int>(positions_.size())};
+                positions_.insert(positions_.end(), run_pos, run_pos + pos_count);
+            }
+            ++chain.size;
+        }
+    }
+
+    // Drops the postings of the slots mapped to tombstone and renumbers the others by `slot_map`
+    void compact(std::span<document_slot const> const slot_map)
+    {
+        auto const is_live = [&](posting const& p) { return slot_map[to_index(p.doc_slot)] != document_slot::tombstone; };
+
+        std::size_t chain_count = 0;
+        std::size_t posting_count = 0;
+        std::size_t position_count = 0;
+        for (auto const& chain : chain_slots_) {
+            if (chain.begin == npos) continue;
+
+            std::size_t live_count = 0;
+            for (auto const& p : this->segment_of(chain)) {
+                if (!is_live(p)) continue;
+                ++live_count;
+                if (p.pos_count > 1) {
+                    position_count += p.pos_count;
+                }
+            }
+            if (live_count == 0) continue;
+            ++chain_count;
+            posting_count += std::bit_ceil(live_count);
+        }
+
+        gram_index result;
+        result.reserve_chains(chain_count);
+        result.postings_.reserve(posting_count);
+        result.positions_.reserve(position_count);
+
+        for (auto const& chain : chain_slots_) {
+            if (chain.begin == npos) continue;
+
+            chain_slot* new_chain = nullptr;
+            for (auto const& p : this->segment_of(chain)) {
+                if (!is_live(p)) continue;
+                if (!new_chain) {
+                    new_chain = &result.chain_slot_of(chain.key);
+                    *new_chain = {chain.key, static_cast<std::uint32_t>(result.postings_.size()), 0};
+                    ++result.chain_count_;
+                }
+
+                int pos_or_offset = p.pos_or_offset;
+                if (p.pos_count > 1) {
+                    pos_or_offset = static_cast<int>(result.positions_.size());
+                    auto const positions = std::span{positions_}.subspan(static_cast<std::size_t>(p.pos_or_offset), p.pos_count);
+                    result.positions_.insert(result.positions_.end(), positions.begin(), positions.end());
+                }
+                result.postings_.emplace_back(slot_map[to_index(p.doc_slot)], p.pos_count, pos_or_offset);
+                ++new_chain->size;
+            }
+            if (new_chain) {
+                result.postings_.resize(new_chain->begin + std::bit_ceil(std::size_t{new_chain->size}));
+            }
+        }
+
+        // Keep `runs_` for reuse
+        chain_slots_.swap(result.chain_slots_);
+        chain_count_ = result.chain_count_;
+        chain_shift_ = result.chain_shift_;
+        postings_.swap(result.postings_);
+        positions_.swap(result.positions_);
     }
 
     void clear() noexcept
     {
-        gram_entries_.clear();
+        chain_slots_.clear();
+        chain_count_ = 0;
+        chain_shift_ = 0;
+        postings_.clear();
+        positions_.clear();
     }
 
     void swap(gram_index& other) noexcept
     {
         using std::swap;
-        swap(gram_entries_, other.gram_entries_);
-    }
-
-    void merge_new_entries(std::vector<std::pair<gram<N, CharT>, std::unique_ptr<posting_list>>>& pending)
-    {
-        for (auto& [key, pl] : pending) {
-            [[maybe_unused]] auto const [it, inserted] = gram_entries_.try_emplace(key, std::move(pl));
-            assert(inserted);
-            assert(it->second != nullptr && pl == nullptr);
-        }
+        swap(chain_slots_, other.chain_slots_);
+        swap(chain_count_, other.chain_count_);
+        swap(chain_shift_, other.chain_shift_);
+        swap(postings_, other.postings_);
+        swap(positions_, other.positions_);
+        swap(runs_, other.runs_);
     }
 
 private:
-    std::unordered_map<gram<N, CharT>, std::unique_ptr<posting_list>>
-    gram_entries_;
+    [[nodiscard]] static constexpr key_type key_of(gram<N, CharT> const ng) noexcept
+    {
+        return static_cast<key_type>(ng.data);
+    }
+
+    // Fibonacci hashing
+    [[nodiscard]] static std::size_t home_of(key_type const key, int const shift) noexcept
+    {
+        return static_cast<std::size_t>((static_cast<std::uint64_t>(key) * 0x9E3779B97F4A7C15ull) >> shift);
+    }
+
+    // Returns the slot holding `key`, or the empty slot for it
+    template<class Self>
+    [[nodiscard]] auto& chain_slot_of(this Self& self, key_type const key) noexcept
+    {
+        assert(!self.chain_slots_.empty());
+        std::size_t const mask = self.chain_slots_.size() - 1;
+        auto i = home_of(key, self.chain_shift_);
+        while (self.chain_slots_[i].begin != npos && self.chain_slots_[i].key != key) {
+            i = (i + 1) & mask;
+        }
+        return self.chain_slots_[i];
+    }
+
+    [[nodiscard]] std::span<posting const> segment_of(chain_slot const& chain) const noexcept
+    {
+        return std::span{postings_}.subspan(chain.begin, chain.size);
+    }
+
+    [[nodiscard]] chain_slot const* find_chain(key_type const key) const noexcept
+    {
+        if (chain_slots_.empty()) return nullptr;
+        auto const& slot = this->chain_slot_of(key);
+        return slot.begin == npos ? nullptr : &slot;
+    }
+
+    chain_slot& insert_chain(key_type const key)
+    {
+        if (chain_slots_.empty()) {
+            this->reserve_chains(1);
+        }
+        auto* chain = &this->chain_slot_of(key);
+        if (chain->begin == npos) {
+            if ((chain_count_ + 1) * 2 > chain_slots_.size()) {
+                this->reserve_chains(chain_count_ + 1);
+                chain = &this->chain_slot_of(key);
+            }
+            *chain = {key, 0, 0};
+            ++chain_count_;
+        }
+        return *chain;
+    }
+
+    // Keeps the load factor at or below 1/2
+    void reserve_chains(std::size_t const count)
+    {
+        if (count * 2 <= chain_slots_.size()) return;
+
+        std::size_t const new_size = std::bit_ceil(std::max(count * 2, std::size_t{16}));
+        std::vector<chain_slot> old_slots(new_size);
+        chain_slots_.swap(old_slots);
+        chain_shift_ = 64 - std::countr_zero(new_size);
+
+        for (auto const& old_slot : old_slots) {
+            if (old_slot.begin == npos) continue;
+            this->chain_slot_of(old_slot.key) = old_slot;
+        }
+    }
+
+    // Returns the slot of the current document holding `key`, or a free slot for it
+    [[nodiscard]] run_slot& run_slot_of(key_type const key) noexcept
+    {
+        auto& runs = runs_;
+        std::size_t const mask = runs.slots.size() - 1;
+        std::size_t const run_count = runs.keys.size();
+        auto i = home_of(key, runs.shift);
+        while (runs.slots[i].serial - runs.serial_base < run_count && runs.slots[i].key != key) {
+            i = (i + 1) & mask;
+        }
+        return runs.slots[i];
+    }
+
+    // Only the runs of the current document need to be moved
+    void grow_run_slots()
+    {
+        auto& runs = runs_;
+        std::size_t const new_size = std::max(runs.slots.size() * 2, std::size_t{16});
+        std::vector<run_slot> new_slots(new_size);
+        runs.slots.swap(new_slots);
+        runs.shift = 64 - std::countr_zero(new_size);
+
+        for (std::size_t run = 0; run < runs.keys.size(); ++run) {
+            this->run_slot_of(runs.keys[run]) = {runs.keys[run], runs.serial_base + static_cast<std::uint32_t>(run)};
+        }
+    }
+
+    void grow_segment(chain_slot& chain)
+    {
+        assert(chain.is_full());
+
+        if (chain.size == 0) {
+            chain.begin = static_cast<std::uint32_t>(postings_.size());
+            postings_.resize(postings_.size() + 1);
+
+        } else if (chain.begin + chain.size == postings_.size()) {
+            postings_.resize(postings_.size() + chain.size);
+
+        } else {
+            auto const new_begin = static_cast<std::uint32_t>(postings_.size());
+            postings_.resize(postings_.size() + std::size_t{chain.size} * 2);
+            std::copy_n(postings_.begin() + chain.begin, chain.size, postings_.begin() + new_begin);
+            chain.begin = new_begin;
+        }
+    }
+
+    std::vector<chain_slot> chain_slots_; // the size is zero or a power of two
+    std::size_t chain_count_ = 0;
+    int chain_shift_ = 0;
+
+    std::vector<posting, default_init_allocator<posting>> postings_;
+    std::vector<int, default_init_allocator<int>> positions_;
+
+    run_buffers runs_;
 };
 
 template<std::size_t N, class CharT>
@@ -168,171 +432,50 @@ void swap(gram_index<N, CharT>& a, gram_index<N, CharT>& b) noexcept
     a.swap(b);
 }
 
-template<std::size_t N, class CharT>
-struct gram_pos_t
-{
-    gram<N, CharT> ng;
-    int pos;
-
-    [[nodiscard]] constexpr bool operator==(gram_pos_t const&) const noexcept = default;
-    [[nodiscard]] constexpr std::strong_ordering operator<=>(gram_pos_t const&) const noexcept = default;
-};
-
-template<std::size_t N, class CharT>
-struct gram_index_storage
-{
-    gram_index<N, CharT> idx;
-
-    // Caches
-    std::vector<gram_pos_t<N, CharT>, default_init_allocator<gram_pos_t<N, CharT>>>
-    batch_grams;
-
-    std::vector<std::pair<gram<N, CharT>, std::unique_ptr<posting_list>>>
-    batch_pending;
-
-    void clear() noexcept
-    {
-        idx.clear();
-        batch_grams.clear();
-        batch_pending.clear();
-    }
-
-    void swap(gram_index_storage& other) noexcept
-    {
-        using std::swap;
-        swap(idx, other.idx);
-        swap(batch_grams, other.batch_grams);
-        swap(batch_pending, other.batch_pending);
-    }
-};
-
-template<std::size_t N, class CharT>
-void swap(gram_index_storage<N, CharT>& a, gram_index_storage<N, CharT>& b) noexcept
-{
-    a.swap(b);
-}
-
 template<class CharT>
 struct index_storage
 {
+    // Checks the limits of both indexes before changing either
     void append_index(document_slot const doc_slot, std::basic_string_view<CharT> const input)
     {
-        this->template append_index<1>(doc_slot, input);
-        this->template append_index<2>(doc_slot, input);
+        if (input.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+            throw std::length_error{"document is too long to be indexed"};
+        }
+        uni_index_.group(input);
+        bi_index_.group(input);
+        uni_index_.append(doc_slot);
+        bi_index_.append(doc_slot);
+    }
+
+    void compact(std::span<document_slot const> const slot_map)
+    {
+        uni_index_.compact(slot_map);
+        bi_index_.compact(slot_map);
     }
 
     void clear() noexcept
     {
-        uni_data_.clear();
-        bi_data_.clear();
+        uni_index_.clear();
+        bi_index_.clear();
     }
 
     void swap(index_storage& other) noexcept
     {
         using std::swap;
-        swap(uni_data_, other.uni_data_);
-        swap(bi_data_, other.bi_data_);
+        swap(uni_index_, other.uni_index_);
+        swap(bi_index_, other.bi_index_);
     }
 
-    [[nodiscard]] bool empty() const noexcept
+    [[nodiscard]] posting_list find(std::basic_string_view<CharT> const chars) const noexcept
     {
-        return
-            this->template get_data<1>().idx.empty() &&
-            this->template get_data<2>().idx.empty();
-    }
-
-    template<std::size_t N, class F>
-    void search(gram<N, CharT> const ng, F&& f) const
-    {
-        this->template get_data<N>().idx.search(ng, f);
-    }
-
-    template<std::size_t N>
-    [[nodiscard]] auto& get_index(this auto& self IRIS_LIFETIMEBOUND) noexcept
-    {
-        return self.template get_data<N>().idx;
+        assert(chars.size() == 1 || chars.size() == 2);
+        if (chars.size() == 1) return uni_index_.find(gram<1, CharT>::from_copy_n(chars.begin()));
+        return bi_index_.find(gram<2, CharT>::from_copy_n(chars.begin()));
     }
 
 private:
-    gram_index_storage<1, CharT> uni_data_;
-    gram_index_storage<2, CharT> bi_data_;
-
-    template<std::size_t N>
-    [[nodiscard]] auto& get_data(this auto& self IRIS_LIFETIMEBOUND) noexcept
-    {
-        if constexpr (N == 1) {
-            return self.uni_data_;
-        } else if constexpr (N == 2) {
-            return self.bi_data_;
-        } else {
-            static_assert(false);
-        }
-    }
-
-    template<std::size_t N>
-    void append_index(
-        document_slot const doc_slot,
-        std::basic_string_view<CharT> const input
-    )
-    {
-        if (input.size() < N) return;
-        gram_index_storage<N, CharT>& data = this->template get_data<N>();
-
-        // Per document, let G be the number of n-gram occurrences,
-        // D the number of distinct n-grams, and P the number of new keys:
-        //
-        //   1. Collect grams and positions: O(G).
-        //   2. Sort by gram, then position: O(G log G).
-        //   3. Group equal grams and look up each group: O(G + D) expected.
-        //   4. Append positions to posting lists: O(G) amortized.
-        //   5. Insert the P new keys into the index: O(P) expected amortized.
-        //
-        // Since P <= D <= G, the overall cost is O(G log G) expected
-        // amortized. Hash-table bounds assume well-distributed hashes;
-        // individual insertions may rehash the table, and pathological
-        // collisions can make lookups and insertions linear in index size.
-        //
-        // Sorting groups each gram's occurrences into one lookup and keeps
-        // its positions in ascending order, as required by search.
-
-        data.batch_grams.clear();
-        data.batch_grams.resize(input.size() - N + 1);
-
-        if constexpr (N == 1) {
-            for (std::size_t i = 0; i < input.size(); ++i) {
-                data.batch_grams[i].ng.data = input[i];
-                data.batch_grams[i].pos = static_cast<int>(i);
-            }
-
-        } else {
-            for (std::size_t i = 0; i + N <= input.size(); ++i) {
-                data.batch_grams[i].ng.copy_n(input.begin() + i);
-                data.batch_grams[i].pos = static_cast<int>(i);
-            }
-        }
-        std::ranges::sort(data.batch_grams);
-
-        data.batch_pending.clear();
-
-        for (auto const& chunk : data.batch_grams | std::views::chunk_by(
-            [](auto const& a, auto const& b) { return a.ng == b.ng; }
-        )) {
-            auto const& key = chunk.front().ng;
-            if (posting_list* const pl = data.idx.find_list(key)) {
-                for (auto const& gp : chunk) {
-                    pl->append(doc_slot, gp.pos);
-                }
-
-            } else {
-                auto& new_pl = data.batch_pending.emplace_back(key, std::make_unique<posting_list>()).second;
-                for (auto const& gp : chunk) {
-                    new_pl->append(doc_slot, gp.pos);
-                }
-            }
-        }
-
-        data.idx.merge_new_entries(data.batch_pending);
-    }
+    gram_index<1, CharT> uni_index_;
+    gram_index<2, CharT> bi_index_;
 };
 
 template<class CharT>

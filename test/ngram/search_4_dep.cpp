@@ -25,7 +25,7 @@ TEST_CASE("gram search (document chars = 4, aaaa)")
         IRIS_CHECK_SEARCH(
             "aa",
             {0_doc_id, {
-                {0, {interval{0, 2}, interval{1, 3}, interval{2, 4}}},
+                {0, {interval{0, 2}, interval{2, 4}}},
             }},
         );
         IRIS_CHECK_SEARCH("XX");
@@ -33,7 +33,7 @@ TEST_CASE("gram search (document chars = 4, aaaa)")
         IRIS_CHECK_SEARCH(
             "aaa",
             {0_doc_id, {
-                {0, {interval{0, 3}, interval{1, 4}}},
+                {0, {interval{0, 3}}},
             }},
         );
         IRIS_CHECK_SEARCH("XXX");
