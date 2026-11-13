@@ -27,7 +27,7 @@ class recursive_wrapper_alloca;
 // This class covers 99.99% of recursive-variant use cases.
 template<class T>
 class recursive_wrapper
-    : private detail::indirect_base<T, std::allocator<T>>
+    : private detail::indirect_base<recursive_wrapper<T>, T, std::allocator<T>>
 {
     static_assert(
         !is_ttp_specialization_of_v<T, recursive_wrapper> && !is_ttp_specialization_of_v<T, recursive_wrapper_alloca>,
@@ -38,7 +38,7 @@ class recursive_wrapper
     // If any changes are required, modify `recursive_wrapper_alloca` first.
     // See https://github.com/iris-cpp/iris/issues/43 for rationale
 
-    using base_type = detail::indirect_base<T, std::allocator<T>>;
+    using base_type = detail::indirect_base<recursive_wrapper, T, std::allocator<T>>;
 
 public:
     using typename base_type::allocator_type;
@@ -95,7 +95,6 @@ public:
     //using base_type::operator=;
 
     constexpr recursive_wrapper& operator=(recursive_wrapper const&) = default;
-
     constexpr recursive_wrapper& operator=(recursive_wrapper&&) noexcept = default;
 
     // This is required for proper delegation; otherwise constructor will be called
@@ -127,14 +126,14 @@ public:
 // "Allocator-aware" recursive_wrapper
 template<class T, class Allocator = std::allocator<T>>
 class recursive_wrapper_alloca
-    : private detail::indirect_base<T, Allocator>
+    : private detail::indirect_base<recursive_wrapper_alloca<T, Allocator>, T, Allocator>
 {
     static_assert(
         !is_ttp_specialization_of_v<T, recursive_wrapper> && !is_ttp_specialization_of_v<T, recursive_wrapper_alloca>,
         "recursive wrapper of recursive wrapper is not allowed"
     );
 
-    using base_type = detail::indirect_base<T, Allocator>;
+    using base_type = detail::indirect_base<recursive_wrapper_alloca, T, Allocator>;
 
 public:
     using typename base_type::allocator_type;

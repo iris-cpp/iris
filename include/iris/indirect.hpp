@@ -54,7 +54,7 @@ private:
 
 // Polyfill for the C++26 `std::indirect`
 // https://eel.is/c++draft/indirect
-template<class T, class Allocator = std::allocator<T>>
+template<class Derived, class T, class Allocator = std::allocator<T>>
 class indirect_base
 {
     static_assert(std::is_object_v<T>);
@@ -90,9 +90,7 @@ public:
     constexpr indirect_base(std::allocator_arg_t, Allocator const& a, indirect_base const& other)
         : alloc_(a)
         , ptr_(other.ptr_ ? this->make_obj(std::as_const(*other.ptr_)) : nullptr)
-    {
-        static_assert(std::is_copy_constructible_v<T>);
-    }
+    {}
 
     constexpr indirect_base(indirect_base&& other) noexcept
         : alloc_(std::move(other.alloc_))
@@ -169,9 +167,6 @@ public:
 
     constexpr indirect_base& operator=(indirect_base const& other)
     {
-        static_assert(std::is_copy_assignable_v<T>);
-        static_assert(std::is_copy_constructible_v<T>);
-
         if (std::addressof(other) == this) [[unlikely]] {
             return *this;
         }
@@ -251,8 +246,6 @@ public:
             std::allocator_traits<Allocator>::is_always_equal::value
         )
     {
-        static_assert(std::is_move_constructible_v<T>);
-
         if (std::addressof(other) == this) [[unlikely]] {
             return *this;
         }
@@ -375,10 +368,10 @@ private:
 // Polyfill for the C++26 `std::indirect`
 // https://eel.is/c++draft/indirect
 template<class T, class Allocator = std::allocator<T>>
-class indirect : public detail::indirect_base<T, Allocator>
+class indirect : public detail::indirect_base<indirect<T, Allocator>, T, Allocator>
 {
 public:
-    using detail::indirect_base<T, Allocator>::indirect_base;
+    using detail::indirect_base<indirect, T, Allocator>::indirect_base;
 };
 
 template<class Value>
@@ -458,12 +451,9 @@ template<class T, class A, class U>
 
 }  // iris
 
-
-namespace std {
-
 template<class T, class Allocator>
     requires ::iris::is_hash_enabled_v<T>
-struct hash<::iris::indirect<T, Allocator>>
+struct std::hash<::iris::indirect<T, Allocator>>
 {
     [[nodiscard]] static size_t operator()(::iris::indirect<T, Allocator> const& obj)
         noexcept(::iris::is_nothrow_hashable_v<T>)
@@ -475,20 +465,5 @@ struct hash<::iris::indirect<T, Allocator>>
         }
     }
 };
-
-} // std
-
-
-namespace iris {
-
-template<class T, class Allocator>
-    requires is_hash_enabled_v<T>
-[[nodiscard]] std::size_t hash_value(indirect<T, Allocator> const& obj)
-    noexcept(is_nothrow_hashable_v<T>)
-{
-    return std::hash<indirect<T, Allocator>>{}(obj);
-}
-
-} // iris
 
 #endif

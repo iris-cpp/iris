@@ -8,7 +8,8 @@
 #include <iris/marshal/serialize_traits.hpp> // IWYU pragma: keep
 #include <iris/marshal/detail/field.hpp> // IWYU pragma: keep
 
-#include <iris/alloy/adapt.hpp> // IWYU pragma: export
+#include <iris/alloy/adapt.hpp> // IWYU pragma: keep
+#include <iris/alloy/tuple.hpp> // IWYU pragma: keep
 
 #include <iris/pp/tuple.hpp>
 #include <iris/pp/seq.hpp>
