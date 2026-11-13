@@ -137,23 +137,7 @@ template<class... Ts, class... Args>
     throw std::logic_error{"[BUG] failed to create valueless instance; exception was never thrown"};
 }
 
-template<class T>
-struct HashForwarded
-{
-    T value;
-};
-
 }  // unit_test
-
-
-template<class T>
-struct std::hash<::unit_test::HashForwarded<T>>  // NOLINT(bugprone-std-namespace-modification)
-{
-    std::size_t operator()(::unit_test::HashForwarded<T> const& v) const
-    {
-        return std::hash<T>{}(v.value);
-    }
-};
 
 template<class charT>
 struct std::formatter<::unit_test::MC_Thrower, charT>  // NOLINT(cert-dcl58-cpp)

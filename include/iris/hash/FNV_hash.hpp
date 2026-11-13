@@ -9,6 +9,7 @@
 #include <memory>
 
 #include <cstddef> // IWYU pragma: keep
+#include <cstdint>
 
 // https://datatracker.ietf.org/doc/html/draft-eastlake-fnv-03#section-2
 // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=59406
@@ -20,18 +21,20 @@ namespace detail {
 template<std::size_t Base>
 struct FNV_hash_numbers;
 
-template<>
-struct FNV_hash_numbers<4>
-{
-    static constexpr std::size_t FNV_offset_basis = 2166136261uz;
-    static constexpr std::size_t FNV_prime = 16777619uz;
-};
-
+#if SIZE_MAX >= 0xFFFFFFFFFFFFFFFFULL
 template<>
 struct FNV_hash_numbers<8>
 {
     static constexpr std::size_t FNV_offset_basis = 14695981039346656037uz;
     static constexpr std::size_t FNV_prime = 1099511628211uz;
+};
+#endif
+
+template<>
+struct FNV_hash_numbers<4>
+{
+    static constexpr std::size_t FNV_offset_basis = 2166136261uz;
+    static constexpr std::size_t FNV_prime = 16777619uz;
 };
 
 template<std::size_t Base>

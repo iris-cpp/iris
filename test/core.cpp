@@ -562,6 +562,29 @@ TEST_CASE("throwf")
     );
 }
 
+} // unit_test
+
+namespace unit_test {
+
+struct HashSpecializedRange
+{
+    int const* begin() const { return nullptr; }
+    int const* end() const { return nullptr; }
+};
+
+} // unit_test
+
+template<>
+struct std::hash<unit_test::HashSpecializedRange>
+{
+    static std::size_t operator()(unit_test::HashSpecializedRange const&)
+    {
+        return 114514uz;
+    }
+};
+
+namespace unit_test {
+
 TEST_CASE("hash")
 {
     static_assert(iris::hash_all(std::vector<int>{}) == 0);
@@ -572,13 +595,16 @@ TEST_CASE("hash")
     }
     {
         std::vector<int> const vec{1};
-        CHECK(iris::hash_all(vec) == iris::hash_combine(0, iris::hash_value(1)));
-        CHECK(iris::hash_all(vec) == iris::hash_combine(0, std::hash<int>{}(1)));
+        CHECK(iris::hash_all(vec) == iris::hash_combine(0uz, iris::hash_value(1)));
     }
     {
         std::vector<int> const vec{1, 2};
-        CHECK(iris::hash_all(vec) == iris::hash_combine(iris::hash_combine(0, iris::hash_value(1)), iris::hash_value(2)));
-        CHECK(iris::hash_all(vec) == iris::hash_combine(iris::hash_combine(0, std::hash<int>{}(1)), std::hash<int>{}(2)));
+        CHECK(iris::hash_all(vec) == iris::hash_combine(iris::hash_combine(0uz, iris::hash_value(1)), iris::hash_value(2)));
+    }
+
+    {
+        static_assert(std::ranges::input_range<HashSpecializedRange const>);
+        CHECK(iris::hash_value(HashSpecializedRange{}) == 114514uz); // NOT `0`
     }
 }
 
