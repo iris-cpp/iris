@@ -129,7 +129,7 @@ struct variant_format_for_impl<charT, rvariant<Ts...>>
     using spec_type = variant_format_string_t<charT, Ts...>;
 
     template<class... Fmts>
-    [[nodiscard]] static IRIS_CONSTEXPR_UP spec_type
+    [[nodiscard]] static consteval spec_type
     apply(Fmts&&... fmts) noexcept
     {
         return variant_format_string{variant_format_string_overload<charT, Ts>{
@@ -142,7 +142,7 @@ struct variant_format_for_impl<charT, rvariant<Ts...>>
 
 
 template<class... Ts, class... Fmts, class charT = select_char_t<Fmts...>>
-[[nodiscard]] IRIS_CONSTEXPR_UP detail::variant_format_string_t<charT, Ts...>
+[[nodiscard]] consteval detail::variant_format_string_t<charT, Ts...>
 variant_format(Fmts&&... fmts) noexcept
 {
     static_assert(sizeof...(Ts) > 0);
@@ -152,7 +152,7 @@ variant_format(Fmts&&... fmts) noexcept
 }
 
 template<class Variant, class... Fmts, class charT = select_char_t<Fmts...>>
-[[nodiscard]] IRIS_CONSTEXPR_UP detail::variant_format_for_impl<charT, std::remove_cvref_t<Variant>>::spec_type
+[[nodiscard]] consteval detail::variant_format_for_impl<charT, std::remove_cvref_t<Variant>>::spec_type
 variant_format_for(Fmts&&... fmts) noexcept
 {
     static_assert(is_ttp_specialization_of_v<std::remove_cvref_t<Variant>, rvariant>);
