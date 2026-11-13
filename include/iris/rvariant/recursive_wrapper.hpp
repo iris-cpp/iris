@@ -5,15 +5,17 @@
 
 #include <iris/config.hpp> // IWYU pragma: keep
 
+#include <iris/bits/indirect_base.hpp>
 #include <iris/bits/specialization_of.hpp>
 
 #include <iris/hash.hpp>
-#include <iris/indirect.hpp>
+#include <iris/compare.hpp>
 
 #include <compare>
 #include <initializer_list>
 #include <memory>
 #include <utility>
+#include <type_traits>
 
 namespace iris {
 
@@ -27,7 +29,7 @@ class recursive_wrapper_alloca;
 // This class covers 99.99% of recursive-variant use cases.
 template<class T>
 class recursive_wrapper
-    : private detail::indirect_base<T, std::allocator<T>>
+    : private detail::indirect_base<recursive_wrapper<T>, T, std::allocator<T>>
 {
     static_assert(
         !is_ttp_specialization_of_v<T, recursive_wrapper> && !is_ttp_specialization_of_v<T, recursive_wrapper_alloca>,
@@ -38,7 +40,7 @@ class recursive_wrapper
     // If any changes are required, modify `recursive_wrapper_alloca` first.
     // See https://github.com/iris-cpp/iris/issues/43 for rationale
 
-    using base_type = detail::indirect_base<T, std::allocator<T>>;
+    using base_type = detail::indirect_base<recursive_wrapper, T, std::allocator<T>>;
 
 public:
     using typename base_type::allocator_type;
@@ -95,7 +97,6 @@ public:
     //using base_type::operator=;
 
     constexpr recursive_wrapper& operator=(recursive_wrapper const&) = default;
-
     constexpr recursive_wrapper& operator=(recursive_wrapper&&) noexcept = default;
 
     // This is required for proper delegation; otherwise constructor will be called
@@ -127,14 +128,14 @@ public:
 // "Allocator-aware" recursive_wrapper
 template<class T, class Allocator = std::allocator<T>>
 class recursive_wrapper_alloca
-    : private detail::indirect_base<T, Allocator>
+    : private detail::indirect_base<recursive_wrapper_alloca<T, Allocator>, T, Allocator>
 {
     static_assert(
         !is_ttp_specialization_of_v<T, recursive_wrapper> && !is_ttp_specialization_of_v<T, recursive_wrapper_alloca>,
         "recursive wrapper of recursive wrapper is not allowed"
     );
 
-    using base_type = detail::indirect_base<T, Allocator>;
+    using base_type = detail::indirect_base<recursive_wrapper_alloca, T, Allocator>;
 
 public:
     using typename base_type::allocator_type;
@@ -427,14 +428,9 @@ template<class T, class A, class U>
 
 }  // iris
 
-namespace std {
-
-// ---------------------------------------------------
-// recursive_wrapper
-
 template<class T>
     requires ::iris::is_hash_enabled_v<T>
-struct hash<::iris::recursive_wrapper<T>>  // NOLINT(cert-dcl58-cpp)
+struct std::hash<::iris::recursive_wrapper<T>>  // NOLINT(cert-dcl58-cpp)
 {
     [[nodiscard]] static size_t operator()(::iris::recursive_wrapper<T> const& obj)
         noexcept(::iris::is_nothrow_hashable_v<T>)
@@ -447,12 +443,9 @@ struct hash<::iris::recursive_wrapper<T>>  // NOLINT(cert-dcl58-cpp)
     }
 };
 
-// ---------------------------------------------------
-// recursive_wrapper_alloca
-
 template<class T, class Allocator>
     requires ::iris::is_hash_enabled_v<T>
-struct hash<::iris::recursive_wrapper_alloca<T, Allocator>>  // NOLINT(cert-dcl58-cpp)
+struct std::hash<::iris::recursive_wrapper_alloca<T, Allocator>>  // NOLINT(cert-dcl58-cpp)
 {
     [[nodiscard]] static size_t operator()(::iris::recursive_wrapper_alloca<T, Allocator> const& obj)
         noexcept(::iris::is_nothrow_hashable_v<T>)
@@ -464,34 +457,5 @@ struct hash<::iris::recursive_wrapper_alloca<T, Allocator>>  // NOLINT(cert-dcl5
         }
     }
 };
-
-} // std
-
-
-namespace iris {
-
-// ---------------------------------------------------
-// recursive_wrapper
-
-template<class T>
-    requires is_hash_enabled_v<T>
-[[nodiscard]] std::size_t hash_value(recursive_wrapper<T> const& obj)
-    noexcept(is_nothrow_hashable_v<T>)
-{
-    return std::hash<recursive_wrapper<T>>{}(obj);
-}
-
-// ---------------------------------------------------
-// recursive_wrapper_alloca
-
-template<class T, class Allocator>
-    requires is_hash_enabled_v<T>
-[[nodiscard]] std::size_t hash_value(recursive_wrapper_alloca<T, Allocator> const& obj)
-    noexcept(is_nothrow_hashable_v<T>)
-{
-    return std::hash<recursive_wrapper_alloca<T, Allocator>>{}(obj);
-}
-
-} // iris
 
 #endif
