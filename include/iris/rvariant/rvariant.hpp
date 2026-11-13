@@ -1809,20 +1809,18 @@ operator<=>(rvariant<Ts...> const& v, rvariant<Ts...> const& w)
 }  // iris
 
 
-namespace std {
-
 // https://eel.is/c++draft/variant.hash
 template<class... Ts>
-    requires (::iris::is_hash_enabled_v<std::remove_const_t<Ts>> && ...)
-struct hash<::iris::rvariant<Ts...>>  // NOLINT(cert-dcl58-cpp)
+    requires (iris::is_hash_enabled_v<std::remove_const_t<Ts>> && ...)
+struct std::hash<iris::rvariant<Ts...>>  // NOLINT(cert-dcl58-cpp)
 {
-    [[nodiscard]] static /* constexpr */ std::size_t operator()(::iris::rvariant<Ts...> const& v)
-        noexcept(std::conjunction_v<::iris::is_nothrow_hashable<std::remove_const_t<Ts>>...>)
+    [[nodiscard]] static /* constexpr */ std::size_t operator()(iris::rvariant<Ts...> const& v)
+        noexcept(std::conjunction_v<iris::is_nothrow_hashable<std::remove_const_t<Ts>>...>)
     {
-        return ::iris::detail::raw_visit(v, []<std::size_t i, class T>(std::in_place_index_t<i>, T const& t) static
+        return iris::detail::raw_visit(v, []<std::size_t i, class T>(std::in_place_index_t<i>, T const& t) static
             noexcept(std::disjunction_v<
                 std::bool_constant<i == std::variant_npos>,
-                ::iris::is_nothrow_hashable<T>
+                iris::is_nothrow_hashable<T>
             >)
         {
             if constexpr (i == std::variant_npos) {
@@ -1877,27 +1875,12 @@ struct hash<::iris::rvariant<Ts...>>  // NOLINT(cert-dcl58-cpp)
                 // We assume `hash_combine` is unnecessary here, since the collision
                 // is very unlikely to occur as long as the `index_hash` is NOT
                 // evaluated as the re-interpreted bit representation.
-                constexpr std::size_t index_hash = ::iris::FNV_hash<>::hash(i);
+                constexpr std::size_t index_hash = iris::FNV_hash<>::hash(i);
                 return index_hash + std::hash<T>{}(t);
             }
         });
     }
 };
-
-} // std
-
-
-namespace iris {
-
-template<class... Ts>
-    requires (is_hash_enabled_v<std::remove_const_t<Ts>> && ...)
-[[nodiscard]] std::size_t hash_value(rvariant<Ts...> const& v)
-    noexcept(std::conjunction_v<is_nothrow_hashable<std::remove_const_t<Ts>>...>)
-{
-    return std::hash<rvariant<Ts...>>{}(v);
-}
-
-} // iris
 
 #undef IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_BEGIN
 #undef IRIS_RVARIANT_DISABLE_UNINITIALIZED_WARNING_END

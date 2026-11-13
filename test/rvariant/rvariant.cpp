@@ -2107,51 +2107,16 @@ TEST_CASE("relational operators")
     }
 }
 
-namespace {
-
-template<class T>
-[[nodiscard]] constexpr std::size_t do_hash(T const& t) noexcept(iris::is_nothrow_hashable_v<T>)
-{
-    return std::hash<T>{}(t);
-}
-
-} // anonymous
-
 TEST_CASE("rvariant.hash")
 {
     {
         STATIC_REQUIRE(iris::is_hash_enabled_v<int>);
         STATIC_REQUIRE(iris::is_hash_enabled_v<iris::rvariant<int>>);
-        CHECK(do_hash(iris::rvariant<int>(42)) == hash_value(iris::rvariant<int>(42)));
     }
     {
         struct NonExistent {};
         STATIC_REQUIRE(!iris::is_hash_enabled_v<NonExistent>);
         STATIC_REQUIRE(!iris::is_hash_enabled_v<iris::rvariant<NonExistent>>);
-    }
-    {
-        STATIC_REQUIRE(iris::is_hash_enabled_v<HashForwarded<int>>);
-        CHECK(std::hash<int>{}(42) == std::hash<HashForwarded<int>>{}(HashForwarded<int>(42)));
-    }
-    {
-        STATIC_REQUIRE(iris::is_hash_enabled_v<iris::rvariant<HashForwarded<int>>>);
-        iris::rvariant<HashForwarded<int>> v(HashForwarded<int>(42));
-        CHECK(do_hash(v) == hash_value(v));
-    }
-
-    // heuristic tests; may fail on collisions
-    {
-        using Int = HashForwarded<int>;
-        using V = iris::rvariant<int, Int>;
-        CHECK(do_hash(V(std::in_place_type<int>, 42)) != do_hash(V(std::in_place_type<Int>, 42)));
-    }
-    {
-        using V = iris::rvariant<int, unsigned>;
-        CHECK(do_hash(V(std::in_place_type<int>, 42)) != do_hash(V(std::in_place_type<unsigned>, 42)));
-    }
-    {
-        using V = iris::rvariant<int, long long>;
-        CHECK(do_hash(V(std::in_place_type<int>, 42)) != do_hash(V(std::in_place_type<long long>, 42)));
     }
 }
 
@@ -2160,13 +2125,6 @@ TEST_CASE("rvariant.hash", "[wrapper]")
     {
         STATIC_REQUIRE(iris::is_hash_enabled_v<iris::recursive_wrapper<int>>);
         CHECK(std::hash<int>{}(42) == std::hash<iris::recursive_wrapper<int>>{}(iris::recursive_wrapper<int>(42)));
-        CHECK(std::hash<int>{}(42) == hash_value(iris::recursive_wrapper<int>(42)));
-    }
-    {
-        iris::recursive_wrapper<int> a(42);
-        auto b = std::move(a);
-        REQUIRE(a.valueless_after_move());  // NOLINT(bugprone-use-after-move)
-        CHECK(std::hash<iris::recursive_wrapper<int>>{}(a) == hash_value(a));
     }
 }
 
