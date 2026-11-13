@@ -1,0 +1,368 @@
+#ifndef IRIS_ZZ_BITS_INDIRECT_BASE_HPP
+#define IRIS_ZZ_BITS_INDIRECT_BASE_HPP
+
+// SPDX-License-Identifier: MIT
+
+#include <iris/config.hpp>
+
+#include <iris/bits/specialization_of.hpp>
+
+#include <memory>
+#include <utility>
+#include <type_traits>
+#include <initializer_list>
+
+#include <cassert>
+
+namespace iris {
+
+namespace detail {
+
+template<class Alloc>
+class scoped_allocation
+{
+public:
+    using pointer = std::allocator_traits<Alloc>::pointer;
+    using const_pointer = std::allocator_traits<Alloc>::const_pointer;
+
+    template<class... Args>
+    constexpr explicit scoped_allocation(Alloc const& a, Args&&... args)
+        : alloc_(a)
+        , ptr_(std::allocator_traits<Alloc>::allocate(alloc_, 1))
+    {
+        std::allocator_traits<Alloc>::construct(alloc_, this->get(), std::forward<Args>(args)...);
+    }
+
+    constexpr ~scoped_allocation()
+        noexcept(noexcept(std::allocator_traits<Alloc>::deallocate(alloc_, ptr_, 1)))
+    {
+        if (ptr_) [[unlikely]] {
+            std::allocator_traits<Alloc>::deallocate(alloc_, ptr_, 1);
+        }
+    }
+
+    [[nodiscard]] constexpr Alloc get_allocator() const noexcept { return alloc_; }
+    [[nodiscard]] constexpr auto get() const noexcept { return std::to_address(ptr_); }
+    [[nodiscard]] constexpr pointer release() noexcept { return std::exchange(ptr_, nullptr); }
+
+private:
+    IRIS_NO_UNIQUE_ADDRESS Alloc alloc_;
+    pointer ptr_;
+};
+
+// Polyfill for the C++26 `std::indirect`
+// https://eel.is/c++draft/indirect
+template<class Derived, class T, class Allocator = std::allocator<T>>
+class indirect_base
+{
+    static_assert(std::is_object_v<T>);
+    static_assert(!std::is_array_v<T>);
+    static_assert(!std::is_same_v<T, std::in_place_t>);
+    static_assert(!is_ttp_specialization_of_v<T, std::in_place_type_t>);
+    static_assert(!std::is_const_v<T> && !std::is_volatile_v<T>);
+    static_assert(std::is_same_v<T, typename std::allocator_traits<Allocator>::value_type>);
+
+public:
+    using value_type = T;
+    using allocator_type = Allocator;
+    using pointer = std::allocator_traits<Allocator>::pointer;
+    using const_pointer = std::allocator_traits<Allocator>::const_pointer;
+
+    constexpr explicit indirect_base() requires std::is_default_constructible_v<Allocator>
+        : ptr_(this->make_obj())
+    {}
+
+    constexpr indirect_base(indirect_base const& other)
+        : indirect_base(
+            std::allocator_arg,
+            std::allocator_traits<Allocator>::select_on_container_copy_construction(other.alloc_),
+            other
+        )
+    {}
+
+    constexpr explicit indirect_base(std::allocator_arg_t, Allocator const& a)
+        : alloc_(a)
+        , ptr_(this->make_obj())
+    {}
+
+    constexpr indirect_base(std::allocator_arg_t, Allocator const& a, indirect_base const& other)
+        : alloc_(a)
+        , ptr_(other.ptr_ ? this->make_obj(std::as_const(*other.ptr_)) : nullptr)
+    {}
+
+    constexpr indirect_base(indirect_base&& other) noexcept
+        : alloc_(std::move(other.alloc_))
+        , ptr_(std::exchange(other.ptr_, nullptr))
+    {}
+
+    constexpr indirect_base(std::allocator_arg_t, Allocator const& a, indirect_base&& other)
+        noexcept(std::allocator_traits<Allocator>::is_always_equal::value)
+        : alloc_(a)
+        , ptr_(alloc_ == other.alloc_
+            ? std::exchange(other.ptr_, nullptr)
+            : this->make_obj(*std::move(other))
+        )
+    {}
+
+    template<class U = T>
+        requires
+            (!std::is_same_v<std::remove_cvref_t<U>, indirect_base>) &&
+            (!std::is_same_v<std::remove_cvref_t<U>, std::in_place_t>) &&
+            std::is_constructible_v<T, U> &&
+            std::is_default_constructible_v<Allocator>
+    constexpr explicit indirect_base(U&& u)
+        : ptr_(this->make_obj(std::forward<U>(u)))
+    {}
+
+    template<class U = T>
+        requires
+            (!std::is_same_v<std::remove_cvref_t<U>, indirect_base>) &&
+            (!std::is_same_v<std::remove_cvref_t<U>, std::in_place_t>) &&
+            std::is_constructible_v<T, U>
+    constexpr explicit indirect_base(std::allocator_arg_t, Allocator const& a, U&& u)
+        : alloc_(a)
+        , ptr_(this->make_obj(std::forward<U>(u)))
+    {}
+
+    template<class... Us>
+        requires
+            std::is_constructible_v<T, Us...> &&
+            std::is_default_constructible_v<Allocator>
+    constexpr explicit indirect_base(std::in_place_t, Us&&... us)
+        : ptr_(this->make_obj(std::forward<Us>(us)...))
+    {}
+
+    template<class... Us>
+        requires
+            std::is_constructible_v<T, Us...>
+    constexpr explicit indirect_base(std::allocator_arg_t, Allocator const& a, std::in_place_t, Us&&... us)
+        : alloc_(a)
+        , ptr_(this->make_obj(std::forward<Us>(us)...))
+    {}
+
+    template<class I, class... Us>
+        requires
+            std::is_constructible_v<T, std::initializer_list<I>&, Us...> &&
+            std::is_default_constructible_v<Allocator>
+    constexpr explicit indirect_base(std::in_place_t, std::initializer_list<I> il, Us&&... us)
+        : ptr_(this->make_obj(il, std::forward<Us>(us)...))
+    {}
+
+    template<class I, class... Us>
+        requires
+            std::is_constructible_v<T, std::initializer_list<I>&, Us...>
+    constexpr explicit indirect_base(std::allocator_arg_t, Allocator const& a, std::in_place_t, std::initializer_list<I> il, Us&&... us)
+        : alloc_(a)
+        , ptr_(this->make_obj(il, std::forward<Us>(us)...))
+    {}
+
+    constexpr ~indirect_base() noexcept
+    {
+        if (ptr_) [[likely]] {
+            this->destroy_deallocate();
+        }
+    }
+
+    constexpr indirect_base& operator=(indirect_base const& other)
+    {
+        if (std::addressof(other) == this) [[unlikely]] {
+            return *this;
+        }
+
+        constexpr bool pocca = std::allocator_traits<Allocator>::propagate_on_container_copy_assignment::value;
+
+        if (other.ptr_) [[likely]] {
+            if constexpr (std::allocator_traits<Allocator>::is_always_equal::value) {  // NOLINT(bugprone-branch-clone)
+                if (ptr_) [[likely]] {
+                    // both contain value and allocator is equal; copy assign
+                    **this = *other;
+                    if constexpr (pocca) {
+                        alloc_ = other.alloc_;
+                    }
+                    return *this;
+                }
+
+                assert(other.ptr_ && !ptr_);
+                if constexpr (pocca) {
+                    ptr_ = other.make_obj(*other);
+                    alloc_ = other.alloc_;
+                } else {
+                    ptr_ = this->make_obj(*other);
+                }
+                return *this;
+
+            } else if (alloc_ == other.alloc_) {
+                if (ptr_) [[likely]] {
+                    // both contain value and allocator is equal; copy assign
+                    **this = *other;
+                    if constexpr (pocca) {
+                        alloc_ = other.alloc_;
+                    }
+                    return *this;
+                }
+
+                assert(other.ptr_ && !ptr_);
+                if constexpr (pocca) {
+                    ptr_ = other.make_obj(*other);
+                    alloc_ = other.alloc_;
+                } else {
+                    ptr_ = this->make_obj(*other);
+                }
+                return *this;
+
+            } else {
+                // other.ptr_ && (ptr_ || !ptr_)
+                // either allocator is not equal or `this` does not contain value; create copy from `other`
+                if (ptr_) [[likely]] {
+                    this->destroy_deallocate();
+                    ptr_ = nullptr; // make it safer
+                }
+                if constexpr (pocca) {
+                    ptr_ = other.make_obj(*other);
+                    alloc_ = other.alloc_;
+                } else {
+                    ptr_ = this->make_obj(*other);
+                }
+                return *this;
+            }
+
+        } else [[unlikely]] { // !other.ptr_
+            if (ptr_) [[likely]] {
+                this->destroy_deallocate();
+                ptr_ = nullptr; // make it safer
+            }
+            if constexpr (pocca) {
+                alloc_ = other.alloc_;
+            }
+            return *this;
+        }
+    }
+
+    constexpr indirect_base& operator=(indirect_base&& other)
+        noexcept(
+            std::allocator_traits<Allocator>::propagate_on_container_move_assignment::value ||
+            std::allocator_traits<Allocator>::is_always_equal::value
+        )
+    {
+        if (std::addressof(other) == this) [[unlikely]] {
+            return *this;
+        }
+
+        constexpr bool pocma = std::allocator_traits<Allocator>::propagate_on_container_move_assignment::value;
+
+        if (other.ptr_) [[likely]] {
+            if constexpr (std::allocator_traits<Allocator>::is_always_equal::value) {
+                if (ptr_) [[likely]] {
+                    this->destroy_deallocate();
+                }
+                ptr_ = std::exchange(other.ptr_, nullptr);
+                if constexpr (pocma) {
+                    alloc_ = other.alloc_;
+                }
+                return *this;
+
+            } else if (alloc_ == other.alloc_) {
+                if (ptr_) [[likely]] {
+                    this->destroy_deallocate();
+                }
+                ptr_ = std::exchange(other.ptr_, nullptr);
+                if constexpr (pocma) {
+                    alloc_ = other.alloc_;
+                }
+                return *this;
+
+            } else {
+                if (ptr_) [[likely]] {
+                    this->destroy_deallocate();
+                }
+                if constexpr (pocma) {
+                    ptr_ = other.make_obj(std::move(*other));
+                } else {
+                    ptr_ = this->make_obj(std::move(*other));
+                }
+                other.destroy_deallocate();
+                return *this;
+            }
+        } else [[unlikely]] { // !other.ptr_
+            if (ptr_) [[likely]] {
+                this->destroy_deallocate();
+                ptr_ = nullptr;
+            }
+            if constexpr (pocma) {
+                alloc_ = other.alloc_;
+            }
+            return *this;
+        }
+    }
+
+    template<class U = T>
+        requires
+            (!std::is_same_v<std::remove_cvref_t<U>, indirect_base>) &&
+            std::is_constructible_v<T, U> &&
+            std::is_assignable_v<T&, U>
+    constexpr indirect_base& operator=(U&& u)
+    {
+        if (ptr_) [[likely]] {
+            **this = std::forward<U>(u);
+
+        } else [[unlikely]] {
+            ptr_ = this->make_obj(std::forward<U>(u));
+        }
+        return *this;
+    }
+
+    [[nodiscard]] constexpr T& operator*() & noexcept IRIS_LIFETIMEBOUND { return *ptr_; }
+    [[nodiscard]] constexpr T const& operator*() const& noexcept IRIS_LIFETIMEBOUND { return *ptr_; }
+    [[nodiscard]] constexpr T&& operator*() && noexcept IRIS_LIFETIMEBOUND { return std::move(*ptr_); }
+    [[nodiscard]] constexpr T const&& operator*() const&& noexcept IRIS_LIFETIMEBOUND { return std::move(*ptr_); }
+
+    [[nodiscard]] constexpr pointer operator->() noexcept IRIS_LIFETIMEBOUND { return ptr_; }
+    [[nodiscard]] constexpr const_pointer operator->() const noexcept IRIS_LIFETIMEBOUND { return ptr_; }
+
+    [[nodiscard]] constexpr bool valueless_after_move() const noexcept { return ptr_ == nullptr; }
+
+    [[nodiscard]] constexpr allocator_type get_allocator() const noexcept { return alloc_; }
+
+    constexpr void swap(indirect_base& other)
+        noexcept(
+            std::allocator_traits<Allocator>::propagate_on_container_swap::value ||
+            std::allocator_traits<Allocator>::is_always_equal::value
+        )
+    {
+        using std::swap;
+        swap(ptr_, other.ptr_);
+
+        if constexpr (std::allocator_traits<Allocator>::propagate_on_container_swap::value) {
+            swap(alloc_, other.alloc_);
+        }
+    }
+
+    friend constexpr void swap(indirect_base& lhs, indirect_base& rhs) noexcept(noexcept(lhs.swap(rhs)))
+    {
+        return lhs.swap(rhs);
+    }
+
+private:
+    constexpr void destroy_deallocate()
+    {
+        assert(ptr_);
+        std::allocator_traits<Allocator>::destroy(alloc_, std::to_address(ptr_));
+        std::allocator_traits<Allocator>::deallocate(alloc_, ptr_, 1);
+    }
+
+    template<class... Args>
+    [[nodiscard]] constexpr T* make_obj(Args&&... args) const
+    {
+        detail::scoped_allocation sa(alloc_, std::forward<Args>(args)...);
+        return sa.release();
+    }
+
+    IRIS_NO_UNIQUE_ADDRESS Allocator alloc_ = Allocator();
+    pointer ptr_;
+};
+
+} // detail
+
+} // iris
+
+#endif
