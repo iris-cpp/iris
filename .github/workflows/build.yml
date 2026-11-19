@@ -101,23 +101,13 @@ jobs:
 
       # Adapt CMP0168; enable caching in CI
       # https://cmake.org/cmake/help/latest/module/FetchContent.html#variable:FETCHCONTENT_FULLY_DISCONNECTED
-      - name: Setup Cached CMake Dependencies
-        id: deps-info
-        shell: bash
-        run: |
-          if [ "${{ steps.cache-deps.outputs.cache-hit }}" = "true" ]; then
-            echo "IRIS_CI_CMAKE_ARGS=-DFETCHCONTENT_FULLY_DISCONNECTED=ON" >> "$GITHUB_OUTPUT"
-          else
-            echo "IRIS_CI_CMAKE_ARGS=" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Configure
         env:
           CLICOLOR_FORCE: 1
         shell: bash
         run: |
           set -xe
-          cmake ${{ steps.deps-info.outputs.IRIS_CI_CMAKE_ARGS }} -B build \
+          cmake ${{ steps.cache-deps.outputs.cache-hit == 'true' && '-DFETCHCONTENT_FULLY_DISCONNECTED=ON' || '' }} -B build \
             ${{ inputs.cmake-config-additional-args }} \
             ${{ inputs.compiler-toolset == 'msvc' && format('-T {0},version={1}', inputs.msvc-platform-toolset, steps.setup.outputs.msvc-toolset) || '' }} \
             -DCMAKE_CXX_COMPILER=${{ inputs.compiler-executable }} \
