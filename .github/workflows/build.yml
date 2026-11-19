@@ -194,6 +194,22 @@ jobs:
             -DIRIS_CI=ON \
             -S .
 
+      # Not named "Build ...": the warning notifier links to the first step
+      # matching its STEP_REGEX, which must be "Build Tests".
+      - name: Prepare Deps
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        env:
+          CLICOLOR_FORCE: 1
+        run: |
+          cmake --build build --config ${{ inputs.build-type-name }} -j${{ env.IRIS_CI_BUILD_JOBS }} --target Catch2WithMain ${{ inputs.compiler-builder-additional-args }}
+
+      - name: Cache CMake Dependencies (save)
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          key: ${{ steps.setup.outputs.deps-cache-key }}
+          path: ${{ github.workspace }}/build/_deps
+
       - name: Build Tests
         env:
           CLICOLOR_FORCE: 1
