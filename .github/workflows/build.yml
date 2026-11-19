@@ -194,8 +194,6 @@ jobs:
             -DIRIS_CI=ON \
             -S .
 
-      # Not named "Build ...": the warning notifier links to the first step
-      # matching its STEP_REGEX, which must be "Build Tests".
       - name: Prepare Deps
         if: steps.cache-deps.outputs.cache-hit != 'true'
         env:
