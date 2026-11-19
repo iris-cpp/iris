@@ -185,13 +185,16 @@ jobs:
           key: ${{ steps.setup.outputs.deps-cache-key }}
           path: ${{ github.workspace }}/build/_deps
 
+      # The cache can miss when this job lands on a runner image with another
+      # toolset than prepare-deps did (e.g. during an image rollout); fetch the
+      # dependencies again in that case.
       - name: Configure
         env:
           CLICOLOR_FORCE: 1
         shell: bash
         run: |
           set -xe
-          cmake -DFETCHCONTENT_FULLY_DISCONNECTED=ON -B build \
+          cmake ${{ steps.cache-deps.outputs.cache-hit == 'true' && '-DFETCHCONTENT_FULLY_DISCONNECTED=ON' || '' }} -B build \
             ${{ inputs.compiler-toolset == 'msvc' && format('-T {0},version={1}', inputs.msvc-platform-toolset, steps.setup.outputs.msvc-toolset) || '' }} \
             -DCMAKE_CXX_COMPILER=${{ inputs.compiler-executable }} \
             -DCMAKE_CXX_FLAGS="${{ inputs.compiler-cxxflags }}" \
