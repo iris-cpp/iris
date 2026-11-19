@@ -153,9 +153,6 @@ jobs:
         with:
           submodules: recursive
 
-      # Take the local actions from this workflow's own commit, not from the
-      # caller's checkout, so that callers in other repositories get the
-      # version this workflow was written against.
       - name: Checkout CI Actions
         uses: actions/checkout@v5
         with:
