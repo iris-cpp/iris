@@ -17,13 +17,9 @@ inputs:
     required: true
   compiler-executable:
     required: true
-  compiler-toolset-version:
+  msvc-toolset-prefix:
+    description: Version prefix of the MSVC toolset; the newest installed match is used (e.g. 14.5)
     required: false
-    type: string
-    default: ''
-  vs-path:
-    required: false
-    type: string
     default: ''
   cpp-version-name:
     required: true
@@ -34,6 +30,9 @@ outputs:
   compiler-full-version:
     description: Full version string of the compiler
     value: ${{ steps.env-info.outputs.compiler-full-version }}
+  msvc-toolset:
+    description: Full version of the selected MSVC toolset (e.g. 14.52.37025)
+    value: ${{ steps.setup-msvc.outputs.toolset }}
   deps-cache-key:
     description: Cache key for CMake dependencies
     value: ${{ steps.env-info.outputs.deps-cache-key }}
@@ -64,12 +63,13 @@ runs:
         sudo ./llvm.sh ${{ inputs.compiler-version }}
         sudo apt-get install -y libc++-${{ inputs.compiler-version }}-dev libc++abi-${{ inputs.compiler-version }}-dev libunwind-${{ inputs.compiler-version }}-dev
 
-    - uses: TheMrMilchmann/setup-msvc-dev@v3
-      if: inputs.os-name == 'windows'
+    - name: Setup MSVC
+      id: setup-msvc
+      if: inputs.compiler-toolset == 'msvc'
+      uses: yaito3014/setup-msvc@v0.1.1
       with:
+        toolset-prefix: ${{ inputs.msvc-toolset-prefix }}
         arch: x64
-        vs-path: ${{ inputs.vs-path }}
-        toolset: ${{ inputs.compiler-toolset-version }}
 
     - name: Fetch Environment Info
       id: env-info
@@ -89,4 +89,4 @@ runs:
         esac
         echo "COMPILER_FULL_VERSION=$COMPILER_FULL_VERSION"
         echo "compiler-full-version=$COMPILER_FULL_VERSION" >> "$GITHUB_OUTPUT"
-        echo "deps-cache-key=deps4-${{ inputs.os-name }}-${{ inputs.os-version }}-${{ inputs.compiler-toolset }}-${COMPILER_FULL_VERSION}-${{ inputs.cpp-version-name }}-${{ inputs.build-type-name }}" >> "$GITHUB_OUTPUT"
+        echo "deps-cache-key=deps5-${{ inputs.os-name }}-${{ inputs.os-version }}-${{ inputs.compiler-toolset }}-${COMPILER_FULL_VERSION}-${{ inputs.cpp-version-name }}-${{ inputs.build-type-name }}" >> "$GITHUB_OUTPUT"

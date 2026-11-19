@@ -36,14 +36,16 @@ on:
         required: false
         type: string
         default: ""
-      compiler-toolset-version:
+      msvc-toolset-prefix:
         required: false
         type: string
         default: ""
-      vs-path:
+        description: 'Version prefix of the MSVC toolset; the newest installed match is used (e.g. "14.5")'
+      msvc-platform-toolset:
         required: false
         type: string
         default: ""
+        description: 'Visual Studio platform toolset passed to CMake -T (e.g. "v145")'
       cmake-config-additional-args:
         required: false
         type: string
@@ -86,8 +88,7 @@ jobs:
           compiler-toolset: ${{ inputs.compiler-toolset }}
           compiler-version: ${{ inputs.compiler-version }}
           compiler-executable: ${{ inputs.compiler-executable }}
-          compiler-toolset-version: ${{ inputs.compiler-toolset-version }}
-          vs-path: ${{ inputs.vs-path }}
+          msvc-toolset-prefix: ${{ inputs.msvc-toolset-prefix }}
           cpp-version-name: ${{ inputs.cpp-version-name }}
           build-type-name: ${{ inputs.build-type-name }}
 
@@ -118,6 +119,7 @@ jobs:
           set -xe
           cmake ${{ steps.deps-info.outputs.IRIS_CI_CMAKE_ARGS }} -B build \
             ${{ inputs.cmake-config-additional-args }} \
+            ${{ inputs.compiler-toolset == 'msvc' && format('-T {0},version={1}', inputs.msvc-platform-toolset, steps.setup.outputs.msvc-toolset) || '' }} \
             -DCMAKE_CXX_COMPILER=${{ inputs.compiler-executable }} \
             -DCMAKE_CXX_FLAGS="${{ inputs.compiler-cxxflags }}" \
             -DCMAKE_CXX_STANDARD=${{ inputs.cpp-version-number }} \
@@ -172,6 +174,7 @@ jobs:
           compiler-toolset: ${{ inputs.compiler-toolset }}
           compiler-version: ${{ inputs.compiler-version }}
           compiler-executable: ${{ inputs.compiler-executable }}
+          msvc-toolset-prefix: ${{ inputs.msvc-toolset-prefix }}
           cpp-version-name: ${{ inputs.cpp-version-name }}
           build-type-name: ${{ inputs.build-type-name }}
 
@@ -189,6 +192,7 @@ jobs:
         run: |
           set -xe
           cmake -DFETCHCONTENT_FULLY_DISCONNECTED=ON -B build \
+            ${{ inputs.compiler-toolset == 'msvc' && format('-T {0},version={1}', inputs.msvc-platform-toolset, steps.setup.outputs.msvc-toolset) || '' }} \
             -DCMAKE_CXX_COMPILER=${{ inputs.compiler-executable }} \
             -DCMAKE_CXX_FLAGS="${{ inputs.compiler-cxxflags }}" \
             -DCMAKE_CXX_STANDARD=${{ inputs.cpp-version-number }} \
