@@ -61,6 +61,19 @@ function(iris_set_msvc_debug_info)
     if(MSVC)
         set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT Embedded PARENT_SCOPE)
         add_link_options("$<$<CONFIG:Release>:/DEBUG:FULL;/OPT:REF;/OPT:ICF>")
+
+        # Incremental linking is disabled because, after switching to /Z7, incremental relinks
+        # started to fail intermittently with LNK1235 ("corrupt or invalid COFF symbol table")
+        # on a valid static library.
+        foreach(kind IN ITEMS EXE SHARED MODULE)
+            foreach(config IN ITEMS DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
+                set(var CMAKE_${kind}_LINKER_FLAGS_${config})
+                # Edit the string in place (not as a list) so that quoted arguments keep their quotes.
+                string(REGEX REPLACE "(^| )[/-]INCREMENTAL(:[^ ]*)?" "" flags "${${var}}")
+                string(STRIP "${flags} /INCREMENTAL:NO" flags)
+                set(${var} "${flags}" PARENT_SCOPE)
+            endforeach()
+        endforeach()
     endif()
 endfunction()
 
