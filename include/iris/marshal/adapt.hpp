@@ -144,18 +144,20 @@ using setter_param_t = std::conditional_t<
 #define IRIS_MARSHAL_CLASS(class_name) \
     IRIS_ZZ_MARSHAL_CLASS_COMMON(class_name) \
     public: \
-        [[nodiscard]] constexpr bool operator==(class_name const&) const noexcept = default;
+        [[nodiscard]] bool operator==(class_name const&) const noexcept = default;
 
 #define IRIS_MARSHAL_PIMPL_CLASS(class_name) \
     IRIS_ZZ_MARSHAL_CLASS_COMMON(class_name) \
     public: \
         class_name(); \
-        class_name(class_name const&) = delete; \
+        class_name(class_name const&); \
         class_name(class_name&&) noexcept; \
         ~class_name(); \
     \
-        class_name& operator=(class_name const&) = delete; \
+        class_name& operator=(class_name const&); \
         class_name& operator=(class_name&&) noexcept; \
+    \
+        [[nodiscard]] bool operator==(class_name const&) const noexcept; \
     \
     private: \
         struct Impl; \
@@ -190,10 +192,11 @@ using setter_param_t = std::conditional_t<
     IRIS_ZZ_MARSHAL_PIMPL_FIELD_DATA_MEMBER field_def
 
 #define IRIS_MARSHAL_PIMPL_FIELD_DEFS(field_defs) \
+    [[nodiscard]] bool operator==(Impl const&) const noexcept = default; \
     IRIS_PP_SEQ_FOR_EACH(field_defs, IRIS_ZZ_MARSHAL_PIMPL_FIELD_DEFS_I, ~)
 
 
-#define IRIS_ZZ_MARSHAL_PIMPL_FIELD_VARIABLE(field_name) impl_->field_name
+#define IRIS_ZZ_MARSHAL_PIMPL_FIELD_VARIABLE(field_name) this->impl_->field_name
 
 #define IRIS_ZZ_MARSHAL_PIMPL_FIELD_ACCESS_DEFINE_FIELD_I(class_name, maybe_paren_type, field_name, ...) \
     IRIS_PP_IIF( \
@@ -224,9 +227,13 @@ using setter_param_t = std::conditional_t<
 
 #define IRIS_MARSHAL_PIMPL_CLASS_DEFINE(class_name) \
     class_name::class_name() = default; \
+    class_name::class_name(class_name const&) = default; \
     class_name::class_name(class_name&&) noexcept = default; \
     class_name::~class_name() = default; \
-    class_name& class_name::operator=(class_name&&) noexcept = default;
+    class_name& class_name::operator=(class_name const&) = default; \
+    class_name& class_name::operator=(class_name&&) noexcept = default; \
+    \
+    bool class_name::operator==(class_name const&) const noexcept = default;
 
 // ------------------------------------------------------------
 
