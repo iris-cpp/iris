@@ -11,6 +11,8 @@
 #include <iris/alloy/adapt.hpp> // IWYU pragma: keep
 #include <iris/alloy/tuple.hpp> // IWYU pragma: keep
 
+#include <iris/indirect.hpp>
+
 #include <iris/pp/tuple.hpp>
 #include <iris/pp/seq.hpp>
 #include <iris/pp/va.hpp>
@@ -157,7 +159,7 @@ using setter_param_t = std::conditional_t<
     \
     private: \
         struct Impl; \
-        std::unique_ptr<Impl> impl_; \
+        ::iris::indirect<Impl> impl_; \
     \
     public:
 
@@ -221,7 +223,7 @@ using setter_param_t = std::conditional_t<
 
 
 #define IRIS_MARSHAL_PIMPL_CLASS_DEFINE(class_name) \
-    class_name::class_name() : impl_(std::make_unique<Impl>()) {} \
+    class_name::class_name() = default; \
     class_name::class_name(class_name&&) noexcept = default; \
     class_name::~class_name() = default; \
     class_name& class_name::operator=(class_name&&) noexcept = default;
