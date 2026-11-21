@@ -49,16 +49,17 @@ if(MSVC)
     unset(IRIS_MSVC_BIN_DIR)
 endif()
 
-# Make debug information embedded in the object files (/Z7) also in Release.
-# Unlike /Zi, it lets a precompiled header be shared between targets.
-# See also: https://gitlab.kitware.com/cmake/cmake/-/issues/27434
+# Make debug information embedded in the object files (/Z7) in all configurations.
+#
+# With /Zi, `target_precompile_headers(... REUSE_FROM <pch_target>)` makes CMake copy
+# the compiler PDB of <pch_target> over the consumer's compiler PDB before each build.
+# If <pch_target> has sources other than the PCH, editing any of them updates its PDB,
+# and the copy discards the type records that the consumer's unchanged objects still
+# reference. The consumer then fails to link with LNK1103 ("debugging information
+# corrupt") until it is rebuilt. (/Z7 has no compiler PDB, so nothing is copied.)
 function(iris_set_msvc_debug_info)
     if(MSVC)
-        set(
-            CMAKE_MSVC_DEBUG_INFORMATION_FORMAT
-            "$<$<CONFIG:Debug>:ProgramDatabase>$<$<CONFIG:RelWithDebInfo,Release>:Embedded>"
-            PARENT_SCOPE
-        )
+        set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT Embedded PARENT_SCOPE)
         add_link_options("$<$<CONFIG:Release>:/DEBUG:FULL;/OPT:REF;/OPT:ICF>")
     endif()
 endfunction()
