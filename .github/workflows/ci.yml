@@ -123,7 +123,7 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           JOB_ID: ${{ job.check_run_id }}
           WORKER_URL: https://cpp-warning-notifier.iris-cpp.org
-          STEP_REGEX: Build .+
+          STEP_REGEX: '^Build Tests$'
           JOB_REGEX: '\[C\+\+(?<cppVersion>\d+)\] (?<vendorName>.+) (?<vendorVersion>.+) \((?<config>.+)\) / (?<component>.+)'
           ROW_HEADERS: '["component", "vendorName", "vendorVersion", "config"]'
           COLUMN_HEADER: cppVersion
