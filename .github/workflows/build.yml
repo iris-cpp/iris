@@ -36,14 +36,16 @@ on:
         required: false
         type: string
         default: ""
-      compiler-toolset-version:
+      msvc-toolset-prefix:
         required: false
         type: string
         default: ""
-      vs-path:
+        description: 'Version prefix of the MSVC toolset; the newest installed match is used (e.g. "14.5")'
+      msvc-platform-toolset:
         required: false
         type: string
         default: ""
+        description: 'Visual Studio platform toolset passed to CMake -T (e.g. "v145")'
       cmake-config-additional-args:
         required: false
         type: string
@@ -86,8 +88,7 @@ jobs:
           compiler-toolset: ${{ inputs.compiler-toolset }}
           compiler-version: ${{ inputs.compiler-version }}
           compiler-executable: ${{ inputs.compiler-executable }}
-          compiler-toolset-version: ${{ inputs.compiler-toolset-version }}
-          vs-path: ${{ inputs.vs-path }}
+          msvc-toolset-prefix: ${{ inputs.msvc-toolset-prefix }}
           cpp-version-name: ${{ inputs.cpp-version-name }}
           build-type-name: ${{ inputs.build-type-name }}
 
@@ -100,24 +101,15 @@ jobs:
 
       # Adapt CMP0168; enable caching in CI
       # https://cmake.org/cmake/help/latest/module/FetchContent.html#variable:FETCHCONTENT_FULLY_DISCONNECTED
-      - name: Setup Cached CMake Dependencies
-        id: deps-info
-        shell: bash
-        run: |
-          if [ "${{ steps.cache-deps.outputs.cache-hit }}" = "true" ]; then
-            echo "IRIS_CI_CMAKE_ARGS=-DFETCHCONTENT_FULLY_DISCONNECTED=ON" >> "$GITHUB_OUTPUT"
-          else
-            echo "IRIS_CI_CMAKE_ARGS=" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Configure
         env:
           CLICOLOR_FORCE: 1
         shell: bash
         run: |
           set -xe
-          cmake ${{ steps.deps-info.outputs.IRIS_CI_CMAKE_ARGS }} -B build \
+          cmake ${{ steps.cache-deps.outputs.cache-hit == 'true' && '-DFETCHCONTENT_FULLY_DISCONNECTED=ON' || '' }} -B build \
             ${{ inputs.cmake-config-additional-args }} \
+            ${{ inputs.compiler-toolset == 'msvc' && format('-T {0},version={1}', inputs.msvc-platform-toolset, steps.setup.outputs.msvc-toolset) || '' }} \
             -DCMAKE_CXX_COMPILER=${{ inputs.compiler-executable }} \
             -DCMAKE_CXX_FLAGS="${{ inputs.compiler-cxxflags }}" \
             -DCMAKE_CXX_STANDARD=${{ inputs.cpp-version-number }} \
@@ -172,6 +164,7 @@ jobs:
           compiler-toolset: ${{ inputs.compiler-toolset }}
           compiler-version: ${{ inputs.compiler-version }}
           compiler-executable: ${{ inputs.compiler-executable }}
+          msvc-toolset-prefix: ${{ inputs.msvc-toolset-prefix }}
           cpp-version-name: ${{ inputs.cpp-version-name }}
           build-type-name: ${{ inputs.build-type-name }}
 
@@ -182,13 +175,17 @@ jobs:
           key: ${{ steps.setup.outputs.deps-cache-key }}
           path: ${{ github.workspace }}/build/_deps
 
+      # The cache can miss when this job lands on a runner image with another
+      # toolset than prepare-deps did (e.g. during an image rollout); fetch the
+      # dependencies again in that case.
       - name: Configure
         env:
           CLICOLOR_FORCE: 1
         shell: bash
         run: |
           set -xe
-          cmake -DFETCHCONTENT_FULLY_DISCONNECTED=ON -B build \
+          cmake ${{ steps.cache-deps.outputs.cache-hit == 'true' && '-DFETCHCONTENT_FULLY_DISCONNECTED=ON' || '' }} -B build \
+            ${{ inputs.compiler-toolset == 'msvc' && format('-T {0},version={1}', inputs.msvc-platform-toolset, steps.setup.outputs.msvc-toolset) || '' }} \
             -DCMAKE_CXX_COMPILER=${{ inputs.compiler-executable }} \
             -DCMAKE_CXX_FLAGS="${{ inputs.compiler-cxxflags }}" \
             -DCMAKE_CXX_STANDARD=${{ inputs.cpp-version-number }} \
@@ -196,6 +193,20 @@ jobs:
             -DIRIS_CI_COMPONENT=${{ matrix.component }} \
             -DIRIS_CI=ON \
             -S .
+
+      - name: Prepare Deps
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        env:
+          CLICOLOR_FORCE: 1
+        run: |
+          cmake --build build --config ${{ inputs.build-type-name }} -j${{ env.IRIS_CI_BUILD_JOBS }} --target Catch2WithMain ${{ inputs.compiler-builder-additional-args }}
+
+      - name: Cache CMake Dependencies (save)
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          key: ${{ steps.setup.outputs.deps-cache-key }}
+          path: ${{ github.workspace }}/build/_deps
 
       - name: Build Tests
         env:
