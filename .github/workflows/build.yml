@@ -72,16 +72,21 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Copy Local GitHub Actions
-        shell: bash
-        run: |
-          if [ -e modules/iris ]; then
-            cp -r modules/iris/.github/actions .github/
-          fi
+      # Take the local actions from this workflow's own commit, not from the
+      # caller's checkout, so that callers in other repositories get the
+      # version this workflow was written against.
+      - name: Checkout CI Actions
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .iris-ci
+          sparse-checkout: .github/actions
+          persist-credentials: false
 
       - name: Setup Toolchain
         id: setup
-        uses: ./.github/actions/setup-cpp
+        uses: ./.iris-ci/.github/actions/setup-cpp
         with:
           os-name: ${{ inputs.os-name }}
           os-version: ${{ inputs.os-version }}
@@ -148,16 +153,18 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Copy Local GitHub Actions
-        shell: bash
-        run: |
-          if [ -e modules/iris ]; then
-            cp -r modules/iris/.github/actions .github/
-          fi
+      - name: Checkout CI Actions
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: .iris-ci
+          sparse-checkout: .github/actions
+          persist-credentials: false
 
       - name: Setup Toolchain
         id: setup
-        uses: ./.github/actions/setup-cpp
+        uses: ./.iris-ci/.github/actions/setup-cpp
         with:
           os-name: ${{ inputs.os-name }}
           os-version: ${{ inputs.os-version }}
